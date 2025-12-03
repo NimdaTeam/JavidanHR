@@ -1,0 +1,329 @@
+﻿@using _0_Framework.FileUploader
+@using HrSystem.Application.common.Extensions
+@using HrSystem.Domain.Entities
+@using Microsoft.AspNetCore.Mvc.TagHelpers
+@using _0_Framework.Utilities.Helpers
+@using AuthenticationSystem.SystemPermissions
+@inject IFileUploadService _FileUploadService
+@model HrSystem.Application.DTO.Step1PersonalVM
+
+@{
+    ViewData["Title"] = !Model.IsUpdating ? "ایجاد کارمند جدید - مرحله اطلاعات هویتی" : $"ویرایش اطلاعات هویتی کارمند: {ViewData["EmployeeTitle"]}";
+}
+
+<link rel="stylesheet" href="https://unpkg.com/persian-datepicker@latest/dist/css/persian-datepicker.min.css" />
+
+<div class="card mb-5 mb-xl-8">
+    <div class="card-header border-0 pt-5">
+        <h3 class="card-title align-items-start flex-column">
+            <span class="card-label fw-bold fs-3 mb-1">@((Model.IsUpdating) ? $"اطلاعات هویتی کارمند: {ViewData["EmployeeTitle"]}" : "ایجاد کارمند جدید")</span>
+            <span class="text-muted fw-semibold fs-6">مرحله ۱ از ۵ - اطلاعات هویتی</span>
+        </h3>
+    </div>
+
+    <div class="card-body py-3">
+
+        @if (!Model.IsUpdating)
+        {
+            <div class="alert alert-info text-center">
+                <strong>لطفاً اطلاعات پایه کارمند را وارد کنید. این مرحله اجباری است و پس از ثبت، می‌توانید سایر بخش‌ها را بعداً تکمیل کنید.</strong>
+            </div>
+        }
+
+        <form asp-action="AddEmployee" asp-controller="Employee" method="post" enctype="multipart/form-data" class="form">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Id" value="@Model.Id" />
+            <input type="hidden" asp-for="IsUpdating" value="@Model.IsUpdating" />
+
+            <div class="row">
+
+                <!-- کد کارمندی -->
+                <div class="col-md-12">
+                    <div class="fv-row mb-7">
+                        <label class="required fw-bold fs-6 mb-2">کد کارمندی</label>
+                        <input required asp-for="EmployeeCode" type="text" class="form-control form-control-solid text-center" placeholder="کد کارمندی" />
+                        <span asp-validation-for="EmployeeCode" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <!-- نام -->
+                <div class="col-md-6">
+                    <div class="fv-row mb-7">
+                        <label class="required fw-bold fs-6 mb-2">نام</label>
+                        <input required asp-for="FirstName" type="text" class="form-control form-control-solid text-center" placeholder="نام" />
+                        <span asp-validation-for="FirstName" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <!-- نام خانوادگی -->
+                <div class="col-md-6">
+                    <div class="fv-row mb-7">
+                        <label class="required fw-bold fs-6 mb-2">نام خانوادگی</label>
+                        <input required asp-for="LastName" type="text" class="form-control form-control-solid text-center" placeholder="نام خانوادگی" />
+                        <span asp-validation-for="LastName" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <!-- کد ملی -->
+                <div class="col-md-6">
+                    <div class="fv-row mb-7">
+                        <label class="required fw-bold fs-6 mb-2">کد ملی</label>
+                        <input required asp-for="NationalCode" type="text" maxlength="10" class="form-control form-control-solid ltr text-center" placeholder="کد ملی (۱۰ رقم)" />
+                        <span asp-validation-for="NationalCode" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <!-- تاریخ تولد - شمسی با تبدیل به میلادی -->
+                <div class="col-md-6">
+	                <div class="fv-row mb-7">
+		                <label class="required fw-bold fs-6 mb-2">تاریخ تولد (شمسی)</label>
+		                <input required 
+		                       type="text" 
+		                       asp-for="PersianBirthDateStringify" 
+                               id="PersianBirthDateStringify"
+		                       class="form-control form-control-solid text-center" 
+		                       placeholder="@($"مثلا: {DateTime.Now.ToShamsi()}")" 
+		                       maxlength="10"
+		                       autocomplete="off"
+		                       dir="ltr" />
+		                <span asp-validation-for="PersianBirthDateStringify" class="text-danger"></span>
+		                <small class="text-muted d-block mt-1">فقط عدد تایپ کنید، اسلش خودکار اضافه می شود</small>
+	                </div>
+                </div>
+
+                <!-- جنسیت -->
+                <div class="col-md-6">
+                    <div class="fv-row mb-7">
+                        <label class="required fw-bold fs-6 mb-2">جنسیت</label>
+                        <select required asp-for="Gender" class="form-select form-select-solid text-center"
+                                asp-items="@(new SelectList(Enum.GetValues(typeof(Gender)).Cast<Gender>().Select(g => new SelectListItem { Value = ((int)g).ToString(), Text = g.ToPersian() }), "Value", "Text"))">
+                            <option value="">انتخاب کنید</option>
+                        </select>
+                        <span asp-validation-for="Gender" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <!-- وضعیت تأهل -->
+                <div class="col-md-6">
+                    <div class="fv-row mb-7">
+                        <label class="required fw-bold fs-6 mb-2">وضعیت تأهل</label>
+                        <select required asp-for="MaritalStatus" class="form-select form-select-solid text-center"
+                                asp-items="@(new SelectList(Enum.GetValues(typeof(MaritalStatus)).Cast<MaritalStatus>().Select(m => new SelectListItem { Value = ((int)m).ToString(), Text = m.ToPersian() }), "Value", "Text"))">
+                            <option value="">انتخاب کنید</option>
+                        </select>
+                        <span asp-validation-for="MaritalStatus" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <!-- تعداد فرزندان -->
+                <div class="col-md-6">
+                    <div class="fv-row mb-7">
+                        <label class="fw-bold fs-6 mb-2">تعداد فرزندان</label>
+                        <input asp-for="ChildrenCount" type="number" min="0" class="form-control form-control-solid text-center" placeholder="تعداد فرزندان" />
+                    </div>
+                </div>
+
+                <!-- تصویر کارمند فعلی -->
+                @if (!string.IsNullOrEmpty(Model.CurrentImage))
+                {
+                    <div class="fv-row mb-6 text-center">
+                        <label class="fs-6 fw-semibold mb-3 d-block">تصویر فعلی</label>
+                        <img src="@_FileUploadService.GetFileUrl(Model.CurrentImage, "Employees")"
+                             alt="تصویر فعلی کارمند"
+                             class="rounded"
+                             style="width: 120px; height: 120px; object-fit: cover; border: 3px solid #e4e6ef;" />
+                    </div>
+                }
+
+                <div class="fv-row mb-8">
+                    <label class="fs-6 fw-semibold mb-3">تصویر کارمند</label>
+
+                    <div class="text-center">
+                        <label class="btn btn-light btn-active-light-primary btn-sm px-6">
+                            <i class="ki-duotone ki-folder-add fs-2"></i> افزودن تصویر کارمند
+                            <input type="file" asp-for="ProfileImage" id="attachment_files" accept="image/*" class="d-none" />
+                        </label>
+
+                        <div id="attachment_list" class="mt-4 d-flex flex-wrap gap-3 justify-content-center"></div>
+                        <div id="attachment_message" class="mt-3"></div>
+                    </div>
+
+                    <div class="form-text text-muted text-center">
+                        حجم فایل حداکثر 2 مگابایت • فرمت: JPG, PNG, WebP
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="text-center pt-10">
+                <button type="submit" class="btn btn-primary">
+                    <span class="indicator-label">ثبت کارمند</span>
+                </button>
+                <a permissions="[SystemPermissions.EmployeesList]" asp-action="AllEmployees" class="btn btn-light me-3">انصراف</a>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+	@*    <script src="https://unpkg.com/persian-date@latest/dist/persian-date.min.js"></script>
+    <script src="https://unpkg.com/persian-datepicker@latest/dist/js/persian-datepicker.min.js"></script>
+
+    @if (Model.IsUpdating)
+    {
+	    <script>
+                $(document).ready(function () {
+
+                $('#BirthDatePersian').persianDatepicker({
+                    position: "auto",
+                    altField: "#BirthDateGregorian",
+                    initialValue: true,
+                    initialValueType: 'persian',
+                    altFormat: 'L',
+                });
+            });
+	    </script>
+    }
+    else
+    {
+	    <script>
+                $(document).ready(function () {
+
+                $('#BirthDatePersian').persianDatepicker({
+                    position: "auto",
+                    altField: "#BirthDateGregorian",
+                    initialValue: false,
+                    altFormat: 'L',
+                });
+            });
+	    </script>
+    }
+ *@
+	
+	<!-- اسکریپت فرمت خودکار تاریخ شمسی -->
+	<script>
+        $(document).ready(function () {
+            const input = $("#PersianBirthDateStringify");
+
+            // اگر در حالت ویرایش هستیم و مقدار قبلی هست → فرمت کن
+            @if (Model.IsUpdating && !string.IsNullOrEmpty(Model.PersianBirthDateStringify))
+            {
+	            var clean = Model.PersianBirthDateStringify.Replace("/", "").Replace("-", "");
+	            if (clean.Length == 8)
+	            {
+		            var formatted = clean.Substring(0,4) + "/" + clean.Substring(4,2) + "/" + clean.Substring(6,2);
+		            <text>
+                    input.val("@formatted");
+                    </text>
+	            }
+            }
+
+            // رویداد تایپ کاربر
+            input.on("input", function () {
+                let value = this.value.replace(/\D/g, ""); // فقط عدد
+
+                if (value.length >= 4) {
+                    value = value.substring(0, 4) + "/" + value.substring(4);
+                }
+                if (value.length >= 7) {
+                    value = value.substring(0, 7) + "/" + value.substring(7, 10);
+                }
+                if (value.length > 10) {
+                    value = value.substring(0, 10);
+                }
+
+                this.value = value;
+            });
+
+            // وقتی کاربر فوکوس رو از دست داد، اگر ناقص بود پاک کن (اختیاری)
+            input.on("blur", function () {
+                const val = this.value;
+                if (val.length > 0 && val.length < 10) {
+                    this.value = "";
+                }
+            });
+        });
+    </script>
+
+	<!-- اسکریپت آپلود تصویر -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const input = document.getElementById("attachment_files");
+            const list = document.getElementById("attachment_list");
+            const message = document.getElementById("attachment_message");
+            const maxFiles = 1;
+            const maxSize = 2 * 1024 * 1024;
+            const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+            let files = [];
+
+            function updateList() {
+                list.innerHTML = "";
+                files.forEach((file, index) => {
+                    const item = document.createElement("div");
+                    item.className = "d-flex align-items-center bg-light rounded px-3 py-2 gap-2";
+                    const img = document.createElement("img");
+                    img.src = URL.createObjectURL(file);
+                    img.style.width = "40px";
+                    img.style.height = "40px";
+                    img.style.objectFit = "cover";
+                    img.style.borderRadius = "8px";
+                    item.appendChild(img);
+                    const name = document.createElement("span");
+                    name.textContent = file.name;
+                    name.className = "fs-7 text-gray-700 me-2";
+                    item.appendChild(name);
+                    const remove = document.createElement("button");
+                    remove.type = "button";
+                    remove.innerHTML = "×";
+                    remove.className = "btn btn-icon btn-sm btn-danger";
+                    remove.style.width = "28px";
+                    remove.style.height = "28px";
+                    remove.onclick = () => {
+                        files.splice(index, 1);
+                        updateList();
+                        showMessage("فایل حذف شد", "danger");
+                    };
+                    item.appendChild(remove);
+                    list.appendChild(item);
+                });
+            }
+
+            function showMessage(text, type = "success") {
+                message.innerHTML = `<small class="text-${type === "success" ? "success" : "danger"}">${text}</small>`;
+                setTimeout(() => message.innerHTML = "", 3000);
+            }
+
+            input.addEventListener("change", function () {
+                const newFiles = Array.from(this.files);
+                if (newFiles.length === 0) return;
+                const file = newFiles[0];
+                if (files.length >= maxFiles) {
+                    showMessage("فقط یک تصویر مجاز است!", "danger");
+                    return;
+                }
+                if (!allowedTypes.includes(file.type)) {
+                    showMessage("فقط فایل تصویری مجاز است!", "danger");
+                    return;
+                }
+                if (file.size > maxSize) {
+                    showMessage("حجم فایل بیش از ۲ مگابایت است!", "danger");
+                    return;
+                }
+                files = [file];
+                updateList();
+                showMessage("تصویر با موفقیت انتخاب شد");
+                this.value = "";
+            });
+
+            const form = document.querySelector("form");
+            form.addEventListener("submit", function () {
+                if (files.length > 0) {
+                    const dataTransfer = new DataTransfer();
+                    files.forEach(f => dataTransfer.items.add(f));
+                    input.files = dataTransfer.files;
+                }
+            });
+        });
+    </script>
+}

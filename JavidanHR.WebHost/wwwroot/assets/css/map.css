@@ -1,0 +1,27 @@
+﻿
+.leaflet-popup-content-wrapper {
+    font-family: Vazirmatn !important; /* Use the template's font */
+    font-size: 11px; /* Adjust as needed */
+    color: #333; /* Optional: Customize text color */
+    background-color: #f9f9f9; /* Optional: Popup background color */
+    padding: 10px;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); /* Optional: Add a subtle shadow */
+}
+
+/* Customize the popup text */
+.leaflet-popup-content {
+    font-family: Vazirmatn !important; /* Ensure the content also inherits the template font */
+    font-size: 11px !important;
+}
+
+
+/* Optional: Style the popup close button */
+.leaflet-popup-close-button {
+    color: #333; /* Change close button color */
+}
+
+/* Optional: Customize the popup tip (arrow) */
+.leaflet-popup-tip {
+    background: #f9f9f9;
+}

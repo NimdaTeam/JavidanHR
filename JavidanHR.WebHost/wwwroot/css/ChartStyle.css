@@ -1,0 +1,119 @@
+﻿@import url("https://code.highcharts.com/css/highcharts.css");
+
+.highcharts-pie-series .highcharts-point {
+    stroke: #ede;
+    stroke-width: 2px;
+}
+
+.highcharts-pie-series .highcharts-data-label-connector {
+    stroke: silver;
+    stroke-dasharray: 2, 2;
+    stroke-width: 2px;
+}
+
+
+
+.highcharts-data-table table {
+    font-family: Vazirmatn, sans-serif; /* استفاده از فونت فارسی برای تمام جدول‌ها */
+    border-collapse: collapse;
+    border: 1px solid #ebebeb;
+    margin: 10px auto;
+    text-align: center;
+    width: 100%;
+    max-width: 500px;
+}
+
+.highcharts-data-table caption {
+    padding: 1em 0;
+    font-size: 1.2em;
+    color: #555;
+}
+
+.highcharts-data-table th {
+    font-weight: 600;
+    padding: 0.5em;
+}
+
+.highcharts-data-table td,
+.highcharts-data-table th,
+.highcharts-data-table caption {
+    padding: 0.5em;
+}
+
+.highcharts-data-table thead tr,
+.highcharts-data-table tr:nth-child(even) {
+    background: #f8f8f8;
+}
+
+.highcharts-data-table tr:hover {
+    background: #f1f7ff;
+}
+
+.highcharts-description {
+    margin: 0.3rem 10px;
+    text-align: center; /* وسط‌چین کردن توضیحات */
+}
+
+/* فونت فارسی برای نمودار */
+.highcharts-title,
+.highcharts-tooltip,
+.highcharts-legend-item,
+.highcharts-data-labels {
+    font-family: Vazirmatn, sans-serif !important; /* فونت فارسی برای عنوان و تولتیپ */
+}
+
+/* وسط‌چین کردن داده‌ها */
+.highcharts-data-labels {
+    text-align: center;
+}
+
+.highcharts-figure {
+    border: 1px solid #e0e0e0; /* مرز خاکی */
+    padding: 15px; /* فاصله داخلی */
+    box-sizing: border-box; /* شامل پدینگ و حاشیه در اندازه کل */
+    margin: 2px; /* فاصله از اطراف */
+    background-color: #fafafa; /* پس‌زمینه روشن برای کنتراست */
+    border-radius: 5px;  
+}
+/* استایل برای فریم نمودار */
+    .chart-wrapper {
+    border: 1px solid #e0e0e0; /* مرز خاکی */
+    padding: 15px; /* فاصله داخلی */
+    box-sizing: border-box; /* شامل پدینگ و حاشیه در اندازه کل */
+    margin: 2px; /* فاصله از اطراف */
+    background-color: #fafafa; /* پس‌زمینه روشن برای کنتراست */
+    border-radius: 5px; /* گوشه‌های گرد */
+}
+
+/* استایل برای کانتینر نمودار */
+.chart-container {
+    width: 100%; /* عرض 100% */
+    margin-bottom: 30px;
+    margin-top: 30px;
+    position: relative; /* موقعیت‌دهی برای استفاده از Chart.js */
+}
+
+/* تنظیم ارتفاع برای صفحه‌های بزرگ */
+.chart-container {
+    height: 400px; /* ارتفاع پیش‌فرض برای دسکتاپ */
+}
+
+/* تنظیم ارتفاع برای تبلت‌ها و دسکتاپ‌های کوچک */
+@media (max-width: 992px) {
+    .chart-container {
+        height: 350px; /* ارتفاع کم‌تر برای صفحات کوچکتر */
+    }
+}
+
+/* تنظیم ارتفاع برای موبایل */
+@media (max-width: 576px) {
+    .chart-container {
+        height: 300px; /* ارتفاع کم‌تر برای موبایل‌ها */
+    }
+}
+
+/* استایل برای بوم (canvas) */
+.chart-container canvas {
+    width: 100% !important; /* عرض 100% */
+    height: 100% !important; /* ارتفاع 100% */
+}

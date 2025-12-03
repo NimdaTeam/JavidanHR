@@ -1,0 +1,96 @@
+﻿@using _0_Framework.Utilities.Helpers
+@using HrSystem.Domain.Entities
+@model HrSystem.Application.DTO.EmployeeDetailsVM
+@{
+    Layout = null; // مهم! بدون لِی‌اوت
+    ViewData["Title"] = "چاپ پروفایل پرسنلی - " + Model.FullName;
+}
+
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <title>@ViewData["Title"]</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+   <link rel="stylesheet" href="~/css/NewEmployeeReport.css" />
+</head>
+<body>
+
+    <button style="font-family:Vazirmatn" class="print-btn" onclick="window.print()">
+        چاپ این صفحه
+    </button>
+
+    <div class="print-container">
+
+        <div class="header">
+            <h1>پروفایل پرسنلی</h1>
+            <p>سیستم مدیریت منابع انسانی</p>
+            <p style="margin-top:8px; color:#666;">
+                تاریخ چاپ: @DateTime.Now.ToShamsiWithTime() — ساعت: @DateTime.Now.ToString("HH:mm")
+            </p>
+        </div>
+
+        <div style="text-align:center; margin-bottom:40px;">
+            <img src="@(string.IsNullOrEmpty(Model.ProfileImageUrl) ? "/assets/media/avatars/blank.png" : "/uploads/Employees/" + Model.ProfileImageUrl)"
+                 class="profile-photo" alt="@Model.FullName" />
+            <h2 style="margin:20px 0 8px; font-size:26pt;">@Model.FullName</h2>
+            <p style="font-size:18pt; color:#0d6efd; margin:0;">کد پرسنلی: @Model.EmployeeCode</p>
+            <p style="margin-top:10px; font-size:16pt; color:@(Model.IsActive ? "green" : "red"); font-weight:bold;">
+                وضعیت: @(Model.IsActive ? "فعال در سازمان" : "ترک کار کرده")
+                @(Model.RetirementStatus == RetirementStatus.Retired ? " — بازنشسته" : "")
+            </p>
+        </div>
+
+        <div class="info-title">اطلاعات هویتی</div>
+        <table class="table table-bordered">
+            <tr><td>کد ملی</td><td>@Model.NationalCode</td></tr>
+            <tr><td>تاریخ تولد</td><td>@Model.PersianBirthDate (@Model.Age سال)</td></tr>
+            <tr><td>جنسیت</td><td>@Model.GenderDisplay</td></tr>
+            <tr><td>وضعیت تأهل</td><td>@Model.MaritalStatusDisplay</td></tr>
+            <tr><td>تعداد فرزند</td><td>@(Model.ChildrenCount == 0 ? "ندارد" : Model.ChildrenCount + " نفر")</td></tr>
+        </table>
+
+        <div class="info-title">اطلاعات تماس</div>
+        <table>
+            <tr><td>شماره همراه</td><td>@(Model.PhoneNumber ?? "ثبت نشده")</td></tr>
+            <tr><td>ایمیل</td><td>@(Model.Email ?? "ثبت نشده")</td></tr>
+            <tr><td>آدرس</td><td>@(Model.Address ?? "ثبت نشده")</td></tr>
+            <tr><td>تماس اضطراری</td><td>@(string.IsNullOrEmpty(Model.EmergencyContactName) ? "ثبت نشده" : $"{Model.EmergencyContactName} — {Model.EmergencyContactPhone}")</td></tr>
+        </table>
+
+        <div class="info-title">اطلاعات سازمانی</div>
+        <table>
+            <tr><td>واحد سازمانی</td><td>@(Model.Department ?? "ثبت نشده")</td></tr>
+            <tr><td>پست سازمانی</td><td>@(Model.Position ?? "ثبت نشده")</td></tr>
+            <tr><td>مدرک تحصیلی</td><td>@Model.EducationLevelDisplay</td></tr>
+            <tr><td>رشته تحصیلی</td><td>@(Model.FieldOfStudy ?? "—")</td></tr>
+            <tr><td>نوع قرارداد</td><td>@Model.ContractTypeDisplay</td></tr>
+            <tr><td>نوع همکاری</td><td>@Model.CooperationTypeDisplay</td></tr>
+            <tr><td>تاریخ استخدام</td><td>@Model.PersianHireDate (@Model.WorkExperienceYears سال سابقه)</td></tr>
+        </table>
+
+        <div class="info-title">اطلاعات مالی</div>
+        <table>
+            <tr><td>حقوق پایه</td><td>@(Model.BaseSalary?.ToString("N0") ?? "0") ریال</td></tr>
+            <tr><td>مزایا و فوق‌العاده</td><td>@(Model.Benefits?.ToString("N0") ?? "0") ریال</td></tr>
+            <tr class="highlight"><td>کل دریافتی ماهانه</td><td>@Model.TotalSalary.ToString("N0") ریال</td></tr>
+            <tr><td>بانک</td><td>@(Model.BankName ?? "—")</td></tr>
+            <tr><td>روش پرداخت</td><td>@Model.PaymentMethodDisplay</td></tr>
+        </table>
+
+        <div class="info-title">اطلاعات تکمیلی</div>
+        <table>
+            <tr><td>شماره بیمه تأمین اجتماعی</td><td>@(Model.InsuranceNumber ?? "ندارد")</td></tr>
+            <tr><td>وضعیت سلامت</td><td>@Model.HealthStatusDisplay</td></tr>
+            <tr><td>مرخصی باقیمانده</td><td><strong>@Model.RemainingLeaveDays روز</strong></td></tr>
+            <tr><td>نمره ارزیابی عملکرد</td><td>@(Model.PerformanceScore.HasValue? Model.PerformanceScore + " از ۱۰۰" : "ارزیابی نشده")</td></tr>
+        </table>
+
+        <div class="footer">
+            <p>این سند به صورت خودکار توسط سیستم مدیریت منابع انسانی تولید شده است.</p>
+            <p style="margin-top:8px; color:#aaa;">چاپ شده در تاریخ @DateTime.Now.ToShamsiWithTime()</p>
+        </div>
+    </div>
+</body>
+</html>

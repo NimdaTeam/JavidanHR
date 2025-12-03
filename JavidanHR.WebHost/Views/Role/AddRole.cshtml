@@ -1,0 +1,106 @@
+﻿@using _0_Framework.DTO
+@model AuthenticationSystem.Domain.Role.Roles
+
+@{
+	var permissions = ViewBag.Permissions as List<PermissionGroupViewModel>;
+}
+
+<!--begin::Modal dialog-->
+<div class="modal-dialog modal-dialog-centered mw-650px">
+	<!--begin::Modal content-->
+	<div class="modal-content rounded">
+		<!--begin::Modal header-->
+		<div class="modal-header pb-0 border-0 justify-content-end">
+			<!--begin::Close-->
+			<div class="btn btn-sm btn-icon btn-active-color-primary" data-bs-dismiss="modal">
+				<i class="fa fa-close fs-1"></i>
+			</div>
+			<!--end::Close-->
+		</div>
+		<!--begin::Modal header-->
+		<!--begin::Modal body-->
+		<div class="modal-body scroll-y px-10 px-lg-15 pt-0 pb-15">
+			<!--begin::form-->
+			<form id="kt_modal_update_role_form" class="form" asp-action="AddRole" method="post">
+				@Html.AntiForgeryToken()
+				<!--begin::Scroll-->
+				<div class="d-flex flex-column scroll-y me-n7 pe-7" id="kt_modal_update_role_scroll" data-kt-scroll="true" data-kt-scroll-activate="{default: false, lg: true}" data-kt-scroll-max-height="auto" data-kt-scroll-dependencies="#kt_modal_update_role_header" data-kt-scroll-wrappers="#kt_modal_update_role_scroll" data-kt-scroll-offset="300px">
+					<!--begin::Input group-->
+					<div class="fv-row mb-10">
+						<!--begin::Tags-->
+						<label class="fs-5 fw-bold form-label mb-2">
+							<span class="required">نام سطح دسترسی</span>
+						</label>
+						<!--end::Tags-->
+						<!--begin::Input-->
+						<input class="form-control form-control-solid" placeholder="نام سطح دسترسی را وارد نمایید" name="roleName" required="" value=""/>
+						<!--end::Input-->
+					</div>
+					<!--end::Input group-->
+					<!--begin::مجوزها-->
+					<div class="fv-row">
+						<!--begin::Tags-->
+						<label class="fs-5 fw-bold form-label mb-2">مجوز های سطح دسترسی</label>
+						<!--end::Tags-->
+						<!--begin::Table wrapper-->
+						<div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+							<!--begin::Table-->
+							<table class="table align-middle table-row-dashed fs-6 gy-5">
+								<!--begin::Table body-->
+								<tbody class="text-gray-600 fw-semibold">
+								@if (permissions is not null)
+								{
+									@foreach (var item in permissions)
+									{
+										<tr>
+											<td class="text-gray-800">
+											@item.ProjectName
+										</tr>
+
+										@foreach (var p in item.Permissions)
+										{
+											<tr>
+												<!--begin::Tags-->
+												<td class="text-gray-800"> </td>
+												<!--end::Tags-->
+												<!--begin::Input group-->
+												<td>
+													<!--begin::Wrapper-->
+													<div class="d-flex">
+														<!--begin::Checkbox-->
+														<label class="form-check form-check-sm form-check-custom form-check-solid me-5 me-lg-20">
+															<input class="form-check-input" type="checkbox" value="@p.Permission" name="permissions"/>
+															<span class="form-check-label">@p.Name</span>
+														</label>
+														<!--end::Checkbox-->
+													</div>
+													<!--end::Wrapper-->
+												</td>
+												<!--end::Input group-->
+											</tr>
+										}
+
+									}
+
+								}
+								</tbody>
+								<!--end::Table body-->
+							</table>
+							<!--end::Table-->
+						</div>
+						<!--end::Table wrapper-->
+					</div>
+					<!--end::مجوزها-->
+				</div>
+				<!--end::Scroll-->
+				<!--begin::Actions-->
+				<Modal-Buttons></Modal-Buttons>
+				<!--end::Actions-->
+			</form>
+			<!--end::form-->
+		</div>
+		<!--end::Modal body-->
+	</div>
+	<!--end::Modal content-->
+</div>
+<!--end::Modal dialog-->

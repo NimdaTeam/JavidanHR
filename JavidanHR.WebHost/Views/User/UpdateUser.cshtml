@@ -1,0 +1,100 @@
+﻿@using _0_Framework.DTO
+@model AuthenticationSystem.Domain.User.Users
+@{
+    var roles = ViewBag.roles as List<EditUserRolesViewModel>;
+}
+<!--begin::Modal dialog-->
+<div class="modal-dialog modal-dialog-centered mw-650px">
+    <!--begin::Modal content-->
+    <div class="modal-content rounded">
+        <!--begin::Modal header-->
+        <div class="modal-header pb-0 border-0 justify-content-end">
+            <!--begin::Close-->
+            <div class="btn btn-sm btn-icon btn-active-color-primary" data-bs-dismiss="modal">
+                <i class="fa fa-close fs-1"></i>
+            </div>
+            <!--end::Close-->
+        </div>
+        <!--begin::Modal header-->
+        <!--begin::Modal body-->
+        <div class="modal-body scroll-y px-10 px-lg-15 pt-0 pb-15">
+            <!--begin:form-->
+            <form id="kt_modal_new_target_form" class="form" method="post" asp-controller="User" asp-action="UpdateUser">
+	            @Html.AntiForgeryToken()
+                <input asp-for="Id" value="@Model.Id" type="hidden" />
+                <!--begin::Heading-->
+                <div class="mb-13 text-center">
+                    <!--begin::Title-->
+                    <h1 class="mb-3">ویرایش کاربر  </h1>
+                    <!--end::Title-->
+                </div>
+	            <!--end::Heading-->
+				
+	            <!--begin::Input group-->
+
+	            <!--begin::Input group-->
+                <div class="d-flex flex-column mb-8 fv-row">
+                    <!--begin::Tags-->
+                    <label class="d-flex align-items-center fs-6 fw-semibold mb-2">
+                        <span class="required">شماره همراه</span>
+                    </label>
+                    <!--end::Tags-->
+                    <input asp-for="PhoneNumber" required="" type="text" class="form-control form-control-solid text-center" placeholder="شماره همراه">
+                </div>
+
+                <div class="d-flex flex-column mb-8 fv-row">
+                    <!--begin::Tags-->
+                    <label class="d-flex align-items-center fs-6 fw-semibold mb-2">
+                        <span class="required"> نام و نام خانوادگی</span>
+                    </label>
+                    <!--end::Tags-->
+                    <input asp-for="FullName" required="" type="text" class="form-control form-control-solid text-center" placeholder="نام و نام خانوادگی">
+                </div>
+                <!--end::Input group-->
+                <!--begin::Input group-->
+                <div class="mb-5">
+                    <!--begin::Tags-->
+                    <label class="required fw-semibold fs-6 mb-5">سطح دسترسی</label>
+                    <!--end::Tags-->
+                    <!--begin::سطح دسترسی-->
+                    <!--begin::Input row-->
+                    @if (roles is not null)
+                    {
+	                    @foreach (var item in roles)
+	                    {
+		                    <div class="d-flex fv-row">
+			                    <!--begin::رادیو-->
+			                    <div class="form-check form-check-custom form-check-solid">
+				                    <!--begin::Input-->
+				                    <input class="form-check-input me-3" name="roles" type="checkbox" value="@item.Id" id="@item.Name" @(item.IsSelected ? "checked" : "")>
+				                    <!--end::Input-->
+				                    <!--begin::Tags-->
+				                    <label class="form-check-label" for="@item.Name">
+					                    <div class="fw-bold text-gray-800">@item.Name</div>
+				                    </label>
+				                    <!--end::Tags-->
+			                    </div>
+			                    <!--end::رادیو-->
+		                    </div>
+		                    <!--end::Input row-->
+		                    <div class="separator separator-dashed my-5"></div>
+	                    }
+
+                    }
+
+
+                    <!--end::Input row-->
+                    <!--end::سطح دسترسی-->
+                </div>
+                <!--end::Input group-->
+                <!--begin::Actions-->
+                <Modal-Buttons></Modal-Buttons>
+                <!--end::Actions-->
+            </form>
+            <!--end:form-->
+        </div>
+        <!--end::Modal body-->
+    </div>
+    <!--end::Modal content-->
+</div>
+<!--end::Modal dialog-->

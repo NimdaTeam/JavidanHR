@@ -1,0 +1,125 @@
+﻿@using AuthenticationSystem.SystemPermissions
+@model _0_Framework.Utilities.Pagination.PaginationResult<_0_Framework.DTO.AllUsersViewModel>
+
+@{
+    ViewData["title"] = "مدیریت کاربران";
+
+    var currentUserId = ViewBag.currentUserId as long?;
+}
+
+<div class="card mb-5 mb-xl-8">
+    <!--begin::Header-->
+    <div class="card-header border-0 pt-5">
+        <h3 class="card-title align-items-start flex-column">
+            <span class="card-label fw-bold fs-3 mb-1">لیست کاربران</span>
+        </h3>
+        <div class="card-toolbar">
+            <button permissions="[SystemPermissions.AddNewUser]"  class="btn btn-sm btn-light-primary AddModalTrigger">
+                <i class="ki-duotone ki-plus fs-2"></i>کاربر جدید
+            </button>
+        </div>
+    </div>
+    <!--end::Header-->
+    <!--begin::Body-->
+    <div class="card-body py-3">
+        <!--begin::Table container-->
+        <div class="table-responsive">
+            <!--begin::Table-->
+            <table class="table align-middle gs-0 gy-4">
+                <!--begin::Table head-->
+                <thead>
+                    <tr class="fw-bold text-muted bg-light">
+                        <th class="ps-4 min-w-125px rounded-start">نام و نام خانوادگی</th>
+                        <th class="min-w-125px">شماره تماس</th>
+                        <th class="min-w-125px">سطح دسترسی</th>
+                        <th class="min-w-125px text-end rounded-end"> عملیات</th>
+                    </tr>
+                </thead>
+                <!--end::Table head-->
+                <!--begin::Table body-->
+                <tbody>
+
+                    @foreach (var item in Model.PaginatedList)
+                    {
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="d-flex justify-content-start flex-column">
+                                        <span class="text-gray-900 fw-bold text-hover-primary mb-1 fs-6">@item.Fullname</span>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <td>
+                                <span class="badge badge-light-primary fs-7 fw-bold">@item.PhoneNumber</span>
+                            </td>
+
+                            @if (!string.IsNullOrWhiteSpace(item.Roles))
+                            {
+
+                                <td>
+                                    <span class="badge badge-light-success fs-7 fw-bold">@item.Roles</span>
+                                </td>
+                            }
+                            else
+                            {
+                                <td>
+                                    <span class="badge badge-light-success fs-7 fw-bold">-</span>
+                                </td>
+                            }
+
+                            <td class="text-end">
+                                @if (currentUserId!= null && item.Id != currentUserId && item.IsActive)
+                                {
+	                                <a href="/Users/ChangeUserStatus/@item.Id/Deactivate" permissions="[SystemPermissions.ActivateAndDeactivateUsers]" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1 "  title="غیرفعالسازی حساب کاربری" data-bs-toggle="tooltip">
+                                        <i class="fas fa-ban fs-2"></i>
+	                                </a>
+                                }
+                                else if (currentUserId != null && item.Id != currentUserId && !item.IsActive)
+                                {
+	                                <a href="/Users/ChangeUserStatus/@item.Id/Activate" permissions="[SystemPermissions.ActivateAndDeactivateUsers]" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1 "  title="فعالسازی حساب کاربری" data-bs-toggle="tooltip">
+                                        <i class="	fas fa-lock-open fs-2"></i>
+	                                </a>
+                                }
+	                            <button permissions="[SystemPermissions.UpdateUser]" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1 EditModalTrigger" data-id="@item.Id" title="ویرایش کاربر" data-bs-toggle="tooltip">
+		                            <i class="fa fa-edit fs-2"></i>
+	                            </button>
+	                            <a permissions="[SystemPermissions.ChangeUserPasswordFromAdmin]" href="/User/ChangeUserPasswordFromAdmin/@item.Id" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="تغییر کلمه عبور" data-bs-toggle="tooltip">
+		                            <i class="fas fa-user-lock  fs-2"></i>
+	                            </a>
+	                            @if (currentUserId != null && item.Id != currentUserId)
+	                            {
+		                            <button permissions="[SystemPermissions.DeleteUser]" data-url="/DeleteUser/@item.Id" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm delete-button" title="حذف کاربر" data-bs-toggle="tooltip">
+			                            <i class="fa fa-trash fs-2"></i>
+		                            </button>
+	                            }
+                            </td>
+                        </tr>
+                    }
+
+
+                </tbody>
+                <!--end::Table body-->
+            </table>
+
+            <pagination page-model="@Model"></pagination>
+        </div>
+        <!--end::Table container-->
+    </div>
+    <!--begin::Body-->
+</div>
+
+
+
+@section scripts
+{
+	<Simple-CU-Modal
+		add-route="AddUser"
+		update-route="UpdateUser">
+	</Simple-CU-Modal>
+}
+
+@section SearchBox
+{
+    <searchBox search-query="@Model.SearchQuery"></searchBox>
+}

@@ -1,0 +1,162 @@
+﻿@using AuthenticationSystem.SystemPermissions
+<div id="kt_app_sidebar" class="app-sidebar flex-column" data-kt-drawer="true" data-kt-drawer-name="app-sidebar" data-kt-drawer-activate="{default: true, lg: false}" data-kt-drawer-overlay="true" data-kt-drawer-width="225px" data-kt-drawer-direction="start" data-kt-drawer-toggle="#kt_app_sidebar_mobile_toggle">
+	<!--begin::Logo-->
+	<div style="justify-content:center !important;" class="app-sidebar-logo px-6" id="kt_app_sidebar_logo">
+		<!--begin::Logo image-->
+		<a href="/" style="margin-top:50px;">
+			<img alt="Logo" src="/assets/media/logos/Javidan-logo.webp" style="height:120px !important" class=" app-sidebar-logo-default theme-light-show" />
+			<img alt="Logo" src="/assets/media/logos/Javidan-logo.webp" style="height:120px  !important" class=" app-sidebar-logo-default theme-dark-show" />
+			<img alt="Logo" src="/assets/media/logos/Javidan-logo.webp" style="height:70px;margin-top:10px" class=" app-sidebar-logo-minimize theme-light-show" />
+			<img alt="Logo" src="/assets/media/logos/Javidan-logo.webp" style="height:70px;margin-top:10px" class=" app-sidebar-logo-minimize theme-dark-show" />
+		</a>
+		<!--end::Logo image-->
+		<!--begin::Sidebar toggle-->
+		<!--begin::به حداقل رساندن sidebar setup:
+			if (isset($_COموفقIE["sidebar_minimize_state"]) && $_COموفقIE["sidebar_minimize_state"] === "on") {
+				1. "src/js/layout/sidebar.js" adds "sidebar_minimize_state" cookie value to save the sidebar minimize state.
+				2. Set data-kt-app-sidebar-minimize="on" attribute for body tag.
+				3. Set data-kt-toggle-state="active" attribute to the toggle element with "kt_app_sidebar_toggle" id.
+				4. افزودن "active" class to to sidebar toggle element with "kt_app_sidebar_toggle" id.
+			}
+		-->
+		<div id="kt_app_sidebar_toggle" class="app-sidebar-toggle btn btn-icon btn-shadow btn-sm btn-color-muted btn-active-color-primary h-30px w-30px position-absolute top-50 start-100 translate-middle rotate" data-kt-toggle="true" data-kt-toggle-state="active" data-kt-toggle-target="body" data-kt-toggle-name="app-sidebar-minimize">
+			<i class="ki-outline ki-black-left-line fs-3 rotate-180"></i>
+		</div>
+		<!--end::Sidebar toggle-->
+	</div>
+	<!--end::Logo-->
+	<!--begin::sidebar menu-->
+	<div style="margin-top:40px;margin-bottom:-40px" class="app-sidebar-menu overflow-hidden flex-column-fluid">
+		<!--begin::Menu wrapper-->
+		<div id="kt_app_sidebar_menu_wrapper" class="app-sidebar-wrapper">
+			<!--begin::Scroll wrapper-->
+			<div id="kt_app_sidebar_menu_scroll" class="scroll-y my-5 mx-3" data-kt-scroll="true" data-kt-scroll-activate="true" data-kt-scroll-height="auto" data-kt-scroll-dependencies="#kt_app_sidebar_logo, #kt_app_sidebar_footer" data-kt-scroll-wrappers="#kt_app_sidebar_menu" data-kt-scroll-offset="5px" data-kt-scroll-save-state="true">
+				<!--begin::Menu-->
+				<div class="menu menu-column menu-rounded menu-sub-indention fw-semibold fs-6" id="#kt_app_sidebar_menu" data-kt-menu="true" data-kt-menu-expand="false">
+
+					<div class="menu-item">
+						<!--begin:Menu link-->
+						<a class="menu-link" href="/">
+							<span class="menu-icon">
+								<i class="fa fa-home fs-2"></i>
+							</span>
+							<span class="menu-title">داشبورد</span>
+						</a>
+						<!--end:Menu link-->
+					</div>
+
+
+					<!--begin:Menu item-->
+					<div permissions="[SystemPermissions.UsersList,SystemPermissions.RolesList]" data-kt-menu-trigger="click" class="menu-item menu-accordion">
+						<!--begin:Menu link-->
+						<span class="menu-link">
+							<span class="menu-icon">
+								<i class="fa fa-users fs-2"></i>
+							</span>
+							<span class="menu-title">مدیریت کاربران</span>
+							<span class="menu-arrow"></span>
+						</span>
+						<!--end:Menu link-->
+						<!--begin:Menu sub-->
+						<div class="menu-sub menu-sub-accordion">
+							<!--begin:Menu item-->
+							<div permissions="[SystemPermissions.UsersList]" class="menu-item">
+								<!--begin:Menu link-->
+								<a class="menu-link" href="/AllUsers">
+									<span class="menu-bullet">
+										<span class="bullet bullet-dot"></span>
+									</span>
+									<span class="menu-title">مدیریت کاربران</span>
+								</a>
+								<!--end:Menu link-->
+							</div>
+							<!--end:Menu item-->
+							<!--begin:Menu item-->
+							<div permissions="[SystemPermissions.RolesList]" class="menu-item">
+								<!--begin:Menu link-->
+								<a class="menu-link" href="/AllRoles">
+									<span class="menu-bullet">
+										<span class="bullet bullet-dot"></span>
+									</span>
+									<span class="menu-title">مدیریت سطوح دسترسی</span>
+								</a>
+								<!--end:Menu link-->
+							</div>
+							<!--end:Menu item-->
+						</div>
+						<!--end:Menu sub-->
+					</div>
+					<!--end:Menu item-->
+					<!--begin:Menu item-->
+					<div permissions="[SystemPermissions.EmployeesList,SystemPermissions.CreateEmployee]" data-kt-menu-trigger="click" class="menu-item menu-accordion">
+						<!--begin:Menu link-->
+						<span class="menu-link">
+							<span class="menu-icon">
+								<i class="fas fa-user-edit fs-2"></i>
+							</span>
+							<span class="menu-title">مدیریت کارمندان</span>
+							<span class="menu-arrow"></span>
+						</span>
+						<!--end:Menu link-->
+						<!--begin:Menu sub-->
+						<div class="menu-sub menu-sub-accordion">
+							<!--begin:Menu item-->
+							<div permissions="[SystemPermissions.CreateEmployee]" class="menu-item">
+								<!--begin:Menu link-->
+								<a class="menu-link" href="/Employee/AddEmployee">
+									<span class="menu-bullet">
+										<span class="bullet bullet-dot"></span>
+									</span>
+									<span class="menu-title">اضافه کردن کارمند جدید</span>
+								</a>
+								<!--end:Menu link-->
+							</div>
+							<!--end:Menu item-->
+							<!--begin:Menu item-->
+							<div permissions="[SystemPermissions.EmployeesList]" class="menu-item">
+								<!--begin:Menu link-->
+								<a class="menu-link" href="/Employee/All">
+									<span class="menu-bullet">
+										<span class="bullet bullet-dot"></span>
+									</span>
+									<span class="menu-title">لیست کارمندان</span>
+								</a>
+								<!--end:Menu link-->
+							</div>
+							<!--end:Menu item-->
+						</div>
+						<!--end:Menu sub-->
+					</div>
+					<!--end:Menu item-->
+					
+
+					<!--begin:Menu item-->
+					<div class="menu-item">
+						<!--begin:Menu link-->
+						<a class="menu-link" href="/User/ChangePassword">
+							<span class="menu-icon">
+								<i class="fas fa-user-lock fs-2"></i>
+							</span>
+							<span class="menu-title">تغییر رمز عبور</span>
+						</a>
+						<!--end:Menu link-->
+					</div>
+					<!--end:Menu item-->
+
+				</div>
+				<!--end::Menu-->
+			</div>
+			<!--end::Scroll wrapper-->
+		</div>
+		<!--end::Menu wrapper-->
+	</div>
+	<!--end::sidebar menu-->
+	<!--begin::Footer-->
+	<div class="app-sidebar-footer flex-column-auto pt-2 pb-6 px-6" id="kt_app_sidebar_footer">
+		<a href="/logout" class="btn btn-flex flex-center btn-custom btn-primary overflow-hidden text-nowrap px-0 h-40px w-100">
+			<i class="fa fa-sign-out"></i>
+			<span class="btn-label"> خروج از حساب کاربری </span>
+		</a>
+	</div>
+	<!--end::Footer-->
+</div>

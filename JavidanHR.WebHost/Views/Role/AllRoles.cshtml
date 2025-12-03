@@ -1,0 +1,101 @@
+﻿@using AuthenticationSystem.SystemPermissions
+@model _0_Framework.Utilities.Pagination.PaginationResult<_0_Framework.DTO.RoleViewModel>
+
+@{
+    ViewData["title"] = "مدیریت سطوح دسترسی";
+}
+
+<div class="card mb-5 mb-xl-8">
+    <!--begin::Header-->
+    <div class="card-header border-0 pt-5">
+        <h3 class="card-title align-items-start flex-column">
+            <span class="card-label fw-bold fs-3 mb-1">لیست سطوح دسترسی</span>
+        </h3>
+        <div class="card-toolbar">
+            <button permissions="[SystemPermissions.AddNewRole]"  class="btn btn-sm btn-light-primary AddModalTrigger">
+                <i class="ki-duotone ki-plus fs-2"></i>سطح دسترسی جدید
+            </button>
+        </div>
+    </div>
+    <!--end::Header-->
+    <!--begin::Body-->
+    <div class="card-body py-3">
+        <!--begin::Table container-->
+        <div class="table-responsive">
+            <!--begin::Table-->
+            <table class="table align-middle gs-0 gy-4">
+                <!--begin::Table head-->
+                <thead>
+                <tr class="fw-bold text-muted bg-light">
+                    <th class="ps-4 min-w-125px rounded-start">نام سطح دسترسی</th>
+                    <th class="ps-4 min-w-125px rounded-start">تعداد کاربران</th>
+                    <th class="min-w-125px text-end rounded-end"> عملیات</th>
+                </tr>
+                </thead>
+                <!--end::Table head-->
+                <!--begin::Table body-->
+                <tbody>
+
+                @foreach (var item in Model.PaginatedList)
+                {
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="d-flex justify-content-start flex-column">
+                                    <span class="text-gray-900 fw-bold text-hover-primary mb-1 fs-6">@item.Name</span>
+                                </div>
+                            </div>
+                        </td>
+
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="d-flex justify-content-start flex-column">
+                                    <span class="text-gray-900 fw-bold text-hover-primary mb-1 fs-6">@item.UserCount کاربر</span>
+                                </div>
+                            </div>
+                        </td>
+
+
+                        <td class="text-end">
+                                <button permissions="[SystemPermissions.UpdateRole]" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1 EditModalTrigger" data-id="@item.Id">
+                                <i class="fa fa-edit fs-2"></i>
+                            </button>
+                            @if (item.Name != "پیش فرض")
+                            {
+                                <button permissions="[SystemPermissions.DeleteRole]" data-url="/DeleteRole/@item.Id" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm delete-button">
+                                    <i class="fa fa-trash fs-2"></i>
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+
+
+                </tbody>
+                <!--end::Table body-->
+            </table>
+            <!--end::Table-->
+            <pagination page-model="@Model"></pagination>
+        </div>
+        <!--end::Table container-->
+    </div>
+    <!--begin::Body-->
+</div>
+
+
+<div class="modal fade" id="AddRoleModal" tabindex="-1" aria-hidden="true" style="display: none;">
+</div>
+
+<div class="modal fade" id="UpdateRoleModal" tabindex="-1" aria-hidden="true" style="display: none;">
+</div>
+
+
+@section scripts
+{
+    <Simple-CU-Modal add-route="/AddRole" update-route="/UpdateRole"></Simple-CU-Modal>
+}
+
+@section SearchBox
+{
+    <searchBox search-query="@Model.SearchQuery"></searchBox>
+}

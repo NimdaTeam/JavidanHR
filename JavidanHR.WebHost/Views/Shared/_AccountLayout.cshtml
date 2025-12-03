@@ -1,0 +1,129 @@
+﻿<!DOCTYPE html>
+<html direction="rtl" dir="rtl" style="direction: rtl">
+<head>
+	<base href="../" />
+	<title>سامانه مدیریت منابع انسانی صندوق قرض الحسنه جاویدان</title>
+	<meta charset="utf-8" />
+	<meta name="description" content="https://Nimdateam.ir" />
+	<meta name="keywords" content="https://Nimdateam.ir" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<meta property="og:locale" content="en_US" />
+	<meta property="og:type" content="article" />
+	<meta property="og:title" content="سامانه مدیریت منابع انسانی صندوق قرض الحسنه جاویدان" />
+	<meta property="og:url" content="https://nimdateam.ir" />
+	<meta property="og:site_name" content="سامانه مدیریت منابع انسانی صندوق قرض الحسنه جاویدان" />
+	<link rel="shortcut icon" href="/assets/media/logos/Javidan-logo.webp" />
+
+	<link href="/assets/plugins/global/plugins.bundle.rtl.css" rel="stylesheet" type="text/css" />
+	<link href="/assets/css/style.bundle.rtl.css" rel="stylesheet" type="text/css" />
+	<link rel="stylesheet" href="/css/SweetAlert2.css">
+
+	<link href="/css/toastR.css" rel="stylesheet" />
+
+	<link href="/css/AccountLayout.css" rel="stylesheet" />
+
+	<script>// Frame-busting to prevent site from being loaded within a frame without permission (click-jacking) if (window.top != window.self) { window.top.location.replace(window.self.location.href); }</script>
+</head>
+
+<body id="kt_body" class="app-blank bgi-size-cover bgi-attachment-fixed bgi-position-center bgi-no-repeat">
+<!--begin::Theme mode setup on page load-->
+<script>
+		(() => {
+			const ROOT = document.documentElement;
+			if (!ROOT) return;
+
+			const saved = localStorage.getItem("data-bs-theme");
+			const attr = ROOT.getAttribute("data-bs-theme-mode");
+
+			let mode = attr || saved || "light";
+
+			if (mode === "system") {
+				mode = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+			}
+
+			ROOT.setAttribute("data-bs-theme", mode);
+		})();
+	</script>
+<!--end::Theme mode setup on page load-->
+	@* <div class="d-flex flex-column flex-root" id="kt_app_root">
+ *@
+		<style>
+			body {
+				background-image: url('/assets/media/main.webp');
+			}
+
+			[data-bs-theme="dark"] body {
+				background-image: url('/assets/media/main.webp');
+			}</style>
+
+		@* <div class="d-flex flex-column flex-column-fluid ">
+ *@
+			@* <div class="d-flex flex-column-fluid justify-content-center justify-content-center "> *@
+
+				@RenderBody()
+
+			@* </div>
+
+		</div> *@
+
+	@* </div> *@
+
+	<script>var hostUrl = "/assets/";</script>
+
+	<script src="/assets/plugins/global/plugins.bundle.js"></script>
+	<script src="/assets/js/scripts.bundle.js"></script>
+
+	@* <script src="/assets/js/custom/authentication/sign-in/general.js"></script>  *@
+
+	<script src="/js/SweetAlert2.js"></script>
+
+	<script src="/js/toastR.js"></script>
+	<script>
+		function showToastNotification(title, message, icon = 'success') {
+			Swal.fire({
+				title: title,
+				text: message,
+				icon: icon,
+				confirmButtonText: 'باشه',
+				timer: 3000
+			});
+		}
+
+		// Function to check and show notification if any are available in the TempData
+		$(document).ready(function () {
+
+			toastr.options = {
+				"closeButton": false,
+				"progressBar": true,
+				"positionClass": "toast-top-center",
+				"timeOut": "5000"
+			};
+
+		@if (TempData["NotifText"] != null)
+		{
+			if (@TempData["NotifIcon"]!.ToString() == "success")
+			{
+				<text>
+									var title = '@TempData["NotifTitle"]';
+									var notification = '@Html.Raw(TempData["NotifText"])';
+
+									toastr.success(notification);
+				</text>
+			}
+			else
+			{
+				<text>
+									var title = '@TempData["NotifTitle"]';
+									var notification = '@Html.Raw(TempData["NotifText"])';
+
+									toastr.error(notification);
+				</text>
+			}
+
+		}
+		});
+	</script>
+	@RenderSection("scripts", false)
+</body>
+
+</html>

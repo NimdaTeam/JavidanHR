@@ -1,0 +1,202 @@
+﻿@using _0_Framework.Utilities.Helpers
+@model _0_Framework.DTO.Print_Report.PrintReportViewModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water and Sewage Report</title>
+
+    <!-- Vazir Font from jsDelivr CDN -->
+    <link href="/assets/plugins/global/plugins.bundle.rtl.css" rel="stylesheet" type="text/css" />
+    <link href="/assets/css/style.bundle.rtl.css" rel="stylesheet" type="text/css" />
+
+    <link rel="stylesheet" href="/css/ReportPrint.css">
+    <style>
+        body {
+            font-family: 'Vazirmatn', sans-serif; /* Ensure Vazir font is applied */
+            direction: rtl; /* Set text direction to RTL */
+            text-align: center; /* Center all content */
+        }
+
+        .logo-section {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .logo {
+            max-width: 100px;
+        }
+
+        .report-container {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+
+        .report-info {
+            margin-bottom: 20px;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+            .info-item .label {
+                font-weight: bold;
+            }
+
+        .report-content {
+            margin-top: 20px;
+        }
+
+        /* Bootstrap container for table */
+        .report-table-container {
+            width: 90%; /* You can adjust the width as needed */
+            margin: 0 auto;
+        }
+
+        table.report-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        .pagination {
+            margin-top: 20px;
+        }
+
+        .page-number {
+            font-weight: bold;
+        }
+
+        /* Floating Print Button */
+        .floating-print-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #aeaeae;
+            color: black;
+            padding: 15px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+        }
+
+            .floating-print-btn:hover {
+                background-color: black;
+                color: white
+            }
+    </style>
+</head>
+<body>
+    <div class="report-container">
+        <!-- Logo Section -->
+        <div class="logo-section">
+            <img src="/assets/media/logos/default-small.png" alt="Logo" class="logo">
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped text-center">
+                <tr>
+                    <td colspan="2">
+                        <h2>سامانه جامع آماری شهرستان سبزوار </h2>
+                    </td>
+                </tr>
+                <tr>
+                    <td>تاریخ گزارش</td>
+                    <td><h5>@DateTime.Now.ToShamsiWithTime() </h5></td>
+                </tr>
+                <tr>
+                    <td>زیر سیستم  </td>
+                    <td>
+                        <h5> @Model.SubSystemTitle</h5>
+                    </td>
+
+                </tr>
+                <tr>
+                    <td>نام گزارش</td>
+                    <td><h5>@Model.ReportTitle </h5></td>
+                </tr>
+                <tr>
+                    <td>منطقه</td>
+                    <td><h5>@Model.ReportCity</h5> </td>
+                </tr>
+                <tr>
+                    <td>سال</td>
+                    <td><h5>@Model.ReportYear</h5> </td>
+                </tr>
+                <tr>
+                    <td>ماه</td>
+                    <td><h5>@Model.ReportMonth </h5></td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Report Content -->
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped text-center">
+                <thead>
+                    <tr>
+                        <th>عنوان</th>
+                        <th>واحد</th>
+                        @if (!string.IsNullOrWhiteSpace(Model.FirstValueTableHeader))
+                        {
+                            <th>@Model.FirstValueTableHeader</th>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(Model.SecondValueTableHeader))
+                        {
+                            <th>@Model.SecondValueTableHeader</th>
+                        }
+
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Model.Rows)
+                    {
+                        <tr>
+                            <td>@r.Label</td>
+                            <td>@r.Unit</td>
+                            @if (!string.IsNullOrWhiteSpace(r.FirstValue))
+                            {
+                                <td><b>@(decimal.TryParse(r.FirstValue, out decimal firstVal) ? firstVal.ToString("N0") : r.FirstValue)</b></td>
+
+                            }
+                            @if (!string.IsNullOrWhiteSpace(r.SecondValue))
+                            {
+                                <td>
+                                    <b>@(decimal.TryParse(r.SecondValue, out decimal secondVal) ? secondVal.ToString("N0") : r.SecondValue)</b>
+                                </td>
+                            }
+
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Floating Print Button -->
+    <button class="floating-print-btn" onclick="window.print()">
+        <i class="fa fa-print"></i>  چاپ گزارش
+    </button>
+
+</body>
+</html>

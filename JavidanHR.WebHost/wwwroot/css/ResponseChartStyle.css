@@ -1,0 +1,36 @@
+﻿.chart-container * {
+    font-family: IRANSansFaNum !important;
+    text-align: center !important;
+}
+
+.chart-container {
+    width: 100%;
+    direction: rtl;
+}
+
+.chart-div {
+    width: 100% !important;
+    height: 500px !important;
+}
+
+/* مخفی کردن سایر بخش‌ها در هنگام چاپ */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+
+    .card.mb-5.mb-xl-8, .card.mb-5.mb-xl-8 * {
+        visibility: visible;
+    }
+
+    .card.mb-5.mb-xl-8 {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+    }
+    /* مخفی کردن دکمه‌های دانلود و چاپ در هنگام چاپ */
+    .text-center.mb-3 {
+        display: none;
+    }
+}

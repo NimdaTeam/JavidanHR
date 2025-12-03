@@ -1,0 +1,124 @@
+﻿/* General styling */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+/* Report container */
+.report-container {
+    width: 100%;
+    max-width: 210mm;
+    margin: 0 auto;
+    padding: 10mm;
+    box-sizing: border-box;
+    /*page-break-before: always;*/
+}
+
+/* Logo section */
+.logo-section {
+    text-align: center;
+    margin-bottom: 20mm;
+}
+
+.logo {
+    max-width: 100px;
+    height: auto;
+}
+
+/* Report Info section */
+.report-info {
+    text-align: left;
+    margin-bottom: 15mm;
+}
+
+.info-item {
+    margin-bottom: 5mm;
+}
+
+.label {
+    font-weight: bold;
+}
+
+.value {
+    margin-left: 5mm;
+}
+
+/* Report content (table) */
+.report-content {
+    width: 100%;
+    margin-top: 15mm;
+    page-break-inside: auto;
+}
+
+.report-table-container {
+    width: 90%;
+    margin: 0 auto;
+}
+
+table.report-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.report-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 15mm;
+}
+
+    .report-table th, .report-table td {
+        border: 1px solid #000;
+        padding: 5mm;
+        text-align: center;
+    }
+
+    .report-table th {
+        background-color: #f2f2f2;
+        font-weight: bold;
+    }
+
+.page-number {
+    font-size: 14pt;
+}
+
+/* Media queries for page breaks */
+@media print {
+    @page {
+        size: A4 !important; /* Force A4 paper size */
+        margin: 10mm;
+    }
+
+    .floating-print-btn, .floating-excel-btn, .floating-pdf-btn, .sa-visualizer__toolbar, .modebar, .sa-toolbar {
+        display: none !important;
+    }
+
+    .chart-div, .sv-visualization-panel {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+/*    body * {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+    }*/
+
+    .sv-chart {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .sv-question {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .sa-question-layouted * {
+        page-break-inside: avoid !important;
+    }
+
+    .sv-chart {
+        min-height: 300px;
+    }
+}

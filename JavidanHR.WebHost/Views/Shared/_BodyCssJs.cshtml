@@ -1,0 +1,65 @@
+﻿<!--begin::Javascript-->
+<script nonce="@Context.Items["ScriptNonce"]">var hostUrl = "/assets/";</script>
+<!--begin::Global Javascript Bundle(mandatory for all pages)-->
+<script src="/assets/plugins/global/plugins.bundle.js" nonce="@Context.Items["ScriptNonce"]"></script>
+<script src="/assets/js/scripts.bundle.js" nonce="@Context.Items["ScriptNonce"]"></script>
+<script src="/assets/js/widgets.bundle.js"></script>
+<script src="/assets/js/custom/apps/chat/chat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- SurveyJS Form Library resources -->
+<script src="/assets/survey/survey.core.min.js"></script>
+ <script src="/assets/survey/survey-js-ui.min.js"></script>
+<!-- (Optional) Predefined theme configurations -->
+<script src="/assets/survey/index.min.js"></script>
+<!-- Survey Creator resources -->
+<script src="/assets/survey/survey-creator-core.min.js"></script>
+<script src="/assets/survey/persian.js"></script>
+<script src="/assets/survey/survey-creator-js.min.js"></script>
+
+<script src="~/assets/survey/plotly.min.js"></script>
+
+
+
+<script src="/js/toastR.js" nonce="@Context.Items["ScriptNonce"]"></script>
+<script nonce="@Context.Items["ScriptNonce"]">
+	function showToastNotification(title, message, icon = 'success') {
+		Swal.fire({
+			title: title,
+			text: message,
+			icon: icon,
+			confirmButtonText: 'باشه',
+			timer: 3000
+		});
+	}
+	// Function to check and show notification if any are available in the TempData
+	$(document).ready(function () {
+
+		toastr.options = {
+			"closeButton": false,
+			"progressBar": true,
+			"positionClass": "toast-top-center",
+			"timeOut": "5000"
+		};
+
+	@if (TempData["NotifText"] is not null)
+	{
+		if (TempData["NotifIcon"]!.ToString() == "success")
+		{
+			<text>
+												var title = '@TempData["NotifTitle"]';
+												var notification = '@Html.Raw(TempData["NotifTitle"])';
+												toastr.success(notification);
+			</text>
+		}
+		else
+		{
+			<text>
+												var title = '@TempData["NotifTitle"]';
+												var notification = '@Html.Raw(TempData["NotifTitle"])';
+												toastr.error(notification);
+			</text>
+		}
+	}
+	});
+</script>
+

@@ -1,0 +1,69 @@
+﻿@using AuthenticationSystem.SystemPermissions
+@using WebHost.Helpers.GlobalHelpers
+@{
+	ViewData["Title"] = "داشبورد";
+}
+
+<div style="border-radius:12px;box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;padding:20px;overflow-y:scroll">
+	<!--begin::Sidebar nav-->
+	<!--begin::Nav wrapper-->
+	<div class="d-flex flex-column px-8 px-lg-10 hover-scroll-y">
+		<!--begin::پردازش-->
+		<div class="d-flex align-items-center flex-column w-100 mb-4">
+			<div class="d-flex justify-content-between fw-bolder fs-6 text-gray-800 w-100 mt-auto">
+				<span>خدمات در دسترس</span>
+			</div>
+		</div>
+		<hr class="border border-gray-300 border-dashed rounded mb-4" />
+		<!--end::پردازش-->
+		<!--begin::Stats-->
+		<div class="row g-4 mb-8 mb-lg-10">
+			<!--begin::Stat-->
+			<div permissions="[SystemPermissions.UsersList]" class="col-12 col-md-6 col-lg-4">
+				<a href="/AllUsers" class="btn btn-icon btn-outline btn-bg-light btn-active-light-primary btn-flex flex-column flex-center w-100 h-150px border-gray-200 mb-3" data-kt-button="true">
+					<span class="mb-2">
+						<i class="fa fa-users fs-1"></i>
+					</span>
+					<span class="fs-7 fw-bold">مدیریت کاربران</span>
+				</a>
+			</div>
+			<div permissions="[SystemPermissions.RolesList]" class="col-12 col-md-6 col-lg-4">
+				<a href="/AllRoles" class="btn btn-icon btn-outline btn-bg-light btn-active-light-primary btn-flex flex-column flex-center w-100 h-150px border-gray-200 mb-3" data-kt-button="true">
+					<span class="mb-2">
+						<i class="fas fa-user-cog fs-1"></i>
+					</span>
+					<span class="fs-7 fw-bold">مدیریت نقش های کاربری</span>
+				</a>
+			</div>
+			 <div permissions="[SystemPermissions.CreateEmployee]" class="col-12 col-md-6 col-lg-4">
+				<a href="/Employee/AddEmployee" class="btn btn-icon btn-outline btn-bg-light btn-active-light-primary btn-flex flex-column flex-center w-100 h-150px border-gray-200 mb-3" data-kt-button="true">
+					<span class="mb-2">
+						<i class="fas fa-user-plus	 fs-1"></i>
+					</span>
+					<span class="fs-7 fw-bold">افزودن کارمند جدید</span>
+				</a>
+			</div>
+			<div permissions="[SystemPermissions.EmployeesList]" class="col-12 col-md-6 col-lg-4">
+				<a href="/Employee/All" class="btn btn-icon btn-outline btn-bg-light btn-active-light-primary btn-flex flex-column flex-center w-100 h-150px border-gray-200 mb-3" data-kt-button="true">
+					<span class="mb-2">
+						<i class="fas fa-user-friends  fs-1"></i>
+					</span>
+					<span class="fs-7 fw-bold">لیست کارمندان</span>
+				</a>
+			</div>
+	
+			
+			<div  class="col-12 col-md-6 col-lg-4">
+				<a href="/User/ChangePassword" class="btn btn-icon btn-outline btn-bg-light btn-active-light-primary btn-flex flex-column flex-center w-100 h-150px border-gray-200 mb-3" data-kt-button="true">
+					<span class="mb-2">
+						<i class="fas fa-user-lock fs-1"></i>
+					</span>
+					<span class="fs-7 fw-bold">تغییر کلمه عبور</span>
+				</a>
+			</div>
+		</div>
+		<!--end::Stats-->
+	</div>
+	<!--end::Nav wrapper-->
+	<!--end::Sidebar nav-->
+</div>

@@ -1,0 +1,130 @@
+﻿/* استایل‌های مخصوص موبایل برای صفحه لاگین */
+@media (max-width: 576px) {
+    /* غیرفعال کردن اسکرول در کل صفحه */
+    html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        overflow: hidden !important; /* جلوگیری از اسکرول */
+
+        background-color: #ffffff !important; /* پس‌زمینه سفید */
+    }
+
+    /* تنظیم والدهای خارجی برای حذف پدینگ و حاشیه */
+    .d-flex.flex-column.flex-root,
+    .d-flex.flex-column-fluid.flex-lg-row,
+    .d-flex.flex-column-fluid.flex-lg-row-auto {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* تمام‌صفحه کردن باکس لاگین */
+    .bg-body {
+        width: 100vw !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
+        margin: 0 !important;
+        padding: 15px !important;
+        border-radius: 0 !important;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden !important; /* جلوگیری از اسکرول داخلی */
+    }
+
+    /* تنظیم wrapper داخلی */
+    .d-flex.flex-center.flex-column.flex-column-fluid {
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* تنظیم لوگو */
+    img[alt="Logo"] {
+        max-width: 100px !important; /* کوچکتر کردن لوگو */
+        height: auto !important;
+    }
+
+    /* تنظیم عنوان */
+    h1.text-center {
+        font-size: 1.3rem !important;
+        margin-top: 8px !important;
+        margin-bottom: 10px !important;
+        white-space: nowrap;
+    }
+
+    /* تنظیم هدینگ ورود */
+    h3.text-gray-900 {
+        font-size: 1.1rem !important;
+        margin-bottom: 8px !important;
+    }
+
+    /* تنظیم متن راهنما */
+    .fw-bold.text-start.text-gray-900.fs-6 {
+        font-size: 0.9rem !important;
+    }
+
+    /* تنظیم ورودی‌های OTP */
+    .otp-container {
+        display: flex;
+        flex-wrap: nowrap;
+        justify-content: center;
+        width: 100% !important;
+        max-width: 90% !important; /* محدود کردن عرض برای جلوگیری از سرریز */
+        margin: auto !important;
+    }
+
+        .otp-container .otp-input {
+            width: 30px !important; /* کوچکتر کردن ورودی‌ها */
+            height: 30px !important;
+            font-size: 14px !important;
+            margin: 0 1px !important;
+            padding: 0 !important;
+            text-align: center;
+        }
+
+    /* تنظیم دکمه ورود */
+    .btn.btn-primary {
+        width: 90% !important;
+        max-width: 300px !important;
+        font-size: 0.95rem !important;
+        padding: 8px !important;
+        margin: 0 auto !important;
+    }
+
+    /* تنظیم فوتر */
+    .text-center.fw-semibold.fs-5 {
+        font-size: 0.8rem !important;
+        margin-top: 10px !important;
+        margin-bottom: 10px !important;
+        line-height: 1.2 !important;
+    }
+
+  
+
+    /* اطمینان از عدم سرریز فرم */
+    .form.w-100 {
+        width: 90% !important;
+        max-width: 400px !important;
+        margin: 0 auto !important;
+    }
+
+    .form w-100 {
+        margin-top: -100px !important;
+    }
+}

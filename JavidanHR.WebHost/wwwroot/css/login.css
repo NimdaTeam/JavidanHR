@@ -1,0 +1,408 @@
+﻿
+.otp-container {
+    direction: ltr; /* Ensure the OTP inputs are left-to-right */
+}
+
+@media only screen and (max-width: 768px) {
+    .otp-input {
+        width: 30px;
+        padding: 5px;
+        font-size: 14px;
+        text-align: center;
+        margin: 0 1px;
+        border: 2px dashed #ced4da;
+        border-radius: 4px;
+        transition: border-color 0.3s;
+    }
+}
+
+@media only screen and (min-width: 768px) {
+    .otp-input {
+        width: 42px;
+        padding: 5px;
+        font-size: 16px;
+        text-align: center;
+        margin: 0 1px;
+        border: 2px dashed #ced4da;
+        border-radius: 4px;
+        transition: border-color 0.3s;
+    }
+}
+
+.otp-input:focus {
+    border-color: #80bdff;
+    outline: none;
+}
+
+.otp-input.invalid {
+    border-color: red;
+}
+
+.otp-input.valid {
+    border-color: green;
+}
+
+#resendBtn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Additional Styles for RTL */
+body {
+    direction: rtl; /* Ensure the rest of the page is RTL */
+}
+
+/* Optional: Adjust button and timer alignment */
+.resend-section {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+    .resend-section button {
+        margin-left: 10px;
+    }
+
+
+
+    /* login page */
+.phone-wrapper {
+    background: rgb(255,255,255,0.1) !important;
+    overflow: hidden;
+    border-radius: 16px;
+    background: #f8f9fa;
+    padding: 12px 8px;
+    margin: 16px 0;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.phone-container {
+    display: flex;
+    justify-content: center;
+    gap: 9px;
+    direction: ltr;
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 8px 12px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap !important;
+}
+
+    .phone-container::-webkit-scrollbar {
+        display: none;
+    }
+
+.phone-prefix, .phone-digit {
+    flex: 0 0 auto;
+    width: 46px;
+    height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.45rem;
+    font-weight: 700;
+    border: 2.5px solid #a1cffe;
+    border-radius: 10px;
+    background: #f1faff;
+    color: #3699ff;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.phone-prefix {
+    background: #e3f2ff;
+    border-color: #3699ff;
+    color: #1e40af;
+    font-weight: 800;
+}
+
+.phone-digit {
+    background: #ffffff;
+    border-color: #d1d5db;
+    color: #4b5563;
+    cursor: pointer;
+}
+
+    .phone-digit.filled {
+        background: #f1faff;
+        border-color: #3699ff;
+        color: #1e40af;
+    }
+
+    .phone-prefix.valid-all,
+    .phone-digit.valid-all {
+        background: #ecfdf5 !important;
+        border-color: #10b981 !important;
+        color: #065f46 !important;
+        box-shadow: 0 0 12px rgba(16, 185, 129, 0.3) !important;
+    }
+
+    .phone-digit.current {
+        border-color: #3b82f6 !important;
+        background: #eff6ff !important;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3) !important;
+        animation: glow 1.8s infinite;
+    }
+
+@keyframes glow {
+    0%, 100% {
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3);
+    }
+
+    50% {
+        box-shadow: 0 0 0 10px rgba(59, 130, 246, 0.1);
+    }
+}
+
+.phone-hidden-input {
+    position: fixed;
+    top: -999px;
+    left: -999px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* موبایل: کاملاً جا میشه، بدون اسکرول */
+@media (max-width: 480px) {
+    .phone-prefix, .phone-digit {
+        width: 24px;
+        height: 30px;
+        font-size: 1.3rem;
+        border-width: 1px;
+        border-radius: 7px !important;
+    }
+
+    .phone-container {
+        gap: 4px;
+        padding: 8px 8px;
+    }
+
+    .phone-wrapper {
+        padding: 10px 6px;
+        margin: 12px -12px;
+    }
+}
+
+
+
+
+
+.login-card {
+    background: rgba(0, 0, 0, 0.22);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(18px);
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    padding: 40px 30px;
+    max-width: 800px;
+    width: 100%;
+    margin: auto;
+}
+
+@media (max-width: 768px) {
+    .login-card {
+        padding: 30px 0px;
+        border-radius: 20px;
+        margin: 10px;
+    }
+
+
+    .login-overlay {
+        padding: 1px !important;
+    }
+
+
+    .headerh1{
+        font-size:18px !important;
+    }
+}
+
+/* فوتر مدرن و یک خطه */
+.modern-footer {
+    margin-top: 20px;
+    font-size: 0.9rem;
+    color: #a1a5b7;
+    text-align: center;
+}
+
+    .modern-footer a {
+        color: #3699ff;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s;
+    }
+
+        .modern-footer a:hover {
+            color: #1e40af;
+            text-decoration: underline;
+        }
+
+/* بک‌گراند کمی تیره‌تر برای جلوه بهتر شیشه‌ای */
+.login-overlay {
+    background: linear-gradient(135deg, rgba(0,0,0,0.3), rgba(0,0,0,0.1));
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+
+
+
+.forgot-password {
+    color: #4FC3F7 !important;
+    font-weight: 600 !important;
+    text-decoration: none !important;
+    transition: all 0.25s ease !important;
+}
+
+    .forgot-password:hover, .forgot-password:focus {
+        color: #B3E5FC !important;
+        text-decoration: underline !important;
+        text-decoration-thickness: 2px !important;
+        text-underline-offset: 3px !important;
+    }
+
+
+.login-btn-primary {
+    background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 50%, #60A5FA 100%) !important;
+    border: none !important;
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
+    border-radius: 18px !important;
+    padding: 16px 40px !important;
+    box-shadow: 0 8px 30px rgba(59, 130, 246, 0.5) !important;
+    transition: all 0.3s ease !important;
+    max-width: 250px !important;
+}
+
+    .login-btn-primary:hover,
+    .login-btn-primary:focus {
+        background: linear-gradient(135deg, #1D4ED8 0%, #2563EB 100%) !important;
+        transform: translateY(-4px) !important;
+        box-shadow: 0 14px 40px rgba(59, 130, 246, 0.6) !important;
+    }
+
+/* دکمه ثانویه – آبی خیلی روشن و شیشه‌ای (کاملاً مشخصه که ثانویه‌ست) */
+.login-btn-secondary {
+    background: rgba(255, 255, 255, 0.15) !important;
+    backdrop-filter: blur(12px) !important;
+    color: #93C5FD !important;
+    border: 2.5px solid #93C5FD !important;
+    font-weight: 700 !important;
+    border-radius: 18px !important;
+    padding: 14px 40px !important;
+    transition: all 0.3s ease !important;
+    max-width: 250px !important;
+}
+
+    .login-btn-secondary:hover,
+    .login-btn-secondary:focus {
+        background: rgba(147, 197, 253, 0.25) !important;
+        color: #FFFFFF !important;
+        border-color: #60A5FA !important;
+        transform: translateY(-3px) !important;
+    }
+
+
+.login-btn-primary,
+.login-btn-secondary {
+    width: auto !important; /* مهم‌ترین خط */
+    min-width: 280px; /* حداقل عرض که روی موبایل هم خوب باشه */
+    max-width: 420px; /* حداکثر، که کش نیاد */
+    margin: 0 auto !important; /* وسط چین بشه */
+    display: block !important;
+}
+
+.color-white{
+    color:white;
+}
+
+#passwordInput,
+.form-control
+{
+    background: rgba(255, 255, 255, 0.12) !important; /* شیشه‌ای خیلی ملایم */
+    backdrop-filter: blur(12px) !important;
+    border: 2px solid rgba(255, 255, 255, 0.18) !important;
+    border-radius: 16px !important;
+    color: #FFFFFF !important;
+    font-size: 1.1rem !important;
+    text-align: center !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15) !important;
+}
+
+.phone-digit {
+    background: rgba(255, 255, 255, 0.12) !important; /* شیشه‌ای خیلی ملایم */
+    backdrop-filter: blur(12px) !important;
+    border: 2px solid rgba(255, 255, 255, 0.18) !important;
+    border-radius: 10px;
+    color: #FFFFFF !important;
+    font-size: 1.45rem !important;
+    text-align: center !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15) !important;
+}
+    /* وقتی فوکوس می‌کنه (کاربر داره تایپ می‌کنه) */
+    #passwordInput:focus,
+    .form-control:focus {
+        background: rgba(255, 255, 255, 0.22) !important;
+        border-color: #60A5FA !important;
+        box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.25) !important;
+        outline: none !important;
+    }
+
+    /* placeholder هم سفید و کمی شفاف باشه */
+    #passwordInput::placeholder {
+        color: rgba(255, 255, 255, 0.6) !important;
+    }
+
+
+
+.phone-container.valid-all .phone-prefix,
+.phone-container.valid-all .phone-digit {
+    background: rgba(52, 211, 153, 0.25) !important;
+    border-color: #34D399 !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 0 12px rgba(52, 211, 153, 0.4) !important;
+}
+
+
+
+.password-strength-bar {
+    width: 50px;
+    height: 6px;
+    background: rgb(159, 159, 159);
+    border-radius: 3px;
+    transition: background 0.3s;
+}
+
+    .password-strength-bar.active.danger {
+        background: #ef4444;
+    }
+
+    .password-strength-bar.active.warning {
+        background: #f59e0b;
+    }
+
+    .password-strength-bar.active.success {
+        background: #10b981;
+    }
+
+
+#forgotPasswordBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed !important;
+    pointer-events: auto !important; 
+}
+
+#forgotPasswordBtn:not(:disabled) {
+    opacity: 1;
+    cursor: pointer;
+}
+

@@ -1,0 +1,258 @@
+﻿@using _0_Framework.Utilities.Helpers
+@using AuthenticationSystem.SystemPermissions
+@using HrSystem.Domain.Entities
+@using Microsoft.AspNetCore.Mvc.TagHelpers
+@model HrSystem.Application.DTO.EmployeeDetailsVM
+@{
+    ViewData["Title"] = $"جزئیات کارمند: {Model.FullName}";
+    var completion = Model.ProfileCompletionPercentage;
+    var isActive = Model.IsActive;
+}
+
+<div class="card mb-5 mb-xl-8">
+    <!--begin::Header-->
+    <div class="card-header border-0 pt-5">
+        <h3 class="card-title align-items-start flex-column">
+            <span class="card-label fw-bold fs-3 mb-1">جزئیات کارمند</span>
+            <span class="text-muted fw-semibold fs-6">
+                @Model.EmployeeCode - @Model.FullName
+                @if (!isActive)
+                {
+                    <span class="badge badge-danger ms-3">غیرفعال / ترک کار کرده</span>
+                }
+                else if (Model.RetirementStatus == RetirementStatus.Retired)
+                {
+                    <span class="badge badge-warning ms-3">بازنشسته</span>
+                }
+            </span>
+        </h3>
+        <div class="card-toolbar">
+            <a permissions="[SystemPermissions.EmployeesList]" asp-action="AllEmployees" class="btn btn-sm btn-light me-3">
+                <i class="ki-duotone ki-arrow-left fs-2"></i> بازگشت
+            </a>
+        </div>
+    </div>
+    <!--end::Header-->
+
+    <!--begin::Body-->
+    <div class="card-body py-6">
+
+        <!-- درصد تکمیل پروفایل -->
+        <div class="notice d-flex bg-light-primary rounded border-primary border border-dashed mb-8 p-6">
+            <div class="d-flex flex-stack flex-grow-1">
+                <div class="fw-bold">
+                    <div class="fs-6 text-gray-700">تکمیل اطلاعات باعث بهبود گزارش‌گیری و مدیریت بهتر می‌شود.</div>
+                </div>
+                <div class="d-flex align-items-center">
+                    <div class="w-250px">
+                        <div class="d-flex align-items-center">
+                            <span class="fs-3 fw-bolder text-primary me-3">@completion%</span>
+                            <div class="progress h-8px flex-grow-1 bg-light-primary">
+                                <div class="progress-bar rounded @(completion >= 90 ? "bg-success" : completion >= 70 ? "bg-warning" : "bg-danger")"
+                                     style="width: @completion%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-8">
+
+            <!-- مرحله ۱: اطلاعات هویتی -->
+            <div class="col-lg-6">
+                <div class="card card-dashed h-100">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="ki-duotone ki-profile-user fs-2 text-primary"></i> اطلاعات هویتی</h3>
+
+                        <div class="card-toolbar">
+	                        @if (!Model.Step1Completed)
+	                        {
+		                        <span class="badge badge-danger me-2">ناتمام</span>
+	                        }
+                            <a permissions="[SystemPermissions.CreateEmployee]" asp-action="AddEmployee" asp-route-employeeId="@Model.Id" asp-route-isUpdating="true"
+	                           class="btn btn-sm btn-light-primary"><i class="ki-duotone ki-pencil"></i> ویرایش</a>
+                        </div>
+                        
+                    </div>
+                    <div class="card-body text-center">
+                        <div class="mb-6">
+                            <img style="border-radius:5px !important;max-height:100px" src="@(string.IsNullOrEmpty(Model.ProfileImageUrl) ? "/assets/media/avatars/blank.png" : "/uploads/Employees/" + Model.ProfileImageUrl)"
+                                 alt="@Model.FullName" class=" object-fit-cover" />
+                        </div>
+                        <h4 class="fw-bold">@Model.FullName</h4>
+                        <div class="badge badge-light-primary fs-7 mb-6">کد کارمندی: @Model.EmployeeCode</div>
+
+                        <table class="table table-borderless">
+                            <tr><td class="text-start fw-bold text-gray-600">کد ملی:</td><td>@Model.NationalCode</td></tr>
+                            <tr><td class="text-start fw-bold text-gray-600">تاریخ تولد:</td><td>@Model.PersianBirthDate (@Model.Age سال)</td></tr>
+                            <tr><td class="text-start fw-bold text-gray-600">جنسیت:</td><td>@Model.GenderDisplay</td></tr>
+                            <tr><td class="text-start fw-bold text-gray-600">وضعیت تأهل:</td><td>@Model.MaritalStatusDisplay</td></tr>
+                            <tr><td class="text-start fw-bold text-gray-600">تعداد فرزند:</td><td>@(Model.ChildrenCount == 0 ? "ندارد" : Model.ChildrenCount + " نفر")</td></tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- مرحله ۲: اطلاعات تماس -->
+            <div class="col-lg-6">
+                <div class="card card-dashed h-100 @(Model.Step2Completed ? "" : "border-danger")">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="ki-duotone ki-phone fs-2 @(Model.Step2Completed ? "text-success" : "text-danger")"></i>
+                            اطلاعات تماس
+                        </h3>
+                        <div class="card-toolbar">
+                            @if (!Model.Step2Completed)
+                            {
+                                <span class="badge badge-danger me-2">ناتمام</span>
+                            }
+                            <a permissions="[SystemPermissions.EditEmployeeContactInfo]" asp-action="AddContactInformationToEmployee" asp-route-employeeId="@Model.Id"
+                               class="btn btn-sm @(Model.Step2Completed ? "btn-light-primary" : "btn-danger")">
+                                @(Model.Step2Completed ? "ویرایش" : "تکمیل کنید")
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-borderless">
+                            <tr><td class="fw-bold text-gray-600">شماره همراه:</td><td>@(Model.PhoneNumber ?? "وارد نشده")</td></tr>
+                            <tr><td class="fw-bold text-gray-600">ایمیل:</td><td>@(Model.Email ?? "وارد نشده")</td></tr>
+                            <tr><td class="fw-bold text-gray-600">آدرس:</td><td>@(Model.Address ?? "وارد نشده")</td></tr>
+                            <tr><td class="fw-bold text-gray-600">تماس اضطراری:</td>
+                                <td>@(string.IsNullOrEmpty(Model.EmergencyContactName) ? "ثبت نشده" : $"{Model.EmergencyContactName} - {Model.EmergencyContactPhone}")</td></tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- مرحله ۳: اطلاعات سازمانی -->
+            <div class="col-lg-6">
+                <div class="card card-dashed h-100 @(Model.Step3Completed ? "" : "border-danger")">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="ki-duotone ki-building fs-2 @(Model.Step3Completed ? "text-success" : "text-danger")"></i>
+                            اطلاعات سازمانی
+                        </h3>
+                        <div class="card-toolbar">
+                                @if (!Model.Step3Completed)
+                            {
+                                <span class="badge badge-danger me-2">ناتمام</span>
+                            }
+                            <a permissions="[SystemPermissions.EditEmployeeOrganizationalInfo]" asp-action="AddOrganizationalInformationToEmployee" asp-route-employeeId="@Model.Id"
+                               class="btn btn-sm @(Model.Step3Completed ? "btn-light-primary" : "btn-danger")">
+                                @(Model.Step3Completed ? "ویرایش" : "تکمیل کنید")
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-borderless">
+                            <tr><td class="fw-bold text-gray-600">واحد:</td><td>@(Model.Department ?? "وارد نشده")</td></tr>
+                            <tr><td class="fw-bold text-gray-600">پست:</td><td>@(Model.Position ?? "وارد نشده")</td></tr>
+                            <tr><td class="fw-bold text-gray-600">مدرک:</td><td>@Model.EducationLevelDisplay</td></tr>
+                            <tr><td class="fw-bold text-gray-600">رشته:</td><td>@(Model.FieldOfStudy ?? "—")</td></tr>
+                            <tr><td class="fw-bold text-gray-600">نوع قرارداد:</td><td>@Model.ContractTypeDisplay</td></tr>
+                            <tr><td class="fw-bold text-gray-600">نوع همکاری:</td><td>@Model.CooperationTypeDisplay</td></tr>
+                            <tr><td class="fw-bold text-gray-600">تاریخ استخدام:</td><td>@Model.PersianHireDate (@Model.WorkExperienceYears سال سابقه)</td></tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- مرحله ۴: اطلاعات مالی -->
+            <div class="col-lg-6">
+                <div class="card card-dashed h-100 @(Model.Step4Completed ? "" : "border-danger")">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="ki-duotone ki-wallet fs-2 @(Model.Step4Completed ? "text-success" : "text-danger")"></i>
+                            اطلاعات مالی
+                        </h3>
+                        <div class="card-toolbar">
+                                @if (!Model.Step4Completed)
+                            {
+                                <span class="badge badge-danger me-2">ناتمام</span>
+                            }
+                            <a permissions="[SystemPermissions.EditEmployeeFinancialInfo]" asp-action="AddFinancialInformationToEmployee" asp-route-employeeId="@Model.Id"
+                               class="btn btn-sm @(Model.Step4Completed ? "btn-light-primary" : "btn-danger")">
+                                @(Model.Step4Completed ? "ویرایش" : "تکمیل کنید")
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-borderless">
+                            <tr><td class="fw-bold text-gray-600">حقوق پایه:</td><td>@(Model.BaseSalary?.ToString("N0") ?? "0") تومان</td></tr>
+                            <tr><td class="fw-bold text-gray-600">مزایا:</td><td>@(Model.Benefits?.ToString("N0") ?? "0") تومان</td></tr>
+                            <tr><td class="fw-bold text-gray-600">کل دریافتی:</td><td class="text-success fw-bold">@Model.TotalSalary.ToString("N0") تومان</td></tr>
+                            <tr><td class="fw-bold text-gray-600">بانک:</td><td>@(Model.BankName ?? "—")</td></tr>
+                            <tr><td class="fw-bold text-gray-600">شماره حساب:</td><td>@(Model.AccountNumber ?? "—")</td></tr>
+                            <tr><td class="fw-bold text-gray-600">شماره کارت:</td><td>@(Model.CardNumber ?? "—")</td></tr>
+                            <tr><td class="fw-bold text-gray-600">روش پرداخت:</td><td>@Model.PaymentMethodDisplay</td></tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- مرحله ۵: اطلاعات تکمیلی + وضعیت فعلی -->
+            <div class="col-12">
+                <div class="card card-dashed @(Model.Step5Completed ? "" : "border-warning")">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="ki-duotone ki-information fs-2 @(Model.Step5Completed ? "text-success" : "text-warning")"></i>
+                            اطلاعات تکمیلی و وضعیت فعلی
+                        </h3>
+
+                        <div class="card-toolbar">
+                            @if (!Model.Step1Completed)
+                            {
+                                <span class="badge badge-danger me-2">ناتمام</span>
+                            }
+                            <a permissions="[SystemPermissions.EditEmployeeAdditionalInfo]" asp-action="AddAdditionalInformationToEmployee" asp-route-employeeId="@Model.Id"
+                               class="btn btn-sm @(Model.Step5Completed ? "btn-light-primary" : "btn-warning")">
+	                            @(Model.Step5Completed ? "ویرایش" : "تکمیل کنید")
+                            </a>
+                        </div>
+                       
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-6">
+                            <div class="col-md-4">
+                                <strong>شماره بیمه:</strong> @(Model.InsuranceNumber ?? "ندارد")
+                            </div>
+                            <div class="col-md-4">
+                                <strong>وضعیت سلامت:</strong> @Model.HealthStatusDisplay
+                            </div>
+                            <div class="col-md-4">
+                                <strong>سطح مهارت:</strong> @(Model.SkillLevel ?? "مشخص نشده")
+                            </div>
+                            <div class="col-12"><hr /></div>
+                            <div class="col-md-6">
+                                <strong>مرخصی باقیمانده:</strong>
+                                <span class="badge badge-@(Model.RemainingLeaveDays > 10 ? "success" : Model.RemainingLeaveDays > 5 ? "warning" : "danger") fs-6">
+                                    @Model.RemainingLeaveDays روز
+                                </span>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>نمره عملکرد:</strong>
+                                @(Model.PerformanceScore.HasValue ? Model.PerformanceScore + " از ۱۰۰" : "ارزیابی نشده")
+                            </div>
+                            <div class="col-12"><hr /></div>
+                            <div class="col-12">
+                                <strong>یادداشت‌ها:</strong><br />
+                                @(string.IsNullOrEmpty(Model.Notes) ? "یادداشتی ثبت نشده" : Model.Notes.Replace("\n", "<br/>"))
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- دکمه پرینت A4 -->
+    <div class="text-center mt-8 mb-5">
+        <a permissions="[SystemPermissions.PrintEmployeeProfile]" target="_blank" href="/Employee/PrintProfile/@Model.Id" class="btn btn-success btn-lg px-8">
+            <i class="ki-duotone ki-printer fs-2"></i>
+            چاپ پروفایل کارمند 
+        </a>
+    </div>
+</div>
