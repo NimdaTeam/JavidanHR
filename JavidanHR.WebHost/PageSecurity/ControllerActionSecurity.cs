@@ -3,15 +3,16 @@ using _0_Framework.Utilities.NotificationSystem;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using AuthenticationSystem.Services.Repositories;
+using AuthenticationSystem.SystemPermissions;
 using WebHost.Utilities;
 
 namespace WebHost.PageSecurity
 {
     public class PermissionAttribute : ActionFilterAttribute
     {
-        private readonly int _requiredPermission;
+        private readonly SystemPermissions.PermissionList _requiredPermission;
 
-        public PermissionAttribute(int requiredPermission)
+        public PermissionAttribute(SystemPermissions.PermissionList requiredPermission)
         {
             _requiredPermission = requiredPermission;
         }
@@ -52,7 +53,7 @@ namespace WebHost.PageSecurity
             //    userPermissions =  roleService!.GetUserPermissions(user.Id).Result.Select(x=>x.Permission).ToList();
             //}
 
-            if (userPermissions.All(p => p != _requiredPermission))
+            if (userPermissions.All(p => p != (long)_requiredPermission))
             {
                 if (context.Controller is Controller controller)
                 {

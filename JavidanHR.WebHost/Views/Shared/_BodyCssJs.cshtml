@@ -1,27 +1,16 @@
 ﻿<!--begin::Javascript-->
-<script nonce="@Context.Items["ScriptNonce"]">var hostUrl = "/assets/";</script>
+<script nonce="@Context.Items["ScriptNonce"]" asp-append-version="true">var hostUrl = "/assets/";</script>
 <!--begin::Global Javascript Bundle(mandatory for all pages)-->
-<script src="/assets/plugins/global/plugins.bundle.js" nonce="@Context.Items["ScriptNonce"]"></script>
-<script src="/assets/js/scripts.bundle.js" nonce="@Context.Items["ScriptNonce"]"></script>
-<script src="/assets/js/widgets.bundle.js"></script>
-<script src="/assets/js/custom/apps/chat/chat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<!-- SurveyJS Form Library resources -->
-<script src="/assets/survey/survey.core.min.js"></script>
- <script src="/assets/survey/survey-js-ui.min.js"></script>
-<!-- (Optional) Predefined theme configurations -->
-<script src="/assets/survey/index.min.js"></script>
-<!-- Survey Creator resources -->
-<script src="/assets/survey/survey-creator-core.min.js"></script>
-<script src="/assets/survey/persian.js"></script>
-<script src="/assets/survey/survey-creator-js.min.js"></script>
+<script src="/assets/plugins/global/plugins.bundle.js" nonce="@Context.Items["ScriptNonce"]" asp-append-version="true"></script>
+<script src="/assets/js/scripts.bundle.js" nonce="@Context.Items["ScriptNonce"]" asp-append-version="true"></script>
+<script src="/assets/js/widgets.bundle.js" nonce="@Context.Items["ScriptNonce"]" asp-append-version="true"></script>
+<script src="/assets/js/custom/apps/chat/chat.js" nonce="@Context.Items["ScriptNonce"]" asp-append-version="true"></script>
+<script src="~/js/sweetalert2.js" nonce="@Context.Items["ScriptNonce"]" asp-append-version="true"></script>
 
-<script src="~/assets/survey/plotly.min.js"></script>
+<script src="~/assets/persiandatepicker/jalali-datepicker.min.js" asp-append-version="true" nonce="@Context.Items["ScriptNonce"]"></script>
 
-
-
-<script src="/js/toastR.js" nonce="@Context.Items["ScriptNonce"]"></script>
-<script nonce="@Context.Items["ScriptNonce"]">
+<script src="/js/toastR.js" nonce="@Context.Items["ScriptNonce"]" asp-append-version="true"></script>
+<script nonce="@Context.Items["ScriptNonce"]" asp-append-version="true">
 	function showToastNotification(title, message, icon = 'success') {
 		Swal.fire({
 			title: title,
@@ -43,23 +32,176 @@
 
 	@if (TempData["NotifText"] is not null)
 	{
-		if (TempData["NotifIcon"]!.ToString() == "success")
-		{
-			<text>
-												var title = '@TempData["NotifTitle"]';
-												var notification = '@Html.Raw(TempData["NotifTitle"])';
-												toastr.success(notification);
-			</text>
-		}
-		else
-		{
-			<text>
-												var title = '@TempData["NotifTitle"]';
-												var notification = '@Html.Raw(TempData["NotifTitle"])';
-												toastr.error(notification);
-			</text>
-		}
+				if (TempData["NotifIcon"]!.ToString() == "success")
+				{
+							<text>
+																var title = '@TempData["NotifTitle"]';
+																var notification = '@Html.Raw(TempData["NotifTitle"])';
+																toastr.success(notification);
+							</text>
+				}
+				else
+				{
+							<text>
+																var title = '@TempData["NotifTitle"]';
+																var notification = '@Html.Raw(TempData["NotifTitle"])';
+																toastr.error(notification);
+							</text>
+				}
 	}
+	});
+</script>
+
+<script asp-append-version="true" nonce="@Context.Items["ScriptNonce"]">
+	jalaliDatepicker.startWatch({
+		autoReadOnlyInput:true
+	});
+</script>
+
+<script asp-append-version="true" nonce="@Context.Items["ScriptNonce"]">
+	(function (window, $) {
+
+	  function extractIntegerPart(value) {
+		return value ? value.toString().split('.')[0] : '';
+	  }
+
+	  function removeNonNumeric(value) {
+		return value.replace(/[^0-9]/g, '');
+	  }
+
+	  function addThousandsSeparator(value) {
+		return value.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+	  }
+
+	  function formatCurrency(value) {
+		value = extractIntegerPart(value);
+		value = removeNonNumeric(value);
+		return value ? addThousandsSeparator(value) : '';
+	  }
+
+	  function getCaretPosition(el) {
+		return el.selectionStart;
+	  }
+
+	  function setCaretPosition(el, pos) {
+		el.setSelectionRange(pos, pos);
+	  }
+
+	  function countDigitsBeforeCaret(value, caretPos) {
+		return removeNonNumeric(value.substring(0, caretPos)).length;
+	  }
+
+	  function findCaretFromDigitIndex(formattedValue, digitIndex) {
+		let count = 0;
+		for (let i = 0; i < formattedValue.length; i++) {
+		  if (/\d/.test(formattedValue[i])) {
+			count++;
+		  }
+		  if (count === digitIndex) {
+			return i + 1;
+		  }
+		}
+		return formattedValue.length;
+	  }
+
+	  // ===== input handler با حفظ caret =====
+	  $(document).on('input', '.currency-input', function () {
+		const el = this;
+
+		const caretPos = getCaretPosition(el);
+		const digitIndex = countDigitsBeforeCaret(el.value, caretPos);
+
+		const formatted = formatCurrency(el.value);
+		el.value = formatted;
+
+		const newCaretPos = findCaretFromDigitIndex(formatted, digitIndex);
+		setCaretPosition(el, newCaretPos);
+	  });
+
+	  // ===== مقدار اولیه =====
+	  $(function () {
+		$('.currency-input').each(function () {
+		  this.value = formatCurrency(this.value);
+		});
+	  });
+
+	  // ===== submit =====
+	  $(document).on('submit', 'form', function () {
+		$(this).find('.currency-input').each(function () {
+		  this.value = removeNonNumeric(extractIntegerPart(this.value));
+		});
+	  });
+
+	})(window, jQuery);
+</script>
+
+<script asp-append-version="true" nonce="@Context.Items["ScriptNonce"]">
+	// نقشه تبدیل اعداد فارسی به انگلیسی
+	const persianToEnglishDigits = {
+		'۰': '0', '۱': '1', '۲': '2', '۳': '3', '۴': '4',
+		'۵': '5', '۶': '6', '۷': '7', '۸': '8', '۹': '9'
+	};
+
+	// تبدیل کاراکترهای عربی به فارسی استاندارد
+	function normalizeArabicChars(text) {
+		return text
+			.replace(/ي/g, 'ی')   // ي عربی → ی فارسی
+			.replace(/ك/g, 'ک')   // ك عربی → ک فارسی (خیلی رایج)
+			.replace(/ة/g, 'ه')   // ة → ه
+			.replace(/ؤ/g, 'و')   // گاهی کاربرا مؤ می‌نویسن
+			.replace(/إ/g, 'ا')   // إ → ا
+			.replace(/أ/g, 'ا')   // أ → ا
+			.replace(/آ/g, 'ا');  // آ → ا
+	}
+
+	// تابع اصلی تبدیل
+	function convertInputValue(input) {
+		let value = input.value;
+
+		// تبدیل اعداد فارسی به انگلیسی
+		value = value.replace(/[۰-۹]/g, function(match) {
+			return persianToEnglishDigits[match] || match;
+		});
+
+		// تبدیل کاراکترهای عربی به فارسی
+		value = normalizeArabicChars(value);
+
+		input.value = value;
+	}
+
+	// اعمال به تمام inputهای متنی در صفحه
+	document.addEventListener('DOMContentLoaded', function () {
+		// همه inputهای type=text, number, tel, password و textarea
+		const inputs = document.querySelectorAll('input[type="text"], input[type="number"], input[type="tel"], input[type="password"], textarea');
+
+		inputs.forEach(input => {
+			// در لحظه تایپ (input event بهتر از keypress است)
+			input.addEventListener('input', function () {
+				convertInputValue(this);
+			});
+
+			// یک بار در لود صفحه هم اجرا کن (برای حالت ویرایش که مقدار از قبل هست)
+			convertInputValue(input);
+		});
+	});
+</script>
+
+
+<script asp-append-version="true" nonce="@Context.Items["ScriptNonce"]">
+	document.addEventListener("submit", function (e) {
+		const form = e.target;
+
+		if (form.method.toLowerCase() !== "post") return;
+
+		// اگر قبلاً داشت، اضافه نکن
+		if (form.querySelector("input[name='returnUrl']")) return;
+
+		const input = document.createElement("input");
+		input.type = "hidden";
+		input.name = "returnUrl";
+		input.value = window.location.pathname + window.location.search;
+
+		form.appendChild(input);
 	});
 </script>
 

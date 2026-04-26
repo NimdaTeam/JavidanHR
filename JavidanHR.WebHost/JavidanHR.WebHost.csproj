@@ -7,31 +7,38 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="AutoMapper" Version="15.1.0" />
-		<PackageReference Include="DNTPersianUtils.Core" Version="6.7.1" />
+		<PackageReference Include="AutoMapper" Version="16.1.1" />
+		<PackageReference Include="DNTPersianUtils.Core" Version="6.9.0" />
 		<PackageReference Include="EPPlus" Version="8.0.5" />
+		<PackageReference Include="Microsoft.AspNetCore.Routing" Version="2.3.9" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.10" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.10" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.10">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="9.0.5" />
+		<PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.5" />
 		<PackageReference Include="QuestPDF" Version="2025.5.0" />
 		<PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
 		<PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
 		<PackageReference Include="StackExchange.Redis" Version="2.8.37" />
 		<PackageReference Include="UAParser" Version="3.1.47" />
+		<PackageReference Include="ZiggyCreatures.FusionCache" Version="2.4.0" />
+		<PackageReference Include="ZiggyCreatures.FusionCache.Backplane.StackExchangeRedis" Version="2.4.0" />
 	</ItemGroup>
 
 	<ItemGroup>
+		<Folder Include="Mappings\" />
 		<Folder Include="wwwroot\uploads\" />
 	</ItemGroup>
 
 	<ItemGroup>
 	  <ProjectReference Include="..\0_Framework\0_Framework.csproj" />
+	  <ProjectReference Include="..\AttendanceSystem.Infrastructure\AttendanceSystem.Infrastructure.csproj" />
 	  <ProjectReference Include="..\AuthenticationSystem\AuthenticationSystem.csproj" />
 	  <ProjectReference Include="..\HrSystem.Infrastructure\HrSystem.Infrastructure.csproj" />
+	  <ProjectReference Include="..\PayrollSystem.Application\PayrollSystem.Application.csproj" />
+	  <ProjectReference Include="..\PayrollSystem.Infrastructure\PayrollSystem.Infrastructure.csproj" />
 	</ItemGroup>
 
 </Project>

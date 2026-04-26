@@ -44,7 +44,7 @@ namespace JavidanHR.WebHost.Controllers
         public async Task<IActionResult> LoginWithPassword(string phoneNumber, string password)
         {
             var ipAddress = GetClientIp();
-            var userAgent = Request.Headers["User-Agent"].ToString();
+            var userAgent =  Request.Headers["User-Agent"].ToString();
             var deviceInfo = ParseUserAgent(userAgent);
 
             // ۱. اعتبارسنجی شماره
@@ -65,7 +65,8 @@ namespace JavidanHR.WebHost.Controllers
             {
                 await LogFailedLoginAsync(null, sanitizedPhone, ipAddress, userAgent, deviceInfo, "UserNotFound",
                     LoginMethod.Password);
-                NotificationSystem.ShowNotification(TempData, "اطلاعات ورود اشتباه است",
+
+                NotificationSystem.ShowNotification(TempData, ApplicationMessages.NotFound,
                     "شماره تلفن یا رمز عبور صحیح نمی‌باشد.", ApplicationMessagesIcon.ErrorIcon);
                 return RedirectToAction("Login");
             }
@@ -75,7 +76,7 @@ namespace JavidanHR.WebHost.Controllers
             {
                 await LogFailedLoginAsync(user.Id, sanitizedPhone, ipAddress, userAgent, deviceInfo, "AccountDisabled",
                     LoginMethod.Password);
-                NotificationSystem.ShowNotification(TempData, "حساب غیرفعال",
+                NotificationSystem.ShowNotification(TempData, "حساب کاربری شما غیرفعال است. با پشتیبانی تماس بگیرید",
                     "حساب کاربری شما غیرفعال است. با پشتیبانی تماس بگیرید.", ApplicationMessagesIcon.ErrorIcon);
                 return RedirectToAction("Login");
             }
@@ -126,8 +127,8 @@ namespace JavidanHR.WebHost.Controllers
                         $"رمز عبور اشتباه است ({user.AccessFailedCount}/5)", ApplicationMessagesIcon.ErrorIcon);
                 }
 
-                await _userService.Update(user);
-                await _userService.SaveChanges();
+                await _userService.UpdateAsync(user);
+                await _userService.SaveChangesAsync();
                 return RedirectToAction("Login");
             }
 
@@ -138,8 +139,8 @@ namespace JavidanHR.WebHost.Controllers
             user.LastLoginAt = DateTime.UtcNow;
             user.LastLoginIp = ipAddress;
 
-            await _userService.Update(user);
-            await _userService.SaveChanges();
+            await _userService.UpdateAsync(user);
+            await _userService.SaveChangesAsync();
 
             // ۷. دریافت پرمیشن‌ها
             var permissions = (await _roleService.GetUserPermissions(user.Id))
@@ -175,7 +176,12 @@ namespace JavidanHR.WebHost.Controllers
             NotificationSystem.ShowNotification(TempData, $"ورود موفقیت‌آمیز بود، {user.FullName ?? "کاربر "} عزیز خوش آمدید.",
                 $"ورود موفقیت‌آمیز بود، {user.FullName ?? "کاربر عزیز"}", ApplicationMessagesIcon.SuccessIcon);
 
-            return Redirect($"{Request.Scheme}://{Request.Host}{Request.PathBase}/");
+            if (permissions.Any())
+            {
+                return Redirect($"{Request.Scheme}://{Request.Host}{Request.PathBase}/");
+            }
+
+            return RedirectToAction("EmployeeDetails", "Employee");
         }
 
 
@@ -204,12 +210,29 @@ namespace JavidanHR.WebHost.Controllers
             var user = await _userService.GetUserByPhoneNumber(sanitizedPhone);
             if (user == null || user.IsDeleted)
             {
-                await LogFailedLoginAsync(null, sanitizedPhone, ipAddress, userAgent, deviceInfo, "UserNotFound",
-                    LoginMethod.Otp);
-                NotificationSystem.ShowNotification(TempData, "کاربر ثبت‌نام نشده",
-                    "شماره تلفن وارد شده در سیستم ثبت نشده است. لطفاً ابتدا ثبت‌نام کنید.",
-                    ApplicationMessagesIcon.ErrorIcon);
-                return RedirectToAction("Login");
+                //await LogFailedLoginAsync(null, sanitizedPhone, ipAddress, userAgent, deviceInfo, "UserNotFound",
+                //    LoginMethod.Otp);
+
+                var addedUserId = await _userService.CreateNewUser(new Users()
+                {
+                    PhoneNumber = sanitizedPhone,
+                    IsActive = true
+                });
+
+                if (addedUserId <= 0)
+                {
+                    NotificationSystem.ShowNotification(TempData, "خطا در ایجاد کاربر جدید، لطفا مجددا امتحان کنید",
+                        "شماره تلفن یا رمز عبور صحیح نمی‌باشد.", ApplicationMessagesIcon.ErrorIcon);
+                    return RedirectToAction("Login");
+                }
+
+                user = await _userService.GetAsync(addedUserId);
+                if (user is null)
+                {
+                    NotificationSystem.ShowNotification(TempData, ApplicationMessages.NotFound,
+                        "شماره تلفن یا رمز عبور صحیح نمی‌باشد.", ApplicationMessagesIcon.ErrorIcon);
+                    return RedirectToAction("Login");
+                }
             }
 
             // ۳. حساب غیرفعال
@@ -242,8 +265,8 @@ namespace JavidanHR.WebHost.Controllers
                 // اختیاری: قفل موقت برای ارسال OTP
                 user.IsLockedOut = true;
                 user.LockoutEnd = DateTime.UtcNow.AddMinutes(10);
-                await _userService.Update(user);
-                await _userService.SaveChanges();
+                await _userService.UpdateAsync(user);
+                await _userService.SaveChangesAsync();
 
                 await LogFailedLoginAsync(user.Id, sanitizedPhone, ipAddress, userAgent, deviceInfo,
                     "OtpRateLimitExceeded", LoginMethod.Otp);
@@ -312,8 +335,7 @@ namespace JavidanHR.WebHost.Controllers
             {
                 await LogFailedLoginAsync(null, sanitizedPhone, ipAddress, userAgent, deviceInfo, "UserNotFound",
                     LoginMethod.Otp);
-                NotificationSystem.ShowNotification(TempData, "کاربر یافت نشد",
-                    "کاربری با این شماره تلفن ثبت نشده است.", ApplicationMessagesIcon.ErrorIcon);
+                NotificationSystem.ShowNotification(TempData, ApplicationMessages.NotFound, "", ApplicationMessagesIcon.ErrorIcon);
                 return RedirectToAction("Login");
             }
 
@@ -366,10 +388,10 @@ namespace JavidanHR.WebHost.Controllers
                         $"کد یکبار مصرف اشتباه است ({user.AccessFailedCount}/5)", ApplicationMessagesIcon.ErrorIcon);
                 }
 
-                await _userService.Update(user);
-                await _userService.SaveChanges();
+                await _userService.UpdateAsync(user);
+                await _userService.SaveChangesAsync();
 
-                return View("OtpConfirmation", user); // برگرده به همون صفحه با خطا
+                return View("OtpConfirmation", user);
             }
 
             // ۶. OTP صحیح → ورود موفق
@@ -379,8 +401,8 @@ namespace JavidanHR.WebHost.Controllers
             user.LastLoginAt = DateTime.UtcNow;
             user.LastLoginIp = ipAddress;
 
-            await _userService.Update(user);
-            await _userService.SaveChanges();
+            await _userService.UpdateAsync(user);
+            await _userService.SaveChangesAsync();
 
             // ۷. دریافت پرمیشن‌ها
             var permissions = (await _roleService.GetUserPermissions(user.Id))
@@ -418,10 +440,18 @@ namespace JavidanHR.WebHost.Controllers
                 ApplicationMessagesIcon.SuccessIcon);
 
 
-            return string.IsNullOrWhiteSpace(user.PasswordHash)
-                ? Redirect(
-                    $"{Request.Scheme}://{Request.Host}{Request.PathBase}/Account/SetPassword/{user.PhoneNumber}")
-                : Redirect($"{Request.Scheme}://{Request.Host}{Request.PathBase}/");
+            if (string.IsNullOrWhiteSpace(user.PasswordHash))
+            {
+                return Redirect($"{Request.Scheme}://{Request.Host}{Request.PathBase}/Account/SetPassword/{user.PhoneNumber}");
+            }
+
+            if (permissions.Any())
+            {
+                return Redirect($"{Request.Scheme}://{Request.Host}{Request.PathBase}/");
+            }
+
+
+            return RedirectToAction("EmployeeDetails", "Employee");
         }
 
 
@@ -508,8 +538,8 @@ namespace JavidanHR.WebHost.Controllers
                 user.IsLockedOut = true;
                 user.LockoutEnd = DateTime.UtcNow.AddMinutes(10);
 
-                await _userService.Update(user);
-                await _userService.SaveChanges();
+                await _userService.UpdateAsync(user);
+                await _userService.SaveChangesAsync();
 
 
                 await LogFailedLoginAsync(user.Id, phoneNumber, ipAddress, userAgent, deviceInfo, "OtpSpamDetected",
@@ -604,7 +634,7 @@ namespace JavidanHR.WebHost.Controllers
                 return View();
             }
 
-            var user = await _userService.GetUserByPhoneNumber(User.Identity.Name);
+            var user = await _userService.GetUserByPhoneNumber(User);
             if (user == null || !string.IsNullOrEmpty(user.PasswordHash))
             {
                 return RedirectToAction("Index", "Home");
@@ -614,8 +644,8 @@ namespace JavidanHR.WebHost.Controllers
             user.PasswordHash = PasswordSecurity.PasswordHasher.HashPassword(newPassword);
             user.LastPasswordChangedAt = DateTime.UtcNow;
 
-            await _userService.Update(user);
-            await _userService.SaveChanges();
+            await _userService.UpdateAsync(user);
+            await _userService.SaveChangesAsync();
 
             // لاگ مهم: کاربر اولین رمز عبور رو ست کرد
             var ip = GetClientIp();
@@ -703,7 +733,8 @@ namespace JavidanHR.WebHost.Controllers
             {
                 user.IsLockedOut = true;
                 user.LockoutEnd = DateTime.UtcNow.AddMinutes(10);
-                await _userService.Update(user);
+                await _userService.UpdateAsync(user);
+                await _userService.SaveChangesAsync();
 
                 await LogFailedLoginAsync(user.Id, sanitizedPhone, ipAddress, userAgent, deviceInfo, "ForgotPasswordRateLimit", LoginMethod.ForgotPassword);
                 NotificationSystem.ShowNotification(TempData, "تعداد درخواست بیش از حد است. ۱۰ دقیقه صبر کنید", "تعداد درخواست بیش از حد است. ۱۰ دقیقه صبر کنید.", ApplicationMessagesIcon.ErrorIcon);
@@ -810,10 +841,10 @@ namespace JavidanHR.WebHost.Controllers
 
             user.PasswordHash = PasswordHasher.HashPassword(newPassword);
             user.LastPasswordChangedAt = DateTime.UtcNow;
-            await _userService.Update(user);
-            await _userService.SaveChanges();
+            await _userService.UpdateAsync(user);
+            await _userService.SaveChangesAsync();
 
-            await LogSuccessfulPasswordReset(user,ipAddress,userAgent,deviceInfo);
+            await LogSuccessfulPasswordReset(user, ipAddress, userAgent, deviceInfo);
 
             NotificationSystem.ShowNotification(TempData, "رمز عبور با موفقیت تغییر کرد", "رمز عبور با موفقیت تغییر کرد.", ApplicationMessagesIcon.SuccessIcon);
             return RedirectToAction("Login", "Account");

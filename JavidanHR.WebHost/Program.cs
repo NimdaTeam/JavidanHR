@@ -1,8 +1,13 @@
-using _0_Framework.FileUploader;
+﻿using _0_Framework.FileUploader;
+using _0_Framework.Mappings.Profiles;
+using AttendanceSystem.Infrastructure.ApiHelper;
+using AttendanceSystem.Infrastructure.Bootstrapper;
 using AuthenticationSystem.Infrastructure;
-using AutoMapper;
 using HrSystem.Infrastructure.Bootstrapper;
+using JavidanHR.WebHost.Utilities;
+using JavidanHR.WebHost.Utilities.ReturnUrlFilter;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption;
 using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption.ConfigurationModel;
@@ -10,23 +15,26 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
+using PayrollSystem.Infrastructure.Bootstrapper;
 using Serilog;
 using Serilog.Events;
 using StackExchange.Redis;
 using System.Net;
 using System.Security.Cryptography;
 using System.Threading.RateLimiting;
-using HrSystem.Domain.Entities;
 using WebHost.Utilities;
+using ZiggyCreatures.Caching.Fusion;
 using SameSiteMode = Microsoft.AspNetCore.Http.SameSiteMode;
 
 ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
 
 var builder = WebApplication.CreateBuilder(args);
 
+//Add session 
+builder.Services.AddSession();
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
@@ -49,34 +57,57 @@ builder.Host.UseSerilog();
 
 //configure redis cache
 var redisConnectionString = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+// 1. FusionCache with Redis backplane – fully resilient, no crash on startup
+builder.Services.AddFusionCache()
+    .WithDefaultEntryOptions(new FusionCacheEntryOptions
+    {
+        Duration = TimeSpan.FromDays(14),                    // Normal cache duration
+        IsFailSafeEnabled = true,                            // Critical: keeps old data if Redis is down
+        FailSafeMaxDuration = TimeSpan.FromDays(30),         // Works up to 30 days without Redis
+        FailSafeThrottleDuration = TimeSpan.FromSeconds(30)  // Prevents thundering herd
+    })
+    .WithStackExchangeRedisBackplane(options =>
+    {
+        options.Configuration = redisConnectionString;
+        options.ConfigurationOptions ??= new ConfigurationOptions();
+        options.ConfigurationOptions.AbortOnConnectFail = false;     // Never crash on startup
+        options.ConfigurationOptions.ConnectRetry = 10;
+        options.ConfigurationOptions.ReconnectRetryPolicy = new ExponentialRetry(2000);
+    });
 
-builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+// 2. IDistributedCache with automatic fallback to in-memory (required for RedisTicketStore)
+builder.Services.AddStackExchangeRedisCache(opt =>
 {
-    var config = ConfigurationOptions.Parse(redisConnectionString);
-    config.AbortOnConnectFail = false;
-    config.ConnectRetry = 5;
-    config.ConnectTimeout = 10000;
-    return ConnectionMultiplexer.Connect(config);
-});
+    opt.Configuration = redisConnectionString;
+    opt.InstanceName = "SCIP_";
+}).AddDistributedMemoryCache();   // ← fallback when Redis is unavailable
 
+// 3. RedisService – simple, safe wrapper using IDistributedCache (fallback works automatically)
 builder.Services.AddSingleton<RedisService>();
 
-builder.Services.AddStackExchangeRedisCache(options =>
-{
-    options.Configuration = redisConnectionString;
-    options.InstanceName = "JavidanHR_";
-});
-
+// 4. ITicketStore – automatically chooses Redis or Memory based on real connectivity
 builder.Services.AddSingleton<ITicketStore>(sp =>
 {
-    var cache = sp.GetRequiredService<IDistributedCache>();
-    return new RedisTicketStore(cache, TimeSpan.FromDays(14));
+    var logger = sp.GetRequiredService<ILogger<RedisTicketStore>>();
+    var distributedCache = sp.GetRequiredService<IDistributedCache>();
+    var memoryCache = sp.GetRequiredService<IMemoryCache>();
+
+    // این کلاس جدید با fallback داخلی (runtime) کار می‌کنه
+    return new RedisTicketStore(
+        distributedCache,
+        memoryCache,
+        logger,
+        TimeSpan.FromDays(14)
+    );
 });
 
 builder.Services.AddSingleton<IPostConfigureOptions<CookieAuthenticationOptions>, ConfigureCookieAuthenticationOptions>();
 
 // Add services to the container.
-builder.Services.AddControllersWithViews()
+builder.Services.AddControllersWithViews(options =>
+    {
+        options.Filters.Add<ReturnUrlFilter>();
+    })
     .AddJsonOptions(opt =>
     {
         opt.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
@@ -86,6 +117,11 @@ builder.Services.AddControllersWithViews()
 builder.Services.AddResponseCaching();
 
 builder.Services.AddScoped<IFileUploadService, FileUploadService>();
+
+builder.Services.AddScoped<AttendanceSystemApiHelper>();
+
+//add string? returnUrl as injected parameter to each function 
+builder.Services.AddScoped<IRequestContextAccessor, RequestContextAccessor>();
 
 #region Authentication
 builder.Services.AddAuthentication(options =>
@@ -111,7 +147,12 @@ var connectionString = builder.Configuration.GetConnectionString("JavidanHR_DB")
 #region Configure Bootstrapper classes
 AuthenticationSystemBootstrapper.Configure(builder.Services, connectionString!);
 HrSystemBootstrapper.Configure(builder.Services, connectionString!);
+AttendanceSystemBootstrapper.Configure(builder.Services, connectionString!);
+PayrollSystemBootstrapper.Configure(builder.Services, connectionString!);
 #endregion
+
+//AutoMapper
+builder.Services.AddAutoMapper(cfg => { }, typeof(AppMappingProfile));
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient();
@@ -162,7 +203,10 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AuthenticationSystemContext>();
-    context.Database.Migrate();
+    if (context.Database.GetPendingMigrations().Any())
+    {
+        context.Database.Migrate();
+    }
     DbInitializer.Seed(context);
 }
 
@@ -172,6 +216,8 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
+
+app.UseSession();
 
 app.UseHttpsRedirection();
 
@@ -193,6 +239,73 @@ app.UseSerilogRequestLogging();
 app.UseAuthentication();
 app.UseRouting();
 app.UseAuthorization();
+
+
+#region Exceptions and Errors MiddleWare
+
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next();
+    }
+    catch (Exception ex)
+    {
+        Log.Logger.Error(ex, "Unhandled exception");
+
+        context.Response.Clear();
+        context.Response.StatusCode = 500;
+
+        if (context.Request.Path.StartsWithSegments("/api"))
+        {
+            await context.Response.WriteAsJsonAsync(new
+            {
+                success = false,
+                status = 500,
+                message = "خطای داخلی سرور"
+            });
+        }
+        else
+        {
+            context.Request.Path = "/Error/Handle";
+            context.Request.QueryString = new QueryString("?code=500");
+            await next();
+        }
+    }
+});
+
+
+app.UseStatusCodePagesWithReExecute(
+    "/Error/Handle",
+    "?code={0}"
+);
+
+app.UseStatusCodePages(async context =>
+{
+    var response = context.HttpContext.Response;
+    var request = context.HttpContext.Request;
+
+    Log.Logger.Error($"{request.Path} | Error Code: {response.StatusCode}");
+
+    if (request.Path.StartsWithSegments("/api"))
+    {
+        await response.WriteAsJsonAsync(new
+        {
+            success = false,
+            status = response.StatusCode,
+            message = "خطا در پردازش درخواست"
+        });
+    }
+    else
+    {
+        request.Path = "/Error/Handle";
+        request.QueryString = new QueryString($"?code={response.StatusCode}");
+    }
+});
+
+#endregion
+
+
 
 app.Use(async (context, next) =>
 {

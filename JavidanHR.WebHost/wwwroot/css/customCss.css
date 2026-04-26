@@ -72,3 +72,199 @@
 .modal-dialog {
     height: 95% !important;
 }
+
+
+
+.inputGroup {
+    margin: 1em 0 1em 0;
+    max-width: 190px;
+    position: relative;
+}
+
+    .inputGroup input {
+        font-size: 100%;
+        padding: 0.8em;
+        outline: none;
+        border: 2px solid rgb(200, 200, 200);
+        background-color: transparent;
+        border-radius: 10px;
+        width: 100%;
+        text-align:center;
+    }
+
+    .inputGroup label {
+        font-size: 100%;
+        position: absolute;
+        right: 2px;
+        padding: 0.8em;
+        pointer-events: none;
+        transition: all 0.3s ease;
+        color: rgb(100, 100, 100);
+        width: 97.5% !important;
+        text-align: center;
+    }
+
+    .inputGroup :is(input:focus) ~ label {
+        transform: translateY(-50%) scale(.9);
+        margin-top: -10px;
+        padding: 0.4em;
+        padding-left:-3px;
+        background-color: rgb(150, 150, 200);
+        color:white;
+        border-top-left-radius:10px;
+        border-top-right-radius:10px;
+    }
+
+    .inputGroup :is(input:focus) ~ input {
+        border-top-left-radius: 0px !important;
+        border-top-right-radius: 0px !important;
+    }
+
+    .inputGroup :is(input:focus) {
+        border-color: rgb(150, 150, 200);
+    }
+
+
+.form-control,.form-select {
+    border-color: rgb(150, 150, 200) !important;
+}
+
+label{
+    margin-bottom:5px !important;
+}
+
+/* divider with text inside */
+
+.divider-with-text {
+    display: flex; /* Aligns items horizontally */
+    align-items: center; /* Centers text vertically */
+    text-align: center;
+    margin-top: 15px !important; /* Adds some vertical spacing */
+    margin-bottom: 15px !important; /* Adds some vertical spacing */
+    color: #aaa; /* Styles the text color */
+}
+
+    .divider-with-text::before,
+    .divider-with-text::after {
+        content: "";
+        flex: 1; /* Makes the lines grow to fill available space */
+        border-bottom: 1px solid #ccc; /* Creates the horizontal line */
+    }
+
+    .divider-with-text::before {
+        margin-right: 20px; /* Space between the left line and the text */
+    }
+
+    .divider-with-text::after {
+        margin-left: 20px; /* Space between the right line and the text */
+    }
+
+
+
+.select2-container, .select2-selection {
+    height: 41px !important;
+}
+
+.select2-results__option {
+    text-align: center;
+}
+
+input.form-control,
+input.form-control-solid,
+textarea.form-control,
+textarea.form-control-solid,
+select.form-select {
+    text-align: center !important;
+}
+
+.select2-selection__rendered{
+    text-align:center !important;
+    margin:auto !important;
+    padding-left:unset !important;
+}
+
+.select2-selection__clear{
+    right:10px !important;
+}
+
+jdp-container{
+    z-index:9999 !important;
+}
+
+
+
+.overlap {
+    background-color: #ffcccc !important;
+    border: 2px solid #ff0000 !important;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7);
+    }
+
+    70% {
+        box-shadow: 0 0 0 15px rgba(255, 0, 0, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 0, 0, 0);
+    }
+}
+
+
+
+/* ═══════════════════════════════════════════════════════════════
+       استایل تردد ناقص - Modern Incomplete Traffic Style
+       ═══════════════════════════════════════════════════════════════ */
+
+.table-incomplete-row {
+    background: linear-gradient(135deg, rgba(255, 243, 205, 0.9) 0%, rgba(255, 224, 178, 0.7) 100%) !important;
+    border-right: 4px solid #ffc107 !important;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+    .table-incomplete-row:hover {
+        background: linear-gradient(135deg, rgba(255, 243, 205, 1) 0%, rgba(255, 224, 178, 0.9) 100%) !important;
+        transform: scale(1.005);
+        box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+    }
+
+    /* آیکون چشمکانی برای جلب توجه */
+    .table-incomplete-row-icon {
+        font-size: 12px;
+        animation: pulse-warning 2s infinite;
+    }
+
+@keyframes pulse-warning {
+    0%, 100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* استایل متن نارنجی */
+.text-orange {
+    color: #fd7e14 !important;
+}
+
+.bg-orange {
+    background-color: #fd7e14 !important;
+}
+
+.bg-opacity-10 {
+    --bs-bg-opacity: 0.1;
+}
+
+.fs-8 {
+    font-size: 0.75rem !important;
+}
+
+.card-header{
+    align-items:center !important;
+}

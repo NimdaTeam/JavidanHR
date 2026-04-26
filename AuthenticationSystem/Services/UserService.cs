@@ -1,9 +1,11 @@
-﻿using _0_Framework.DTO;
+﻿using System.Security.Claims;
+using _0_Framework.DTO;
 using _0_Framework.GenericRepositoy.Service;
 using AuthenticationSystem.Domain.User;
 using AuthenticationSystem.Infrastructure;
 using AuthenticationSystem.Services.Repositories;
 using AuthenticationSystem.Utilities;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace AuthenticationSystem.Services
@@ -20,7 +22,7 @@ namespace AuthenticationSystem.Services
 
         public async Task<List<AllUsersViewModel>> GetAllUsersForGrid()
         {
-            var users = await GetAll();
+            var users = await GetAllAsync();
 
             var resultList = new List<AllUsersViewModel>();
 
@@ -44,8 +46,22 @@ namespace AuthenticationSystem.Services
             return resultList;
         }
 
-        public async Task<Users?> GetUserByPhoneNumber(string phoneNumber)
+        public async Task<Users?> GetUserByPhoneNumber(ClaimsPrincipal? user)
         {
+            if (user?.Identity is null)
+                return null;
+
+            if (string.IsNullOrEmpty(user.Identity.Name))
+                return null;
+
+            return await _context.Users.FirstOrDefaultAsync(x => x.PhoneNumber == user.Identity.Name);
+        }
+
+        public async Task<Users?> GetUserByPhoneNumber(string? phoneNumber)
+        {
+            if (string.IsNullOrEmpty(phoneNumber))
+                return null;
+
             return await _context.Users.FirstOrDefaultAsync(x => x.PhoneNumber == phoneNumber);
         }
 
@@ -68,7 +84,7 @@ namespace AuthenticationSystem.Services
 
         public async Task<bool> IsUserInfoComplete(long userId)
         {
-            var user = await Get(userId);
+            var user = await GetAsNoTrackingAsync(userId);
             if (user == null)
             {
                 throw new Exception("user not found !");
@@ -86,7 +102,7 @@ namespace AuthenticationSystem.Services
 
         public async Task<string?> GetUserPasswordHash(long userId)
         {
-            var user = await Get(userId);
+            var user = await GetAsNoTrackingAsync(userId);
 
             return user?.PasswordHash;
         }
@@ -95,15 +111,17 @@ namespace AuthenticationSystem.Services
         {
             try
             {
-                var user = await Get(userId);
+                var user = await GetAsync(userId);
 
                 if (user is null)
                     return false;
 
                 user.IsActive = activeStatus;
 
-                var updateStatus = await Update(user);
-                return updateStatus;
+                //todo: execute in action
+                await UpdateAsync(user);
+                await SaveChangesAsync();
+                return true;
             }
             catch (Exception e)
             {

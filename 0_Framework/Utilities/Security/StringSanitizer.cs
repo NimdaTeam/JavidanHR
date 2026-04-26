@@ -5,8 +5,15 @@ namespace _0_Framework.Utilities.Security
 {
     public static class StringSanitizer
     {
+        private static readonly char[] PersianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+        private static readonly char[] EnglishDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
         public static string SanitizeString(this string text)
         {
+            if (string.IsNullOrWhiteSpace(text))
+                return string.Empty;
+
+
             var sanitizer = new HtmlSanitizer();
 
             sanitizer.AllowedTags.Clear();
@@ -16,6 +23,24 @@ namespace _0_Framework.Utilities.Security
             sanitizer.AllowedTags.Add("br");
 
             sanitizer.AllowedAttributes.Clear();
+
+            #region Convert arabic and persian characters
+            // تبدیل اعداد فارسی به انگلیسی
+            for (int i = 0; i < PersianDigits.Length; i++)
+            {
+                text = text.Replace(PersianDigits[i], EnglishDigits[i]);
+            }
+
+            // تبدیل کاراکترهای عربی به فارسی استاندارد
+            text =  text.Replace('ي', 'ی')   // ي عربی → ی فارسی
+                .Replace('ك', 'ک')   // ك عربی → ک فارسی
+                .Replace('ة', 'ه')   // ة → ه
+                .Replace('ؤ', 'و')   // مؤ → و
+                .Replace('إ', 'ا')   // إ → ا
+                .Replace('أ', 'ا')   // أ → ا
+                .Replace('آ', 'ا')   // آ → ا
+                .Replace('ء', 'ئ');  
+            #endregion
 
             var sanitizedString = sanitizer.Sanitize(text);
 

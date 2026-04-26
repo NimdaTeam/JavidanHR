@@ -1,0 +1,254 @@
+﻿@using _0_Framework.Utilities.Helpers
+@using AttendanceSystem.Domain.Entities
+@using AuthenticationSystem.Services.Repositories
+@using AuthenticationSystem.SystemPermissions
+@using DNTPersianUtils.Core
+@using HrSystem.Application.common.Extensions
+@using HrSystem.Application.Interfaces
+@using HrSystem.Domain.Entities
+@using Microsoft.AspNetCore.Mvc.TagHelpers
+@using WebHost.Helpers.GlobalHelpers
+@inject IEmployeeService EmployeeService
+@inject IUserRepository UserService
+@model _0_Framework.Utilities.Pagination.PaginationResult<AttendanceSystem.Domain.Entities.ManualAttendanceRequest>
+@{
+	ViewData["Title"] = "لیست درخواست های تردد دستی";
+
+	var users = ViewBag.users as List<Employee>;
+}
+
+
+<div class="card mb-5 mb-xl-8">
+	<!--begin::Header-->
+	<div class="card-header border-0 pt-5">
+		<h3 class="card-title align-items-start flex-column">
+			<span class="card-label fw-bold fs-3 mb-1">@ViewData["Title"]</span>
+		</h3>
+		<div class="card-toolbar d-flex flex-wrap gap-3">
+
+			<div>
+				<label class="fw-semibold mb-0">فیلتر کاربر</label>
+				<select id="userFilter" class="text-center form-select form-select-solid" style="width: 250px; height:41px !important">
+					<option value="" selected>انتخاب کاربر</option>
+
+					@if (users is not null)
+					{
+						@foreach (var s in users.OrderBy(x => x.LastName).ThenBy(x => x.FirstName))
+						{
+							<option value="@s.UserId">@s.FirstName @s.LastName</option>
+						}
+					}
+				</select>
+			</div>
+
+			<div>
+				<label class="fw-semibold mb-0">فیلتر وضعیت درخواست</label>
+				<select id="statusFilter" class="text-center form-select form-select-solid" style="width: 250px; height:41px !important">
+					<option value="" selected>انتخاب وضعیت</option>
+
+					<option value="0">در انتظار تأیید</option>
+					<option value="1">تأیید شده</option>
+					<option value="2">رد شده</option>
+				</select>
+			</div>
+			<button id="applyFilters" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm"
+					title="اعمال فیلتر ها" data-bs-toggle="tooltip">
+				<i class="fas fa-check fs-2"></i>
+			</button>
+			<!-- دکمه ایجاد کارمند جدید -->
+			<div class="d-flex align-items-end">
+			</div>
+		</div>
+	</div>
+	<!--end::Header-->
+	<!--begin::Body-->
+	<div class="card-body py-3">
+		<div class="table-responsive">
+			<table class="table table-bordered align-middle text-center table-hover">
+				<thead>
+					<tr class="fw-bold text-muted bg-light">
+						<th>تصویر</th>
+						<th>نام و نام خانوادگی</th>
+						<th>وضعیت</th>
+						<th>تاریخ تردد</th>
+						<th>اطلاعات تردد</th>
+						<th>توضیحات</th>
+						<th>علت رد درخواست</th>
+						<th class="min-w-150px">عملیات</th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach (var mr in Model.PaginatedList)
+					{
+						var emp = await EmployeeService.SingleOrDefaultByCondition(x => x.UserId == mr.UserId);
+						if (emp is null)
+						{
+							continue;
+						}
+
+						var statusText = mr.Status switch
+						{
+							RequestStatus.Pending => "در انتظار تأیید",
+							RequestStatus.Approved => "تأیید شده",
+							RequestStatus.Rejected => "رد شده",
+							_ => "-"
+						};
+
+						var statusColor = mr.Status switch
+						{
+							RequestStatus.Pending => "warning",
+							RequestStatus.Approved => "success",
+							RequestStatus.Rejected => "danger",
+							_ => "-"
+						};
+
+						<tr>
+							<td>
+								<div class="symbol symbol-70px">
+									<img src="@(string.IsNullOrWhiteSpace(emp.ProfileImageUrl) ? "/assets/media/avatars/blank.png" : "/uploads/Employees/" + emp.ProfileImageUrl)"
+										 alt="@emp.FirstName @emp.LastName" />
+								</div>
+							</td>
+							<td class="fw-bold">@emp.FirstName @emp.LastName</td>
+							<td>
+								<span class="badge badge-light-@statusColor fs-7 fw-semibold">@statusText</span>
+							</td>
+							<td>
+								<div>@mr.AttendanceDate.ToShamsi()</div>
+								<small class="text-muted">@mr.AttendanceDate.GetPersianWeekDayName()</small>
+							</td>
+
+							<td>
+								@{
+									var atIndex = 1;
+								}
+								<span>
+									@foreach (var item in mr.AttendanceTimes)
+									{
+										if (atIndex % 2 != 0)
+										{
+
+											var text = $"{item} ";
+											@text
+											<i class='fas fa-arrow-left'></i>
+
+										}
+										else
+										{
+											var text = $"{item}";
+											@text
+											<br />
+										}
+
+										atIndex++;
+									}
+								</span>
+							</td>
+							<td>
+								@mr.Reason
+							</td>
+							<td>
+								@(!string.IsNullOrWhiteSpace(mr.RejectionReason) ? mr.RejectionReason : "-")
+							</td>
+							<td>
+								@if (mr.Status != RequestStatus.Approved)
+								{
+									<a permissions="[(long)SystemPermissions.PermissionList.ViewEmployeeDetails]" style="margin:2.5px" href="/attendance/ManualRequests/approve/@mr.Id"
+									   class="btn btn-icon btn-bg-light btn-active-color-success btn-sm me-1" title="تأیید درخواست" data-bs-toggle="tooltip">
+										<i class="	fas fa-check fs-2"></i>
+									</a>
+								}
+								@if (mr.Status != RequestStatus.Rejected)
+								{
+									<a permissions="[(long)SystemPermissions.PermissionList.ViewEmployeeDetails]" style="margin:2.5px" href="/attendance/ManualRequests/reject/@mr.Id"
+									   class="btn btn-icon btn-bg-light btn-active-color-danger btn-sm me-1" title="رد درخواست" data-bs-toggle="tooltip">
+										<i class="	fas fa-times fs-2"></i>
+									</a>
+								}
+								@if (mr.Status == RequestStatus.Pending)
+								{
+									<button style="margin:2.5px"  class="btn btn-icon btn-bg-light btn-active-color-danger btn-sm delete-button"
+									        data-url="/attendance/ManualRequests/Delete/@mr.Id" title="حذف درخواست" data-bs-toggle="tooltip">
+										<i class="fas fa-trash fs-2"></i>
+									</button>
+								}
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+
+			<pagination page-model="@Model"></pagination>
+		</div>
+	</div>
+</div>
+
+@section SearchBox
+{
+	<searchBox search-query="@Model.SearchQuery"></searchBox>
+}
+
+@section Scripts {
+
+	<Simple-CU-Modal add-route=""
+					 update-route="">
+	</Simple-CU-Modal>
+
+
+	<script nonce="@Context.Items["ScriptNonce"]">
+		$(document).ready(function () {
+			// مقدار اولیه از query string
+			const urlParams = new URLSearchParams(window.location.search);
+
+			const selectedUser = urlParams.get('userFilter');
+			const selectedStatus = urlParams.get('status');
+
+			$('#userFilter').select2({
+				placeholder: "انتخاب کاربر",
+				allowClear: true,
+				width: 'resolve',
+				dir: "rtl"
+			});
+
+			$('#statusFilter').select2({
+				placeholder: "انتخاب وضعیت درخواست",
+				allowClear: true,
+				width: 'resolve',
+				dir: "rtl"
+			});
+
+
+			if (selectedUser) {
+				$('#userFilter').val(selectedUser).trigger('change');
+			}
+
+			if (selectedStatus) {
+				$('#statusFilter').val(selectedStatus).trigger('change');
+			}
+
+
+			// تابع برای بروزرسانی URL بر اساس هردو فیلتر
+			function updateUrl() {
+				const user = $('#userFilter').val();
+				const status = $('#statusFilter').val();
+
+				let baseUrl = '/attendance/ManualRequests/All';
+				let queryParams = [];
+
+				if (user) queryParams.push('userFilter=' + user);
+				 if (status) queryParams.push('status=' + status);
+
+
+
+				if (queryParams.length > 0) {
+					baseUrl += '?' + queryParams.join('&');
+				}
+
+				window.location.href = baseUrl;
+			}
+
+
+			$('#applyFilters').on('click', updateUrl);
+		});
+	</script>
+}

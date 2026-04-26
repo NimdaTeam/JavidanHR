@@ -1,200 +1,289 @@
 ﻿@{
 	Layout = "_AccountLayout";
 }
-<link rel="stylesheet" href="/css/login.css" nonce="@Context.Items["ScriptNonce"]" />
+<link rel="stylesheet" href="/css/login.css" nonce="@Context.Items["ScriptNonce"]" asp-append-version="true" />
 
 <div class="login-overlay">
 	<div class="login-card">
-		<form class="form w-100" method="post" asp-action="LoginWithPassword" id="loginForm">
+
+		<form class="form w-100" method="post" asp-action="LoginWithPassword">
 			@Html.AntiForgeryToken()
 
-			<!-- لوگو و عنوان -->
 			<div class="text-center mb-10">
 				<img alt="Logo" src="/assets/media/logos/Javidan-logo.webp" style="height:110px" />
-				<h1 class="mt-6 fw-bolder text-white">سامانه مدیریت منابع انسانی صندوق قرض الحسنه جاویدان</h1>
+				<h1 class="mt-6 fw-bolder text-white">
+					سامانه مدیریت منابع انسانی صندوق قرض الحسنه جاویدان
+				</h1>
 			</div>
+
 			<hr class="border-gray-300">
+
 			<div class="text-center mb-10">
 				<h3 class="fw-bolder text-white">ورود به حساب کاربری</h3>
 			</div>
 
-			<!-- شماره همراه -->
 			<div class="fv-row mb-10">
-				<label class="form-label fw-bold text-white mb-4 text-center d-block">شماره همراه</label>
+				<label class="form-label fw-bold text-white mb-4 text-center d-block">
+					شماره همراه
+				</label>
+
 				<div class="phone-wrapper">
 					<div class="phone-container" id="phoneContainer">
 						<div class="phone-prefix">0</div>
 						<div class="phone-prefix">9</div>
-						<div class="phone-digit" data-index="0"></div>
-						<div class="phone-digit" data-index="1"></div>
-						<div class="phone-digit" data-index="2"></div>
-						<div class="phone-digit" data-index="3"></div>
-						<div class="phone-digit" data-index="4"></div>
-						<div class="phone-digit" data-index="5"></div>
-						<div class="phone-digit" data-index="6"></div>
-						<div class="phone-digit" data-index="7"></div>
-						<div class="phone-digit" data-index="8"></div>
+						@for (int i = 0; i < 9; i++)
+						{
+							<div class="phone-digit"></div>
+						}
 					</div>
 				</div>
-				<input type="hidden" name="phoneNumber" id="fullPhoneNumber" required />
+
+				<input type="hidden" name="phoneNumber" id="fullPhoneNumber" />
+
 				<div class="text-center mt-3">
-					<span id="phoneError" class="text-danger small" style="display:none;font-size:17px;font-weight:800;"></span>
+					<span id="phoneError"
+						  class="text-danger small"
+						  style="display:none;font-size:17px;font-weight:800;"></span>
 				</div>
 			</div>
 
-			<!-- رمز عبور -->
 			<div class="fv-row mb-8">
 				<div class="d-flex justify-content-between mb-3">
 					<label class="fw-bold text-white">رمز عبور</label>
-					<!-- دکمه فراموشی رمز عبور -->
+
 					<button type="button"
 							id="forgotPasswordBtn"
 							class="forgot-password fw-bold"
-							style="background:transparent;border:none; transition: all 0.3s;"
+							style="background:transparent;border:none"
 							disabled
 							data-bs-toggle="tooltip"
-							data-bs-placement="top"
-							data-bs-title="لطفاً ابتدا شماره همراه را کامل وارد کنید"
-							data-bs-trigger="hover focus click">
+							data-bs-title="لطفاً ابتدا شماره همراه را کامل وارد کنید">
 						فراموشی رمز عبور
 					</button>
 				</div>
+
 				<div class="position-relative">
-					<input type="password" name="password" id="passwordInput"
+					<input type="password"
+						   name="password"
+						   id="passwordInput"
 						   class="form-control form-control-lg form-control-solid text-center"
-						   placeholder="رمز عبور خود را وارد کنید" required minlength="6" />
-					<button type="button" id="togglePassword" class="btn btn-icon position-absolute top-50 end-0 translate-middle-y me-3">
+						   minlength="6"
+						   required />
+
+					<button type="button"
+							id="togglePassword"
+							class="btn btn-icon position-absolute top-50 end-0 translate-middle-y me-3">
 						<i class="fa fa-eye fs-4 text-gray-600"></i>
 					</button>
 				</div>
 			</div>
 
-			<!-- دکمه ورود با رمز -->
-			<button type="submit" id="kt_sign_in_submit" class="btn-lg mb-6 login-btn-primary" disabled>
-				<span class="indicator-label">ورود با رمز عبور</span>
+			<button type="submit"
+					id="kt_sign_in_submit"
+					class="btn-lg mb-6 login-btn-primary"
+					disabled>
+				ورود با رمز عبور
 			</button>
 		</form>
 
-		<div style="margin-top:20px;" class="text-center text-white fw-bold">یا</div>
+		<div class="text-center text-white fw-bold" style="margin-top:20px;margin-bottom:20px">یا</div>
 
-		<!-- فرم OTP -->
-		<form method="post" asp-action="SendOtp" asp-controller="Account" id="otpForm">
+		<form id="loginViaOtpForm" method="post" asp-action="SendOtp" asp-controller="Account" data-bs-toggle="tooltip" data-bs-title="لطفاً ابتدا شماره همراه را کامل وارد کنید">
 			@Html.AntiForgeryToken()
 			<input type="hidden" name="phoneNumber" id="otpPhoneNumberHidden" />
-			<button type="submit" id="otpButton" class="btn btn-outline-primary btn-lg login-btn-secondary" disabled>
+			<button type="submit"
+					id="otpButton"
+					class="btn btn-outline-primary btn-lg login-btn-secondary"
+					disabled>
 				<i class="fa fa-comment-sms me-2"></i>
 				ورود با کد یکبار مصرف
 			</button>
 		</form>
 
-		<!-- فرم مخفی برای فراموشی رمز -->
-		<form method="post" asp-action="ForgotPassword" asp-controller="Account" id="forgotPasswordForm" class="d-none">
+		<form method="post"
+			  asp-action="ForgotPassword"
+			  asp-controller="Account"
+			  id="forgotPasswordForm"
+			  class="d-none">
 			@Html.AntiForgeryToken()
 			<input type="hidden" name="phoneNumber" id="forgotPhoneNumber" />
 		</form>
 
-		<!-- فوتر -->
-		<div class="modern-footer" style="color:white">
+		<div class="modern-footer text-white">
 			طراحی و پشتیبانی توسط
-			<a class="forgot-password" href="https://nimdateam.ir" target="_blank">گروه برنامه‌نویسی نیمدا</a>
-			<span class="text-white-500">© 1404</span>
+			<a class="forgot-password" href="https://nimdateam.ir" target="_blank">
+				گروه برنامه‌نویسی نیمدا
+			</a>
+			<span>© 1404</span>
 		</div>
 	</div>
 </div>
 
-<input type="text" inputmode="numeric" maxlength="9" class="phone-hidden-input" id="hiddenPhoneInput" autocomplete="off" autofocus />
+<input type="text"
+	   id="hiddenPhoneInput"
+	   class="phone-hidden-input"
+	   inputmode="numeric"
+	   readonly
+	   autofocus />
 
 @section scripts
 {
-	<script nonce="@Context.Items["ScriptNonce"]">
+	<script nonce="@Context.Items["ScriptNonce"]" asp-append-version="true">
 			document.addEventListener('DOMContentLoaded', function () {
+
 				const digits = document.querySelectorAll('.phone-digit');
-				const container = document.getElementById('phoneContainer');
 				const hiddenInput = document.getElementById('hiddenPhoneInput');
+
 				const fullPhoneInput = document.getElementById('fullPhoneNumber');
 				const otpPhoneInput = document.getElementById('otpPhoneNumberHidden');
 				const forgotPhoneInput = document.getElementById('forgotPhoneNumber');
+
 				const submitBtn = document.getElementById('kt_sign_in_submit');
 				const otpButton = document.getElementById('otpButton');
 				const forgotBtn = document.getElementById('forgotPasswordBtn');
 				const forgotForm = document.getElementById('forgotPasswordForm');
+
 				const phoneError = document.getElementById('phoneError');
 				const passwordInput = document.getElementById('passwordInput');
-				const toggleBtn = document.getElementById('togglePassword');
-				const eyeIcon = toggleBtn.querySelector('i');
 
-				function updateDisplay() {
-					let value = hiddenInput.value.replace(/\D/g, '').substring(0, 9);
-					hiddenInput.value = value;
-					const fullNumber = '09' + value;
+				let phoneDigits = [];
 
-					fullPhoneInput.value = fullNumber;
-					otpPhoneInput.value = fullNumber;
-					forgotPhoneInput.value = fullNumber;
+						
+		       const isTouchDevice =
+		   	       'ontouchstart' in window ||
+			       navigator.maxTouchPoints > 0;
 
-					const isComplete = value.length === 9;
-					updateForgotButtonState(isComplete);
+		       if (isTouchDevice) {
+			       hiddenInput.removeAttribute('readonly');
+			       hiddenInput.setAttribute('inputmode', 'numeric');
+		       }
 
-					digits.forEach((digit, i) => {
-						digit.textContent = value[i] || '';
-						digit.classList.toggle('filled', !!value[i]);
-						digit.classList.toggle('current', i === value.length && !isComplete);
-					});
 
-					container.classList.toggle('valid-all', isComplete);
-					phoneError.style.display = (value.length > 0 && value.length < 9) ? 'block' : 'none';
-					if (value.length > 0 && value.length < 9) phoneError.textContent = 'شماره همراه وارد شده معتبر نمی باشد';
+			function render() {
+		const len = phoneDigits.length;
 
-					submitBtn.disabled = !(isComplete && passwordInput.value.length >= 6);
-					otpButton.disabled = !isComplete;
-					forgotBtn.disabled = !isComplete; // فقط وقتی شماره کامل باشه فعال میشه
-				}
+		digits.forEach((d, i) => {
+			const hasValue = !!phoneDigits[i];
 
-				function updateForgotButtonState(isComplete) {
-		forgotBtn.disabled = !isComplete;
+			d.textContent = phoneDigits[i] || '';
 
-		if (isComplete) {
-			// وقتی فعال شد، Tooltip رو حذف کن
-			const tooltip = bootstrap.Tooltip.getInstance(forgotBtn);
-			if (tooltip) tooltip.dispose();
-			forgotBtn.removeAttribute('data-bs-title');
-			forgotBtn.removeAttribute('data-bs-toggle');
-		} else {
-			// وقتی غیرفعاله، Tooltip رو فعال کن
-			forgotBtn.setAttribute('data-bs-toggle', 'tooltip');
-			forgotBtn.setAttribute('data-bs-title', 'لطفاً ابتدا شماره همراه را بصورت کامل وارد کنید');
-			forgotBtn.setAttribute('data-bs-placement', 'top');
-			forgotBtn.setAttribute('data-bs-trigger', 'hover focus click');
+			// خانه‌هایی که مقدار دارند
+			d.classList.toggle('filled', hasValue);
 
-			// فعال کردن Tooltip
-			new bootstrap.Tooltip(forgotBtn, {
-				trigger: 'hover focus click',
-				delay: { show: 100, hide: 100 }
-			});
+			// 🔥 همه خانه‌های پر + خانه‌ی بعدی = حالت active
+			d.classList.toggle(
+				'current',
+				(hasValue && len < 9) || i === len
+			);
+		});
+
+		const full = '09' + phoneDigits.join('');
+		fullPhoneInput.value = full;
+		otpPhoneInput.value = full;
+		forgotPhoneInput.value = full;
+
+		const complete = len === 9;
+
+		// دکمه‌ها
+		submitBtn.disabled = !(complete && passwordInput.value.length >= 6);
+		otpButton.disabled = !complete;
+		forgotBtn.disabled = !complete;
+
+		if(complete){
+				// 1. tooltip موجود رو پیدا کن
+		var tooltipEl = document.getElementById('forgotPasswordBtn');
+		var tooltip = bootstrap.Tooltip.getInstance(tooltipEl);
+
+		// 2. اگر tooltip ساخته شده، dispose کن
+		if (tooltip) {
+			tooltip.dispose();
+		}
+
+		// 3. data-bs-title رو تغییر بده
+		$('#forgotPasswordBtn').attr('data-bs-title', 'در صورت فراموشی رمز عبور، روی این دکمه کلیک کنید و یا از امکان ورود با شماره همراه استفاده کنید');
+
+		// 4. tooltip جدید بساز
+		new bootstrap.Tooltip(tooltipEl);
+
+				// 1. tooltip موجود رو پیدا کن
+		var tooltipEl1 = document.getElementById('loginViaOtpForm');
+		var tooltip1 = bootstrap.Tooltip.getInstance(tooltipEl1);
+
+		// 2. اگر tooltip ساخته شده، dispose کن
+		if (tooltip1) {
+			tooltip1.dispose();
+		}
+
+		// 3. data-bs-title رو تغییر بده
+		$('#loginViaOtpForm').attr('data-bs-title', 'در صورت فراموشی رمز عبور و یا تمایل به ورود با استفاده از کد یکبار مصرف ارسال شده به شماره همراه، روی این دکمه کلیک کنید.');
+
+		// 4. tooltip جدید بساز
+		new bootstrap.Tooltip(tooltipEl1);
+		}
+
+		// پیام خطا
+		phoneError.style.display = len > 0 && !complete ? 'block' : 'none';
+		if (phoneError.style.display === 'block') {
+			phoneError.textContent = 'شماره همراه وارد شده معتبر نمی‌باشد';
+		}
+
+		// 🔥 وضعیت کلی (سبز / قرمز)
+		const container = document.getElementById('phoneContainer');
+		container.classList.remove('valid-all', 'invalid-all');
+
+		if (complete) {
+			container.classList.add('valid-all');
+		} else if (len > 0) {
+			container.classList.add('invalid-all');
 		}
 			}
 
-
-				hiddenInput.addEventListener('input', updateDisplay);
-				digits.forEach((digit, i) => digit.addEventListener('click', () => { hiddenInput.focus(); hiddenInput.setSelectionRange(i, i); }));
-				passwordInput.addEventListener('input', updateDisplay);
-
-				toggleBtn.addEventListener('click', () => {
-					const type = passwordInput.type === 'password' ? 'text' : 'password';
-					passwordInput.type = type;
-					eyeIcon.classList.toggle('fa-eye', type === 'text');
-					eyeIcon.classList.toggle('fa-eye-slash', type === 'password');
-				});
-
-				// دکمه فراموشی رمز عبور
-				forgotBtn.addEventListener('click', () => {
-					if (!forgotBtn.disabled) {
-						forgotForm.submit();
+				hiddenInput.addEventListener('keydown', e => {
+					if (e.key >= '0' && e.key <= '9') {
+						e.preventDefault();
+						if (phoneDigits.length < 9) {
+							phoneDigits.push(e.key);
+							render();
+						}
+						return;
 					}
+
+					if (e.key === 'Backspace') {
+						e.preventDefault();
+						phoneDigits.pop();
+						render();
+						return;
+					}
+
+					if (e.ctrlKey && e.key === 'v') {
+						e.preventDefault();
+						navigator.clipboard.readText().then(t => {
+							phoneDigits = t.replace(/\D/g, '').slice(0, 9).split('');
+							render();
+						});
+						return;
+					}
+
+					e.preventDefault();
 				});
 
-				hiddenInput.focus();
-				updateDisplay();
+				digits.forEach(d => d.addEventListener('click', () => hiddenInput.focus()));
+
+				passwordInput.addEventListener('input', render);
+
+				render();
+
+						$('#forgotPasswordBtn').on('click', function(e) {
+			// بررسی وضعیت دکمه
+			if ($(this).is(':disabled')) {
+				// اگر غیر فعال بود، هیچ کاری نکن
+				e.preventDefault();
+				return;
+			}
+
+			// اگر فعال بود، فرم مورد نظر را سابمیت کن
+			$('#forgotPasswordForm').submit();
+		});
 			});
 	</script>
 }

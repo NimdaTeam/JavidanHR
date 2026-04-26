@@ -1,0 +1,193 @@
+﻿@using _0_Framework.Utilities.Helpers
+@using AuthenticationSystem.Domain.User
+@using AuthenticationSystem.SystemPermissions
+@using DNTPersianUtils.Core
+@using Microsoft.AspNetCore.Mvc.TagHelpers
+@using WebHost.Helpers.GlobalHelpers
+@inject IWebHostEnvironment HostingEnvironment
+@model IEnumerable<AttendanceSystem.Infrastructure.Dto.LiveAttendanceStatusVM>
+@{
+	ViewData["Title"] = $"وضعیت فعلی حضور و غیاب کارمندان";
+}
+
+<div class="card mb-5 mb-xl-8">
+	<!--begin::Header-->
+	@* <div class="card-header border-0 pt-5">
+		<div class="card-toolbar d-flex flex-wrap gap-3 text-center">
+			<div class="d-flex align-items-end">
+			</div>
+		</div>
+	</div> *@
+	<!--end::Header-->
+	<!--begin::Body-->
+	<div class="card-body py-3">
+		<div class="table-responsive">
+
+			<table class="table table-bordered align-middle text-center table-hover">
+				<thead>
+				<tr class="fw-bold text-muted bg-light">
+					<th>تعداد حاضرین</th>
+					<th>تعداد غایبین</th>
+				</tr>
+				</thead>
+				<tbody>
+				<td style="color:green">
+					@Model.Count(x => x.IsPresent)
+				</td>
+				<td style="color:red">
+					@Model.Count(x => !x.IsPresent)
+				</td>
+				</tbody>
+			</table>
+		</div>
+		
+		<div class="row">
+			<div class="col-lg-6 col-md-6 col-sm-12">
+				<h6 class="text-center">
+					حاضرین
+				</h6>
+				@foreach (var item in Model.Where(x => x.IsPresent))
+				{
+
+					var randomId = Guid.NewGuid();
+					// هر ورودی را به صورت کارت collapsible نمایش بده
+					<div class="card mb-2">
+						<div class="card-header p-2" id="heading-@randomId" style="min-height:unset !important;display:block !important">
+							<div class="d-flex justify-content-between align-items-center text-center" data-bs-toggle="collapse" href="#collapse-@randomId" role="button" aria-expanded="false" aria-controls="collapse-@randomId" style="cursor: pointer;">
+								<div class="symbol symbol-70px">
+									@if (!string.IsNullOrWhiteSpace(item.UserAvatar) && File.Exists(HostingEnvironment.WebRootPath + "/uploads/Employees/" + item.UserAvatar))
+									{
+										<img src="/uploads/Employees/@item.UserAvatar" alt="-"/>
+									}
+									else
+									{
+										<img src="/assets/media/avatars/blank.png" alt="-"/>
+									}
+								</div>
+								<span>@item.FullName</span>
+								<button disabled="" style="margin:2.5px" class="btn btn-bg-light btn-active-color-danger btn-sm"
+								        data-url="#" title="مشاهده اطلاعات تردد" data-bs-toggle="tooltip">
+									<i class="fas fa-search fs-2"></i> مشاهده اطلاعات
+								</button>
+							</div>
+						</div>
+
+						<div id="collapse-@randomId" class="collapse" aria-labelledby="heading-@randomId">
+							<div class="card-body py-2">
+								@{
+									var trafficIndex = 0;
+								}
+
+								@foreach (var t in item.TrafficItems)
+								{
+									var inTypeText = t.IsInManual ? "ثبت دستی" : "دستگاه";
+									var outTypeText = t.IsOutManual ? "ثبت دستی" : "دستگاه";
+									if (t.OutDateTime == null)
+										outTypeText = "-";
+
+									<span>ورود: @t.InDateTime.ToShamsiWithoutDate()</span>
+									<br/>
+									<span>خروج: @t.OutDateTime.ToShamsiWithoutDate()</span>
+									<br/>
+									@if (item.TrafficItems.Count == 1)
+									{
+										var presentTime = (DateTime.Now - item.TrafficItems.FirstOrDefault()?.InDateTime)!.Value.TotalMinutes;
+										<span> مدت حضور تاکنون: @presentTime.ToHourMinuteFormat() </span>
+										<br/>
+									}
+									else
+									{
+										<span> مدت حضور: @t.TotalDuration.ToHourMinuteFormat() </span>
+										<br/>
+									}
+
+									<span>ثبت ورود: <span class="badge bg-light-primary fs-7 fw-semibold">@inTypeText</span> | ثبت خروج: <span class="badge bg-light-primary fs-7 fw-semibold">@outTypeText</span></span>
+									@if (trafficIndex != item.TrafficItems.Count - 1)
+									{
+										<hr/>
+									}
+
+									trafficIndex++;
+								}
+							</div>
+						</div>
+					</div>
+				}
+			</div>
+			<div class="col-lg-6 col-md-6 col-sm-12">
+				<h6 class="text-center">
+					غایبین
+				</h6>
+				@foreach (var item in Model.Where(x => !x.IsPresent))
+				{
+
+					var randomId = Guid.NewGuid();
+
+					// هر ورودی را به صورت کارت collapsible نمایش بده
+					<div class="card mb-2">
+						<div class="card-header p-2" id="heading-@randomId" style="min-height:unset !important;display:block !important">
+							<div class="d-flex justify-content-between align-items-center text-center" data-bs-toggle="collapse" href="#collapse-@randomId" role="button" aria-expanded="false" aria-controls="collapse-@randomId" style="cursor: pointer;">
+								<div class="symbol symbol-70px">
+									@if (!string.IsNullOrWhiteSpace(item.UserAvatar) && File.Exists(HostingEnvironment.WebRootPath + "/uploads/Employees/" + item.UserAvatar))
+									{
+										<img src="/uploads/Employees/@item.UserAvatar" alt="-"/>
+									}
+									else
+									{
+										<img src="/assets/media/avatars/blank.png" alt="-"/>
+									}
+								</div>
+								<span>@item.FullName</span>
+
+								<button disabled="" style="margin:2.5px" class="btn btn-bg-light btn-active-color-danger btn-sm"
+								        data-url="#" title="مشاهده اطلاعات تردد" data-bs-toggle="tooltip">
+									<i class="fas fa-search fs-2"></i> مشاهده اطلاعات
+								</button>
+							</div>
+						</div>
+
+						<div id="collapse-@randomId" class="collapse" aria-labelledby="heading-@randomId">
+							<div class="card-body py-2">
+								@{
+									var trafficIndex = 0;
+								}
+
+								@foreach (var t in item.TrafficItems)
+								{
+									var inTypeText = t.IsInManual ? "ثبت دستی" : "دستگاه";
+									var outTypeText = t.IsOutManual ? "ثبت دستی" : "دستگاه";
+									if (t.OutDateTime == null)
+										outTypeText = "-";
+
+									<span>ورود: @t.InDateTime.ToShamsiWithoutDate()</span>
+
+									<br/>
+									<span>خروج: @t.OutDateTime.ToShamsiWithoutDate()</span>
+
+									<br/>
+									<span> مدت حضور: @t.TotalDuration.ToHourMinuteFormat() </span>
+
+									<br/>
+									<span>ثبت ورود: <span class="badge bg-light-primary fs-7 fw-semibold">@inTypeText</span> | ثبت خروج: <span class="badge bg-light-primary fs-7 fw-semibold">@outTypeText</span></span>
+									@if (trafficIndex != item.TrafficItems.Count - 1)
+									{
+										<hr/>
+									}
+
+									trafficIndex++;
+								}
+							</div>
+						</div>
+					</div>
+				}
+			</div>
+		</div>
+	</div>
+</div>
+
+@section SearchBox
+{
+}
+
+@section Scripts {
+}

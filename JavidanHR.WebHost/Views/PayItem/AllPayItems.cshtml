@@ -1,0 +1,252 @@
+﻿@using PayrollSystem.Application.Utilities
+@using PayrollSystem.Domain.Common
+@using PayrollSystem.Domain.Entities.PayItem
+@model _0_Framework.Utilities.Pagination.PaginationResult<PayrollSystem.Domain.Common.PayItemConstants.PayItemDto>
+@{
+    ViewData["Title"] = "لیست عوامل حقوقی";
+    int row = ((Model.CurrentPage - 1) * 50) + 1;
+}
+<div class="card mb-5 mb-xl-8 pi-card-main">
+<div class="card-header pi-card-header">
+	<div class="d-flex align-items-center gap-3">
+		<div class="pi-icon-wrap">
+			<i class="fas fa-layer-group"></i>
+		</div>
+		<div>
+			<h3 class="card-title mb-0 pi-title">@ViewData["Title"]</h3>
+			<span class="pi-subtitle">
+				مجموع: @Model.PaginatedList.Count —
+				سیستمی: @Model.PaginatedList.Count(x => !x.IsCustom) —
+				سفارشی: @Model.PaginatedList.Count(x => x.IsCustom)
+			</span>
+		</div>
+	</div>
+	<a href="/Payroll/PayItem/Add" class="btn btn-lg btn-light-primary">
+		<i class="ki-duotone ki-plus fs-2"></i> افزودن عامل سفارشی
+	</a>
+</div>
+
+
+    <div class="card-body py-3">
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle text-center table-hover">
+                <thead>
+                    <tr class="fw-bold text-muted bg-light">
+                        <th style="max-width:30px">#</th>
+                        <th class="text-start">نام عامل</th>
+                        <th>نوع</th>
+                        <th>کد سیستمی</th>
+                        <th>نوع داده</th>
+                        <th>فرمول فعال</th>
+                        <th>بیمه</th>
+                        <th>مالیات</th>
+                        <th>وضعیت</th>
+                        <th class="min-w-120px">عملیات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.PaginatedList)
+                    {
+                        <tr class="@(!item.IsActive ? "opacity-50" : "")">
+                            <td class="fw-bold text-muted">@row</td>
+
+                            <td class="text-start fw-bold">
+                                @item.Name
+                                @if (!item.IsCustom)
+                                {
+                                    <span class="badge badge-light-primary ms-1 fs-9">سیستمی</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-light-success ms-1 fs-9">سفارشی</span>
+                                }
+                            </td>
+
+                            <td>
+                                @{
+                                    var typeCls = item.Type switch {
+                                        PayItem.PayItemType.Earning   => "badge-light-success",
+                                        PayItem.PayItemType.Deduction => "badge-light-danger",
+                                        _                             => "badge-light-info"
+                                    };
+                                }
+                                <span class="badge @typeCls">@item.Type.PayItemTypeToString()</span>
+                            </td>
+
+                            <td><code class="fs-8">@item.SystemCode</code></td>
+
+                            <td>
+                                @{
+                                    var dtCls = item.DataType switch {
+                                        PayItem.PayItemDataType.Formula   => "badge-light-warning",
+                                        PayItem.PayItemDataType.UserInput => "badge-light-primary",
+                                        _                                 => "badge-light-secondary"
+                                    };
+                                }
+                                <span class="badge @dtCls">@item.DataType.PayItemDataTypeToString()</span>
+                            </td>
+
+                            <td class="text-start" style="max-width:200px;">
+                                @{
+                                    var activeF = item.Formulas.FirstOrDefault(f => f.IsActive);
+                                }
+                                @if (activeF != null)
+                                {
+                                    <code class="fs-8 text-truncate d-block" style="max-width:180px;"
+                                          title="@activeF.Formula">@activeF.Formula</code>
+                                }
+                                else if (item.DataType == PayItem.PayItemDataType.Formula)
+                                {
+                                    <span class="text-danger fs-8">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>بدون فرمول
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+
+                            <td>
+                                <i class="fas fa-@(item.IsInsured ? "check text-success" : "times text-danger")"></i>
+                            </td>
+                            <td>
+                                <i class="fas fa-@(item.IsTaxable ? "check text-success" : "times text-danger")"></i>
+                            </td>
+
+                            <td>
+                                @if (item.IsActive)
+                                {
+                                    <span class="badge badge-light-success">فعال</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-light-danger">غیرفعال</span>
+                                }
+                            </td>
+
+                            <td>
+                                @if (item.IsCustom && item.Id.HasValue)
+                                {
+                                    @* عامل سفارشی: ویرایش کامل + حذف *@
+                                    <a class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1"
+                                       href="/Payroll/PayItem/Update/@item.Id"
+                                       title="ویرایش" data-bs-toggle="tooltip">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button class="btn btn-icon btn-bg-light btn-active-color-danger btn-sm delete-button"
+                                            data-url="/Payroll/PayItem/Delete/@item.Id"
+                                            title="حذف" data-bs-toggle="tooltip">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                }
+                                else if (!item.IsCustom && item.Group != "کارکرد")
+                                {
+                                    @* عامل سیستمی (غیر کارکردی): ویرایش محدود *@
+                                    <a class="btn btn-icon btn-bg-light btn-active-color-warning btn-sm"
+                                       href="/Payroll/PayItem/UpdateSystem/@item.SystemCode"
+                                       title="تنظیمات عامل سیستمی" data-bs-toggle="tooltip">
+                                        <i class="fas fa-sliders-h"></i>
+                                    </a>
+                                }
+                                else
+                                {
+                                    @* عوامل کارکردی: فقط نمایش *@
+                                    <span class="text-muted fs-9 fw-bold">کارکردی</span>
+                                }
+                            </td>
+                        </tr>
+                        row++;
+                    }
+                </tbody>
+            </table>
+            <pagination page-model="@Model"></pagination>
+        </div>
+    </div>
+</div>
+
+@section SearchBox {
+    <searchBox search-query="@Model.SearchQuery"></searchBox>
+}
+
+@section customStyles
+{
+	<link href="~/css/firststepstyles.css" rel="stylesheet" asp-append-version="true" nonce="@Context.Items["ScriptNonce"]" />
+	<style>
+        /* ════════════════════════════════════════════
+                           متغیرها
+                        ════════════════════════════════════════════ */
+        :root {
+            --pi-radius: 10px;
+            --pi-radius-sm: 6px;
+            --pi-border: #e4e6ef;
+            --pi-bg: #f9fafb;
+            --pi-bg-hover: #f1f3f9;
+            --pi-text: #1e2a45;
+            --pi-muted: #8896ae;
+            --pi-accent: #3b5bdb;
+            --pi-accent-soft: #eef2ff;
+            --grp-info-bg: #e0f5ff;
+            --grp-info-text: #0077a8;
+            --grp-info-border: #a5d8f0;
+            --grp-success-bg: #e6faf0;
+            --grp-success-text: #1a7a45;
+            --grp-success-border: #a3dfc1;
+            --grp-danger-bg: #fff0f0;
+            --grp-danger-text: #c0392b;
+            --grp-danger-border: #f5b7b1;
+            --grp-primary-bg: #eef2ff;
+            --grp-primary-text: #3b5bdb;
+            --grp-primary-border: #c5cff7;
+            --grp-warning-bg: #fff9e6;
+            --grp-warning-text: #a06800;
+            --grp-warning-border: #f7d990;
+            --grp-secondary-bg: #f0f0f0;
+            --grp-secondary-text: #555;
+            --grp-secondary-border: #ccc;
+        }
+
+        /* ════════════════════════════════════════════
+                           کارت اصلی
+                        ════════════════════════════════════════════ */
+        .pi-card-main {
+            border: 1px solid var(--pi-border);
+            border-radius: 14px !important;
+            box-shadow: 0 2px 20px rgba(0,0,0,.06) !important;
+        }
+
+        .pi-card-header {
+            background: linear-gradient(135deg, #1e2a45 0%, #2d3f6e 100%) !important;
+            border-radius: 14px 14px 0 0 !important;
+            padding: 1.25rem 1.75rem !important;
+            border-bottom: none !important;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .pi-icon-wrap {
+            width: 44px;
+            height: 44px;
+            background: rgba(255,255,255,.12);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 1.1rem;
+        }
+
+        .pi-title {
+            color: #fff !important;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .pi-subtitle {
+            color: rgba(255,255,255,.55);
+            font-size: .75rem;
+            display: block;
+        }
+	</style>
+}

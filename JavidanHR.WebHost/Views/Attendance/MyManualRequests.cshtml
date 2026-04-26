@@ -1,0 +1,210 @@
+﻿@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+}
+@using _0_Framework.Utilities.Helpers
+@using AttendanceSystem.Domain.Entities
+@using AuthenticationSystem.Domain.User
+@using AuthenticationSystem.Services.Repositories
+@using AuthenticationSystem.SystemPermissions
+@using DNTPersianUtils.Core
+@using HrSystem.Application.Interfaces
+@using Microsoft.AspNetCore.Mvc.TagHelpers
+@using WebHost.Helpers.GlobalHelpers
+@model _0_Framework.Utilities.Pagination.PaginationResult<AttendanceSystem.Domain.Entities.ManualAttendanceRequest>
+@{
+	var user = ViewBag.user as Users;
+
+	ViewData["Title"] = $"لیست درخواست های تردد دستی کارمند {user?.FullName ?? "-"}";
+}
+
+
+<div class="card mb-5 mb-xl-8">
+	<!--begin::Header-->
+	<div class="card-header border-0 pt-5">
+		<h3 class="card-title align-items-start flex-column">
+			<span class="card-label fw-bold fs-3 mb-1">@ViewData["Title"]</span>
+		</h3>
+		<div class="card-toolbar d-flex flex-wrap gap-3">
+			<div>
+				<label class="fw-semibold mb-0">فیلتر وضعیت درخواست</label>
+				<select id="statusFilter" class="text-center form-select form-select-solid" style="width: 250px; height:41px !important">
+					<option value="" selected>انتخاب وضعیت</option>
+
+					<option value="0">در انتظار تأیید</option>
+					<option value="1">تأیید شده</option>
+					<option value="2">رد شده</option>
+				</select>
+			</div>
+			<button id="applyFilters" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm"
+					title="اعمال فیلتر ها" data-bs-toggle="tooltip">
+				<i class="fas fa-check fs-2"></i>
+			</button>
+			<!-- دکمه ایجاد کارمند جدید -->
+			<div class="d-flex align-items-end">
+			</div>
+		</div>
+	</div>
+	<!--end::Header-->
+	<!--begin::Body-->
+	<div class="card-body py-3">
+		<div class="table-responsive">
+			<table class="table table-bordered align-middle text-center table-hover">
+				<thead>
+				<tr class="fw-bold text-muted bg-light">
+					<th>تاریخ تردد</th>
+					<th>اطلاعات تردد</th>
+					<th>وضعیت</th>
+					<th>توضیحات</th>
+					<th>علت رد درخواست</th>
+					<th>تاریخ ثبت</th>
+					<th>تاریخ تأیید/رد درخواست</th>
+					<th>عملیات</th>
+				</tr>
+				</thead>
+				<tbody>
+					@foreach (var mr in Model.PaginatedList)
+					{
+						var statusText = mr.Status switch
+						{
+							RequestStatus.Pending => "در انتظار تأیید",
+							RequestStatus.Approved => "تأیید شده",
+							RequestStatus.Rejected => "رد شده",
+							_ => "-"
+						};
+
+						var statusColor = mr.Status switch
+						{
+							RequestStatus.Pending => "warning",
+							RequestStatus.Approved => "success",
+							RequestStatus.Rejected => "danger",
+							_ => "-"
+						};
+
+						<tr>
+							<td>
+								<div>@mr.AttendanceDate.ToShamsi()</div>
+								<small class="text-muted">@mr.AttendanceDate.GetPersianWeekDayName()</small>
+							</td>
+
+							<td>
+								@{
+									var atIndex = 1;
+								}
+								<span>
+									@foreach (var item in mr.AttendanceTimes)
+									{
+										if (atIndex % 2 != 0)
+										{
+
+											var text = $"{item} ";
+											@text
+											<i class='fas fa-arrow-left'></i>
+
+										}
+										else
+										{
+											var text = $"{item}";
+											@text
+											<br />
+										}
+
+										atIndex++;
+									}
+								</span>
+							</td>
+							<td>
+								<span class="badge badge-light-@statusColor fs-7 fw-semibold">@statusText</span>
+							</td>
+							<td>
+								@mr.Reason
+							</td>
+							<td>
+								@(!string.IsNullOrWhiteSpace(mr.RejectionReason) ? mr.RejectionReason : "-")
+							</td>
+							<td>
+								@mr.CreatedAt.ToShamsiWithTime()
+							</td>
+							<td>
+								@(mr.ApprovedAt != null ? mr.ApprovedAt.ToShamsiWithTime() : mr.RejectedAt != null ? mr.RejectedAt.ToShamsiWithTime() :"-")
+							</td>
+							<td>
+								@if (mr.Status == RequestStatus.Pending)
+								{
+									<button style="margin:2.5px"  class="btn btn-icon btn-bg-light btn-active-color-danger btn-sm delete-button"
+											data-url="/attendance/ManualRequests/Delete/@mr.Id" title="حذف درخواست" data-bs-toggle="tooltip">
+										<i class="fas fa-trash fs-2"></i>
+									</button>
+								}
+								else
+								{
+									<div class="alert alert-info text-center">
+										درخواست بررسی شده قابل حذف نیست
+									</div>
+								}
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+
+			<pagination page-model="@Model"></pagination>
+		</div>
+	</div>
+</div>
+
+@section SearchBox
+{
+	<searchBox search-query="@Model.SearchQuery"></searchBox>
+}
+
+@section Scripts {
+
+	<Simple-CU-Modal add-route=""
+					 update-route="">
+	</Simple-CU-Modal>
+
+
+	<script nonce="@Context.Items["ScriptNonce"]">
+		$(document).ready(function () {
+			// مقدار اولیه از query string
+			const urlParams = new URLSearchParams(window.location.search);
+
+			const selectedStatus = urlParams.get('status');
+
+			$('#statusFilter').select2({
+				placeholder: "انتخاب وضعیت درخواست",
+				allowClear: true,
+				width: 'resolve',
+				dir: "rtl"
+			});
+
+
+			if (selectedStatus) {
+				$('#statusFilter').val(selectedStatus).trigger('change');
+			}
+
+
+			// تابع برای بروزرسانی URL بر اساس هردو فیلتر
+			function updateUrl() {
+				const status = $('#statusFilter').val();
+
+				let baseUrl = '/attendance/ManualRequests/MyRequests';
+				let queryParams = [];
+
+				 if (status) queryParams.push('status=' + status);
+
+
+
+				if (queryParams.length > 0) {
+					baseUrl += '?' + queryParams.join('&');
+				}
+
+				window.location.href = baseUrl;
+			}
+
+			$('#applyFilters').on('click', updateUrl);
+		});
+	</script>
+}

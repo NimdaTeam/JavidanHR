@@ -1,0 +1,90 @@
+﻿@using WebHost.Helpers.GlobalHelpers
+@model _0_Framework.Utilities.Pagination.PaginationResult<PayrollSystem.Application.DTOs.WorkshopDto>
+@{
+    ViewData["Title"] = "لیست کارگاه ها";
+    int row = 1;
+}
+
+<div class="card mb-5 mb-xl-8">
+    <!--begin::Header-->
+    <div class="card-header border-0 pt-5">
+        <h3 class="card-title align-items-start flex-column">
+            <span class="text-muted fw-semibold fs-6">لیست کارگاه ها</span>
+        </h3>
+        <div class="card-toolbar d-flex flex-wrap gap-3 text-center">
+            <!-- دکمه ایجاد کارگاه جدید -->
+            <div class="d-flex align-items-end">
+                <a href="/payroll/workshop/add" class="btn btn-lg btn-light-primary">
+                    <i class="ki-duotone ki-plus fs-2"></i> افزودن کارگاه جدید
+                </a>
+            </div>
+        </div>
+    </div>
+    <!--end::Header-->
+    <!--begin::Body-->
+    <div class="card-body py-3">
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle text-center table-hover">
+                <thead>
+                    <tr class="fw-bold text-muted bg-light">
+                        <th style="max-width:20px !important">ردیف</th>
+                        <th>کد کارگاه</th>
+                        <th>نام کارگاه</th>
+                        <th>کارفرما</th>
+                        <th>تعداد پرسنل</th>
+                        <th class="min-w-150px">عملیات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var at in Model.PaginatedList.OrderBy(x => x.Name))
+                    {
+                        <tr>
+                            <td class="fw-bold">@row</td>
+                            <td class="fw-bold">@at.Code</td>
+                            <td class="fw-bold">@at.Name</td>
+                            <td class="fw-bold">@at.EmployerName</td>
+                            <td class="fw-bold">@at.EmployeesCount</td>
+                            <td>
+                                <a style="margin:2.5px" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm" href="/payroll/workshop/update/@at.Id"
+                                   title="ویرایش کارگاه" data-bs-toggle="tooltip">
+                                    <i class="fas fa-edit fs-2"></i>
+                                </a>
+								
+                                @if (at.EmployeesCount > 0)
+                                {
+	                                <button disabled="" style="margin:2.5px" class="btn btn-icon btn-bg-light btn-active-color-danger btn-sm delete-button"
+	                                        data-url="/payroll/workshop/delete/@at.Id" title="امکان حذف کارگاهی که کارمند به آن اختصاص داده شده، وجود ندارد." data-bs-toggle="tooltip">
+		                                <i class="fas fa-trash fs-2"></i>
+	                                </button> 
+                                }
+                                else
+                                {
+	                                <button  style="margin:2.5px" class="btn btn-icon btn-bg-light btn-active-color-danger btn-sm delete-button"
+	                                        data-url="/payroll/workshop/delete/@at.Id" title="حذف کارگاه" data-bs-toggle="tooltip">
+		                                <i class="fas fa-trash fs-2"></i>
+	                                </button> 
+                                }
+                                
+                            </td>
+                        </tr>
+                        row++;
+                    }
+                </tbody>
+            </table>
+
+               <pagination page-model="@Model"></pagination> 
+        </div>
+    </div>
+</div>
+
+@section SearchBox
+{
+     <searchBox search-query="@Model.SearchQuery"></searchBox> 
+}
+
+@section Scripts {
+
+    <Simple-CU-Modal add-route=""
+                     update-route="">
+    </Simple-CU-Modal>
+}

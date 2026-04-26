@@ -1,0 +1,89 @@
+﻿@using _0_Framework.FileUploader
+@using HrSystem.Application.common.Extensions
+@using HrSystem.Domain.Entities
+@using Microsoft.AspNetCore.Mvc.TagHelpers
+@model PayrollSystem.Application.DTOs.CreateWorkshopDto
+
+@{
+	ViewData["Title"] = "افزودن کارگاه جدید";
+}
+
+<div class="card mb-5 mb-xl-8">
+	<div class="card-header border-0 pt-5 bg-primary text-white">
+		<h3 class="card-title text-white text-center mb-0">
+			@ViewData["Title"]
+		</h3>
+
+	</div>
+
+	<div class="card-body py-6">
+		<form asp-action="AddWorkshop" asp-controller="Workshop" method="post">
+			@Html.AntiForgeryToken()
+			<div class="row g-7">
+
+				<div class="col-md-6 mb-7">
+					<label class="required fw-bold fs-6">کد کارگاه</label>
+					<input maxlength="10" asp-for="Code" class="form-control form-control-solid text-center" required placeholder="کد کارگاه (کد کارگاهی یک عدد 10 رقمی است که به هر کارگاه  اختصاص می یابد)" />
+					<span asp-validation-for="Code" class="text-danger"></span>
+				</div>
+
+				<div class="col-md-6 mb-7">
+					<label class="fw-bold fs-6">ردیف پیمان</label>
+					<input asp-for="PeymanRow" class="form-control form-control-solid text-center" placeholder="ردیف پیمان - اختیاری" />
+					<span asp-validation-for="PeymanRow" class="text-danger"></span>
+				</div>
+
+				<div class="col-md-6 mb-7">
+					<label class="required fw-bold fs-6">نام کارگاه</label>
+					<input asp-for="Name" class="form-control form-control-solid text-center" required placeholder="نام کارگاه" />
+					<span asp-validation-for="Name" class="text-danger"></span>
+				</div>
+
+				<div class="col-md-6 mb-7">
+					<label class="required fw-bold fs-6">نام کارفرما</label>
+					<input asp-for="EmployerName" class="form-control form-control-solid text-center" required placeholder="نام کارفرما" />
+					<span asp-validation-for="EmployerName" class="text-danger"></span>
+				</div>
+
+				<div class="col-md-4 mb-7">
+					<label class="required fw-bold fs-6">حق بیمه سهم کارمند (%)</label>
+					<input type="number" min="0" max="100" asp-for="EmployeeInsuranceRate" class="form-control form-control-solid text-center" required placeholder="حق بیمه سهم کارمند" />
+					<span asp-validation-for="EmployeeInsuranceRate" class="text-danger"></span>
+				</div>
+
+				<div class="col-md-4 mb-7">
+					<label class="required fw-bold fs-6">حق بیمه سهم کارفرما (%)</label>
+					<input type="number" min="0" max="100" asp-for="EmployerInsuranceRate" class="form-control form-control-solid text-center" required placeholder="حق بیمه سهم کارفرما" />
+					<span asp-validation-for="EmployerInsuranceRate" class="text-danger"></span>
+				</div>
+
+				<div class="col-md-4 mb-7">
+					<label class="required fw-bold fs-6">حق بیمه سهم بیکاری (%)</label>
+					<input type="number" min="0" max="100" asp-for="UnEmploymentInsuranceRate" class="form-control form-control-solid text-center" required placeholder="حق بیمه سهم بیکاری" />
+					<span asp-validation-for="UnEmploymentInsuranceRate" class="text-danger"></span>
+				</div>
+
+				<div class="col-md-6 mb-7">
+					<label class="required fw-bold fs-6">آدرس کارگاه</label>
+					<textarea asp-for="Address" class="form-control form-control-solid text-center" placeholder="آدرس کارگاه" required ></textarea>
+				</div>
+				
+				<div class="col-md-6 mb-7">
+					<label class="fw-bold fs-6">شماره حساب/شبا</label>
+					<input asp-for="AccountNumber" class="form-control form-control-solid text-center" placeholder="شماره حساب/شبا" />
+				</div>
+			
+				<Modal-Buttons></Modal-Buttons>
+			</div>
+		</form>
+	</div>
+</div>
+
+@section Scripts {
+
+}
+
+@section customStyles
+{
+	<link href="~/css/firststepstyles.css" rel="stylesheet" asp-append-version="true" nonce="@Context.Items["ScriptNonce"]" />
+}

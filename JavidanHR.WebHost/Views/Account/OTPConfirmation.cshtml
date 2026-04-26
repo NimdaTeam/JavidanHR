@@ -1,193 +1,223 @@
 ﻿@{
-    Layout = "_AccountLayout";
+	Layout = "_AccountLayout";
 }
 @model AuthenticationSystem.Domain.User.Users
 
-<link rel="stylesheet" href="/css/login.css" nonce="@Context.Items["ScriptNonce"]" />
+<link rel="stylesheet" href="/css/login.css" nonce="@Context.Items["ScriptNonce"]" asp-append-version="true" />
 
-<!-- اورلی شیشه‌ای + کارت مرکزی -->
 <div class="login-overlay">
-    <div class="login-card">
+	<div class="login-card">
 
-        <form class="form w-100" asp-action="OTPConfirmation" method="post" id="otpForm">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="phoneNumber" value="@Model.PhoneNumber" />
+		<form class="form w-100" asp-action="OTPConfirmation" method="post" id="otpForm">
+			@Html.AntiForgeryToken()
+			<input type="hidden" name="phoneNumber" value="@Model.PhoneNumber" />
 
-            <!-- لوگو و عنوان -->
-            <div class="text-center mb-10">
-                <img alt="Logo" src="/assets/media/logos/Javidan-logo.webp" style="height:110px" />
-                <h1 class="mt-6 fw-bolder text-white" style="font-size:1.8rem;">تأیید کد یکبار مصرف</h1>
-            </div>
+			<div class="text-center mb-10">
+				<img alt="Logo" src="/assets/media/logos/Javidan-logo.webp" style="height:110px" />
+				<h1 class="mt-6 fw-bolder text-white" style="font-size:1.8rem;">تأیید کد یکبار مصرف</h1>
+			</div>
 
-            <hr class="border-gray-300 opacity-50">
+			<hr class="border-gray-300 opacity-50">
 
-            <!-- توضیحات -->
-            <div class="text-center mb-10">
-                <div class="text-white fw-semibold fs-5 mb-4">
-                    کد تأیید به شماره زیر ارسال شده است
-                </div>
-                <div class="fw-bold text-white fs-3 mb-6">@Model.PhoneNumber</div>
+			<div class="text-center mb-10">
+				<div class="text-white fw-semibold fs-5 mb-4">
+					کد تأیید به شماره زیر ارسال شده است
+				</div>
+				<div class="fw-bold text-white fs-3 mb-6">@Model.PhoneNumber</div>
 
-                <div class="d-flex justify-content-center align-items-center gap-3">
-                    <span class="text-white-50">شماره اشتباه است؟</span>
-                    <a href="/Account/Login" class="text-primary fw-bold text-decoration-underline forgot-password">ویرایش شماره</a>
-                </div>
-            </div>
+				<div class="d-flex justify-content-center align-items-center gap-3">
+					<span class="text-white-50">شماره اشتباه است؟</span>
+					<a href="/Login" class="text-primary fw-bold forgot-password">ویرایش شماره</a>
+				</div>
+			</div>
 
-            <!-- باکس‌های OTP (۴ تایی) - با همان استایل صفحه لاگین -->
-            <div class="mb-10">
-                <label class="form-label fw-bold text-white text-center d-block mb-6">
-                    کد امنیتی ۴ رقمی خود را وارد کنید
-                </label>
+			<div class="mb-10">
+				<label class="form-label fw-bold text-white text-center d-block mb-6">
+					کد امنیتی ۴ رقمی خود را وارد کنید
+				</label>
 
-                <div class="phone-wrapper mx-auto" style="max-width: 380px;">
-                    <div class="phone-container otp-special" style="gap: 16px;">
-                        <div class="phone-digit otp-box" id="otp1"></div>
-                        <div class="phone-digit otp-box" id="otp2"></div>
-                        <div class="phone-digit otp-box" id="otp3"></div>
-                        <div class="phone-digit otp-box" id="otp4"></div>
-                    </div>
-                </div>
+				<div class="phone-wrapper mx-auto" style="max-width: 380px;">
+					<div class="phone-container otp-special" id="otpContainer" style="gap:16px;">
+						<div class="phone-digit otp-box"></div>
+						<div class="phone-digit otp-box"></div>
+						<div class="phone-digit otp-box"></div>
+						<div class="phone-digit otp-box"></div>
+					</div>
+				</div>
 
-                <div class="text-center mt-4">
-                    <span id="otpError" class="text-danger small" style="display:none; font-weight:800;"></span>
-                </div>
-            </div>
+				<div class="text-center mt-4">
+					<span id="otpError"
+						  class="text-danger small"
+						  style="display:none;font-weight:800;"></span>
+				</div>
+			</div>
 
-            <!-- ارسال مجدد + تایمر -->
-            <div class="d-flex justify-content-center align-items-center gap-4 mb-10">
-                <button type="button" id="resendBtn" class="btn btn-link text-primary fw-bold p-0" disabled>
-                    <span class="forgot-password"> ارسال مجدد کد</span>
-                </button>
-                <span id="timer" class="text-white-50 fw-medium">۱۲۰ ثانیه</span>
-            </div>
+			<div class="d-flex justify-content-center align-items-center gap-4 mb-10">
+				<button type="button" id="resendBtn" class="btn btn-link p-0" disabled>
+					<span class="forgot-password">ارسال مجدد کد</span>
+				</button>
+				<span id="timer" class="text-white-50 fw-medium">۱۲۰ ثانیه</span>
+			</div>
 
-            <!-- دکمه تأیید -->
-            <button type="submit" id="submitOtp" class="btn btn-lg login-btn-primary w-100" disabled>
-                <span class="indicator-label">تأیید و ورود</span>
-                <span class="indicator-progress d-none">
-                    در حال بررسی...
-                    <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
-                </span>
-            </button>
-        </form>
+			<button type="submit"
+					id="submitOtp"
+					class="btn btn-lg login-btn-primary w-100"
+					disabled>
+				<span class="indicator-label">تأیید و ورود</span>
+				<span class="indicator-progress d-none">
+					در حال بررسی...
+					<span class="spinner-border spinner-border-sm align-middle ms-2"></span>
+				</span>
+			</button>
+		</form>
 
-        <!-- فوتر یکسان با صفحه لاگین -->
-        <div class="modern-footer" style="color:white; margin-top: 30px;">
-            طراحی و پشتیبانی توسط
-            <a class="forgot-password" href="https://nimdateam.ir" target="_blank">گروه برنامه‌نویسی نیمدا</a>
-            <span class="text-white-500">© ۱۴۰۴</span>
-        </div>
-    </div>
+		<div class="modern-footer text-white" style="margin-top:30px;">
+			طراحی و پشتیبانی توسط
+			<a class="forgot-password" href="https://nimdateam.ir" target="_blank">
+				گروه برنامه‌نویسی نیمدا
+			</a>
+			<span>© ۱۴۰۴</span>
+		</div>
+	</div>
 </div>
 
-<!-- ورودی مخفی برای OTP -->
-<input type="text" inputmode="numeric" maxlength="4" class="phone-hidden-input" id="hiddenOtpInput" autocomplete="off" autofocus />
+<input type="text"
+	   id="hiddenOtpInput"
+	   class="phone-hidden-input"
+	   inputmode="numeric"
+	   readonly
+	   autofocus />
 
 @section scripts
 {
-    <script nonce="@Context.Items["ScriptNonce"]">
-        document.addEventListener('DOMContentLoaded', function () {
-            const otpBoxes = document.querySelectorAll('.otp-box');
-            const hiddenInput = document.getElementById('hiddenOtpInput');
-            const submitBtn = document.getElementById('submitOtp');
-            const resendBtn = document.getElementById('resendBtn');
-            const timerSpan = document.getElementById('timer');
-            const otpError = document.getElementById('otpError');
-            let countdown = 120;
+	<script nonce="@Context.Items["ScriptNonce"]" asp-append-version="true">
+		document.addEventListener('DOMContentLoaded', function () {
 
-            function updateOtpDisplay() {
-                let value = hiddenInput.value.replace(/\D/g, '').substring(0, 4);
-                hiddenInput.value = value;
+			const boxes = document.querySelectorAll('.otp-box');
+			const hiddenInput = document.getElementById('hiddenOtpInput');
+			const container = document.getElementById('otpContainer');
 
-                otpBoxes.forEach((box, i) => {
-                    box.textContent = value[i] || '';
-                    box.classList.toggle('filled', !!value[i]);
-                    box.classList.toggle('current', i === value.length && value.length < 4);
-                });
+			const submitBtn = document.getElementById('submitOtp');
+			const resendBtn = document.getElementById('resendBtn');
+			const timerSpan = document.getElementById('timer');
+			const otpError = document.getElementById('otpError');
 
-                // فعال/غیرفعال کردن دکمه
-                submitBtn.disabled = value.length !== 4;
+			   const isTouchDevice =
+				   'ontouchstart' in window ||
+				   navigator.maxTouchPoints > 0;
 
-                // خطا
-                if (value.length > 0 && value.length < 4) {
-                    otpError.textContent = 'لطفاً کد ۴ رقمی را کامل وارد کنید';
-                    otpError.style.display = 'block';
-                } else {
-                    otpError.style.display = 'none';
-                }
+			   if (isTouchDevice) {
+				   hiddenInput.removeAttribute('readonly');
+				   hiddenInput.setAttribute('inputmode', 'numeric');
+			   }
 
-                // وقتی کامل شد → سبز بشه
-                document.querySelector('.phone-container').classList.toggle('valid-all', value.length === 4);
-            }
+			let otpDigits = [];
+			let countdown = 120;
 
-            // تایپ در ورودی مخفی
-            hiddenInput.addEventListener('input', updateOtpDisplay);
+			function render() {
+				const len = otpDigits.length;
 
-            // کلیک روی باکس → فوکوس روی ورودی مخفی
-            otpBoxes.forEach((box, i) => {
-                box.addEventListener('click', () => {
-                    hiddenInput.focus();
-                    hiddenInput.setSelectionRange(i, i);
-                });
-            });
+				boxes.forEach((box, i) => {
+					const hasValue = !!otpDigits[i];
+					box.textContent = otpDigits[i] || '';
 
-            // شروع تایمر
-            const timer = setInterval(() => {
-                countdown--;
-                timerSpan.textContent = `${countdown} ثانیه`;
-                if (countdown <= 0) {
-                    clearInterval(timer);
-                    resendBtn.disabled = false;
-                    timerSpan.textContent = '';
-                }
-            }, 1000);
+					box.classList.toggle('filled', hasValue);
 
-            // ارسال مجدد
-            resendBtn.addEventListener('click', function () {
-                const phone = '@Model.PhoneNumber';
-                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+					box.classList.toggle(
+						'current',
+						(hasValue && len < 4) || i === len
+					);
+				});
 
-                fetch('@Url.Action("ResendOtp", "Account")', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'RequestVerificationToken': token
-                    },
-                    body: JSON.stringify({ phoneNumber: phone })
-                })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success || data.result.includes("ارسال شد")) {
-                        countdown = 120;
-                        timerSpan.textContent = '۱۲۰ ثانیه';
-                        resendBtn.disabled = true;
-                        // دوباره تایمر رو شروع کن
-                        setTimeout(() => { location.reload(); }, 1500); // یا فقط تایمر رو ریست کن
-                    }
-                });
-            });
+				submitBtn.disabled = len !== 4;
 
-            // قبل از ارسال فرم → کد رو به hidden بفرست
-            document.getElementById('otpForm').addEventListener('submit', function(e) {
-                const code = hiddenInput.value;
-                if (code.length !== 4) {
-                    e.preventDefault();
-                    return;
-                }
+				otpError.style.display = len > 0 && len < 4 ? 'block' : 'none';
+				if (otpError.style.display === 'block') {
+					otpError.textContent = 'لطفاً کد ۴ رقمی را کامل وارد کنید';
+				}
 
-                let hiddenCode = document.createElement('input');
-                hiddenCode.type = 'hidden';
-                hiddenCode.name = 'otpCode';
-                hiddenCode.value = code;
-                this.appendChild(hiddenCode);
+				container.classList.remove('valid-all', 'invalid-all');
 
-                submitBtn.querySelector('.indicator-label').classList.add('d-none');
-                submitBtn.querySelector('.indicator-progress').classList.remove('d-none');
-            });
+				if (len === 4) {
+					container.classList.add('valid-all');
+				} else if (len > 0) {
+					container.classList.add('invalid-all');
+				}
+			}
 
-            hiddenInput.focus();
-            updateOtpDisplay();
-        });
-    </script>
+			hiddenInput.addEventListener('keydown', e => {
+
+				if (e.key >= '0' && e.key <= '9') {
+					e.preventDefault();
+					if (otpDigits.length < 4) {
+						otpDigits.push(e.key);
+						render();
+					}
+					return;
+				}
+
+				if (e.key === 'Backspace') {
+					e.preventDefault();
+					otpDigits.pop();
+					render();
+					return;
+				}
+
+				if (e.ctrlKey && e.key === 'v') {
+					e.preventDefault();
+					navigator.clipboard.readText().then(t => {
+						otpDigits = t.replace(/\D/g, '').slice(0, 4).split('');
+						render();
+					});
+					return;
+				}
+
+				e.preventDefault();
+			});
+
+			boxes.forEach(b => b.addEventListener('click', () => hiddenInput.focus()));
+
+			const timer = setInterval(() => {
+				countdown--;
+				timerSpan.textContent = `${countdown} ثانیه`;
+				if (countdown <= 0) {
+					clearInterval(timer);
+					resendBtn.disabled = false;
+					timerSpan.textContent = '';
+				}
+			}, 1000);
+
+			resendBtn.addEventListener('click', function () {
+				const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+				fetch('@Url.Action("ResendOtp", "Account")', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'RequestVerificationToken': token
+					},
+					body: JSON.stringify({ phoneNumber: '@Model.PhoneNumber' })
+				}).then(() => location.reload());
+			});
+
+			document.getElementById('otpForm').addEventListener('submit', function (e) {
+				if (otpDigits.length !== 4) {
+					e.preventDefault();
+					return;
+				}
+
+				const hiddenCode = document.createElement('input');
+				hiddenCode.type = 'hidden';
+				hiddenCode.name = 'otpCode';
+				hiddenCode.value = otpDigits.join('');
+				this.appendChild(hiddenCode);
+
+				submitBtn.querySelector('.indicator-label').classList.add('d-none');
+				submitBtn.querySelector('.indicator-progress').classList.remove('d-none');
+			});
+
+			render();
+			hiddenInput.focus();
+		});
+	</script>
 }

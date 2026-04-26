@@ -1,0 +1,32 @@
+﻿@model HrSystem.Application.DTO.EmployeeTrainingVM
+@{ var index = (int)ViewData["index"]; }
+
+<div class="training-block border rounded p-4 mb-4 bg-light">
+	<input type="hidden" name="Trainings[@index].Id" value="@Model.Id" />
+	<div class="row g-4">
+		<div class="col-md-6">
+			<label class="required">نام دوره</label>
+			<input required name="Trainings[@index].CourseName" class="form-control" value="@Model.CourseName" required />
+		</div>
+		<div class="col-md-6">
+			<label class="required">موسسه برگزارکننده</label>
+			<input required name="Trainings[@index].Institute" class="form-control" value="@Model.Institute" required />
+		</div>
+		<div class="col-md-3">
+			<label>تعداد ساعت</label>
+			<input name="Trainings[@index].Hours" class="form-control text-center" value="@Model.Hours" />
+		</div>
+		<div class="col-md-6">
+			<label class="required">شماره و تاریخ گواهی</label>
+			<input required name="Trainings[@index].CertificateNumberAndDate" class="form-control" value="@Model.CertificateNumberAndDate" />
+		</div>
+		<div class="col-md-3 text-end">
+			<label class="opacity-0">حذف</label><br />
+			<button type="button" class="btn btn-danger btn-sm" onclick="deleteTrainingRow(this)">حذف</button>
+		</div>
+		<div class="col-md-12">
+			<label>توضیحات</label>
+			<textarea name="Trainings[@index].Notes" class="form-control" rows="2">@Model.Notes</textarea>
+		</div>
+	</div>
+</div>

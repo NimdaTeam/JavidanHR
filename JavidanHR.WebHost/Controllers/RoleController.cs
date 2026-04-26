@@ -25,7 +25,7 @@ namespace JavidanHR.WebHost.Controllers
         }
 
         [Route("AllRoles")]
-        [Permission(SystemPermissions.RolesList)]
+        [Permission(SystemPermissions.PermissionList.RolesList)]
         public async Task<IActionResult> AllRoles(string searchQuery = "", int page = 1)
         {
             var roles = await _roleService.GetRolesForRolesGrid();
@@ -47,7 +47,7 @@ namespace JavidanHR.WebHost.Controllers
         }
 
         [Route("AddRole")]
-        [Permission(SystemPermissions.AddNewRole)]
+        [Permission(SystemPermissions.PermissionList.AddNewRole)]
         public IActionResult AddRole()
         {
             var permissions = AuthenticationSystemBootstrapper
@@ -59,7 +59,7 @@ namespace JavidanHR.WebHost.Controllers
         }
 
         [Route("AddRole")]
-        [Permission(SystemPermissions.AddNewRole)]
+        [Permission(SystemPermissions.PermissionList.AddNewRole)]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AddRole(string roleName, List<long> permissions)
@@ -91,10 +91,10 @@ namespace JavidanHR.WebHost.Controllers
 
 
         [Route("UpdateRole/{roleId}")]
-        [Permission(SystemPermissions.UpdateRole)]
+        [Permission(SystemPermissions.PermissionList.UpdateRole)]
         public async Task<IActionResult> UpdateRole(long roleId)
         {
-            var role = await _roleService.Get(roleId);
+            var role = await _roleService.GetAsNoTrackingAsync(roleId);
 
             if (role is null)
             {
@@ -108,12 +108,12 @@ namespace JavidanHR.WebHost.Controllers
         }
 
         [Route("UpdateRole/{roleId}")]
-        [Permission(SystemPermissions.UpdateRole)]
+        [Permission(SystemPermissions.PermissionList.UpdateRole)]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateRole(long roleId, string roleName, List<long> permissions)
         {
-            var role = await _roleService.Get(roleId);
+            var role = await _roleService.GetAsync(roleId);
 
             if (role is null)
             {
@@ -148,10 +148,10 @@ namespace JavidanHR.WebHost.Controllers
 
 
         [Route("DeleteRole/{roleId}")]
-        [Permission(SystemPermissions.DeleteRole)]
+        [Permission(SystemPermissions.PermissionList.DeleteRole)]
         public async Task<IActionResult> DeleteRole(long roleId)
         {
-            var role = await _roleService.Get(roleId);
+            var role = await _roleService.GetAsync(roleId);
 
             if (role is null)
             {
@@ -176,11 +176,10 @@ namespace JavidanHR.WebHost.Controllers
                 if (await _roleService.DoesRoleHasAnyPermissions(roleId))
                     await _roleService.DeleteAllRolePermissions(roleId);
 
-                role.IsDeleted = true;
-                role.DeletedAt = DateTime.Now;
+                role.SoftDelete();
 
-                await _roleService.Update(role);
-                await _roleService.SaveChanges();
+                await _roleService.UpdateAsync(role);
+                await _roleService.SaveChangesAsync();
 
                 NotificationSystem
                     .ShowNotification(TempData, ApplicationMessages.OperationSuccessful, "", ApplicationMessagesIcon.SuccessIcon);

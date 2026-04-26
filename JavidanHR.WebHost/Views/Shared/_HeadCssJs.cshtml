@@ -2,24 +2,13 @@
 @* <link rel="stylesheet" href="https://fonts.googleapis.com/cssfamily=Inter:300,400,500,600,700" nonce="@Context.Items["ScriptNonce"]" /> *@
 <!--end::Fonts-->
 <!--begin::Global Stylesheets Bundle(mandatory for all pages)-->
-<link href="/assets/plugins/global/plugins.bundle.rtl.css" rel="stylesheet" type="text/css" nonce="@Context.Items["ScriptNonce"]" />
-<link href="/assets/css/style.bundle.rtl.css" rel="stylesheet" type="text/css" nonce="@Context.Items["ScriptNonce"]" />
-<!-- SurveyJS Form Library resources -->
-<link href="/assets/survey/survey-core-min.css"  type="text/css" rel="stylesheet">
-<!-- Survey Creator resources -->
-<link href="/assets/survey/survey-creator-core.min.css" type="text/css" rel="stylesheet">
+<link href="/assets/plugins/global/plugins.bundle.rtl.css" rel="stylesheet" type="text/css" nonce="@Context.Items["ScriptNonce"]" asp-append-version="true" />
+<link href="/assets/css/style.bundle.rtl.css" rel="stylesheet" type="text/css" nonce="@Context.Items["ScriptNonce"]" asp-append-version="true" />
 
-<link href="~/assets/survey/survey.analytics.min.css" rel="stylesheet" />
-<!--begin::Vendor Stylesheets(used for this page only)-->
-@* 	<link href="/assets/plugins/custom/fullcalendar/fullcalendar.bundle.css" rel="stylesheet" type="text/css" />
-	<link href="/assets/plugins/custom/datatables/datatables.bundle.css" rel="stylesheet" type="text/css" /> *@
-<!--end::Vendor Stylesheets-->
-<link rel="stylesheet" href="/css/SweetAlert2.css" nonce="@Context.Items["ScriptNonce"]">
-<link href="/css/toastR.css" rel="stylesheet" nonce="@Context.Items["ScriptNonce"]" />
-<link rel="stylesheet" href="/css/customCss.css" nonce="@Context.Items["ScriptNonce"]" />
-@* <script src="https://code.highcharts.com/highcharts.js"></script>
-	<script src="https://code.highcharts.com/modules/exporting.js"></script>
-	<script src="https://code.highcharts.com/modules/export-data.js"></script>
-	<script src="https://code.highcharts.com/modules/accessibility.js"></script> *@
-<!--end::Global Stylesheets Bundle-->
-<script>// Frame-busting to prevent site from being loaded within a frame without permission (click-jacking) if (window.top != window.self) { window.top.location.replace(window.self.location.href); }</script>
+<link rel="stylesheet" href="/css/SweetAlert2.css" nonce="@Context.Items["ScriptNonce"]" asp-append-version="true">
+<link href="/css/toastR.css" rel="stylesheet" nonce="@Context.Items["ScriptNonce"]" asp-append-version="true" />
+<link rel="stylesheet" href="/css/customCss.css" nonce="@Context.Items["ScriptNonce"]"  asp-append-version="true"/>
+<link href="~/assets/persiandatepicker/jalali-datepicker.min.css" rel="stylesheet" asp-append-version="true" nonce="@Context.Items["ScriptNonce"]" />
+
+<!--// Frame-busting to prevent site from being loaded within a frame without permission (click-jacking)-->
+<script asp-append-version="true" nonce="@Context.Items["ScriptNonce"]"> if (window.top != window.self) { window.top.location.replace(window.self.location.href); }</script>

@@ -1,0 +1,37 @@
+﻿using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.AspNetCore.Razor.TagHelpers;
+using System.Text;
+using System.Text.Json;
+
+namespace JavidanHR.WebHost.Helpers.GlobalHelpers
+{
+    [HtmlTargetElement("Form-buttons")]
+    public class FormButtons:TagHelper
+    {
+        private readonly IHtmlGenerator _htmlGenerator;
+
+        public string ReturnUrl { get; set; }
+
+        public FormButtons(IHtmlGenerator htmlGenerator)
+        {
+            _htmlGenerator = htmlGenerator;
+        }
+
+        public override void Process(TagHelperContext context, TagHelperOutput output)
+        {
+            
+            var sb = new StringBuilder();
+            sb.AppendLine(@"<div class=""text-center"">");
+            sb.AppendLine(@$"    <a href=""{ReturnUrl}"" class=""btn btn-sm btn-danger"">");
+            sb.AppendLine(@"        <i class=""fa fa-close fs-1""></i> انصراف");
+            sb.AppendLine(@"    </a>");
+            sb.AppendLine(@"    <button type=""submit"" id=""submit-button"" class=""btn btn-success btn-sm"">");
+            sb.AppendLine(@"        <i class=""fa fa-check fs-1""></i> ثبت");
+            sb.AppendLine(@"    </button>");
+            sb.AppendLine(@"</div>");
+
+            output.TagName = "";
+            output.Content.SetHtmlContent(sb.ToString());
+        }
+    }
+}

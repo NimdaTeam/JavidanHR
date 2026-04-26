@@ -1,0 +1,336 @@
+﻿@using _0_Framework.Utilities.Helpers
+@using HrSystem.Domain.Entities
+@using Microsoft.AspNetCore.Mvc.TagHelpers
+@model HrSystem.Application.DTO.Step5FinancialVM
+
+@{
+	ViewData["Title"] = "اطلاعات مالی و وام‌ها (مرحله ۵ از ۵)";
+	var employeeName = ViewData["EmployeeName"]?.ToString() ?? "";
+
+	var banks = new List<SelectListItem>
+	{
+		new() { Value = "", Text = "انتخاب بانک / صندوق" },
+		new() { Value = "بانک ملی ایران", Text = "بانک ملی ایران" },
+		new() { Value = "بانک ملت", Text = "بانک ملت" },
+		new() { Value = "بانک تجارت", Text = "بانک تجارت" },
+		new() { Value = "بانک صادرات ایران", Text = "بانک صادرات ایران" },
+		new() { Value = "بانک سپه", Text = "بانک سپه" },
+		new() { Value = "بانک کشاورزی", Text = "بانک کشاورزی" },
+		new() { Value = "بانک مسکن", Text = "بانک مسکن" },
+		new() { Value = "بانک رفاه کارگران", Text = "بانک رفاه کارگران" },
+		new() { Value = "بانک صنعت و معدن", Text = "بانک صنعت و معدن" },
+		new() { Value = "بانک توسعه صادرات ایران", Text = "بانک توسعه صادرات ایران" },
+		new() { Value = "پست بانک ایران", Text = "پست بانک ایران" },
+		new() { Value = "بانک اقتصاد نوین", Text = "بانک اقتصاد نوین" },
+		new() { Value = "بانک پارسیان", Text = "بانک پارسیان" },
+		new() { Value = "بانک پاسارگاد", Text = "بانک پاسارگاد" },
+		new() { Value = "بانک کارآفرین", Text = "بانک کارآفرین" },
+		new() { Value = "بانک سامان", Text = "بانک سامان" },
+		new() { Value = "بانک سینا", Text = "بانک سینا" },
+		new() { Value = "بانک شهر", Text = "بانک شهر" },
+		new() { Value = "بانک دی", Text = "بانک دی" },
+		new() { Value = "بانک ایران زمین", Text = "بانک ایران زمین" },
+		new() { Value = "بانک خاورمیانه", Text = "بانک خاورمیانه" },
+		new() { Value = "بانک گردشگری", Text = "بانک گردشگری" },
+		new() { Value = "بانک آینده", Text = "بانک آینده" },
+		new() { Value = "بانک قرض‌الحسنه مهر ایران", Text = "بانک قرض‌الحسنه مهر ایران" },
+		new() { Value = "بانک قرض‌الحسنه رسالت", Text = "بانک قرض‌الحسنه رسالت" },
+		new() { Value = "صندوق قرض‌الحسنه جاویدان", Text = "صندوق قرض‌الحسنه جاویدان", Selected = true }
+	};
+}
+
+
+<div class="card mb-5 mb-xl-8">
+	<div class="card-header border-0 pt-5 bg-primary text-white">
+		<h3 class="card-title text-white text-center mb-0">
+			@(Model.IsUpdating ? $"ویرایش اطلاعات مالی و وام های کارمند: {employeeName ?? "-"}" : " اطلاعات مالی و وام های کارمند")
+		</h3>
+	</div>
+
+	<div class="card-body py-6">
+		<div class="alert alert-info text-center mb-8">
+			<strong>نکته:</strong> لطفاً اطلاعات مالی و وام‌های خود را با دقت وارد کنید.
+		</div>
+
+		<form asp-action="FinancialInformation" asp-route-employeeId="@Model.EmployeeId" method="post">
+			@Html.AntiForgeryToken()
+			<input type="hidden" asp-for="EmployeeId" />
+
+			<div class="row g-7">
+				<!-- حقوق پایه -->
+				<div class="col-md-6">
+					<label class="required fw-bold fs-6 mb-2">حقوق پایه (ریال)</label>
+					<input required asp-for="BaseSalary" type="text" step="1000" min="0"
+						   class="form-control form-control-solid text-center currency-input"
+						   placeholder="مثلا 150,000,000" />
+					<span asp-validation-for="BaseSalary" class="text-danger"></span>
+				</div>
+
+				<!-- مزایا -->
+				<div class="col-md-6">
+					<label class="fw-bold fs-6 mb-2">فوق‌العاده مزایا و کمک‌هزینه‌ها (ریال)</label>
+					<input asp-for="Benefits" type="text" step="1000" min="0"
+						   class="form-control form-control-solid text-center currency-input"
+						   placeholder="مثلا 100,000,000" value="@Model.Benefits" />
+				</div>
+
+				<!-- نام بانک -->
+				<div class="col-md-6">
+					<label class="required fw-bold fs-6 mb-2">نام بانک / صندوق</label>
+					<select required asp-for="BankName" class="text-center form-select form-select-solid searchable-bank">
+						@foreach (var bank in banks)
+						{
+							<option value="@bank.Value">@bank.Text</option>
+						}
+					</select>
+					<span asp-validation-for="BankName" class="text-danger"></span>
+				</div>
+
+				<!-- شماره حساب -->
+				<div class="col-md-6">
+					<label class="fw-bold fs-6 mb-2">شماره حساب (۱۳ رقم)</label>
+					<input asp-for="AccountNumber" type="text" maxlength="13"
+						   class="form-control form-control-solid text-center ltr"
+						   placeholder="0123456789012" />
+					<small class="text-muted">فقط عدد - دقیقاً ۱۳ رقم</small>
+				</div>
+
+				<!-- شماره کارت -->
+				<div class="col-md-6">
+					<label class="fw-bold fs-6 mb-2">شماره کارت</label>
+					<input asp-for="CardNumber" type="text" maxlength="19"
+						   class="form-control form-control-solid text-center ltr card-input"
+						   placeholder="6037-9977-1234-5678" />
+				</div>
+
+				<!-- روش پرداخت -->
+				<div class="col-md-6 mb-7">
+					<label class="required fw-bold fs-6">روش پرداخت</label>
+					<select asp-for="PaymentMethod" class="form-select form-select-solid text-center" required>
+						<option value="">انتخاب کنید</option>
+						<option value="1">انتقال بانکی</option>
+						<option value="2">نقدی</option>
+						<option value="3">کارت به کارت</option>
+					</select>
+				</div>
+			</div>
+
+			<!-- بخش وام‌ها -->
+			<div class="col-12 mb-10">
+				<h5 class="text-primary text-center mb-5">وام‌های دریافتی</h5>
+
+				@if (!Model.Loans.Any())
+				{
+					<div class="alert alert-info text-center" id="no-loan-div">
+						هیچ وامی ثبت نشده است.
+					</div>
+				}
+
+				<div id="loanContainer">
+					@for (int i = 0; i < Model.Loans.Count; i++)
+					{
+						var loan = Model.Loans[i];
+						var index = i;
+						<div class="loan-block mb-4">
+							<div class="table-responsive">
+								<input type="hidden" name="Loans[@index].Id" value="@loan.Id" />
+								<table class="table table-bordered align-middle">
+									<tbody>
+										<tr>
+											<td class="required" width="25%">مبلغ وام (ریال)</td>
+											<td>
+												<div>
+													<input required name="Loans[@index].Amount" type="text" class="form-control text-center ltr currency-input" value="@loan.Amount" step="1000" min="0" />
+												</div>
+											</td>
+										</tr>
+										<tr>
+											<td class="required">نام وام‌گیرنده</td>
+											<td><input required name="Loans[@index].BorrowerName" class="form-control text-center" value="@loan.BorrowerName" /></td>
+										</tr>
+										<tr>
+											<td>ضامنین</td>
+											<td><input name="Loans[@index].Guarantors" class="form-control text-center" value="@loan.Guarantors" /></td>
+										</tr>
+										<tr>
+											<td>تاریخ تسویه</td>
+											<td><input name="Loans[@index].SettlementDatePersian" class="form-control text-center persian-date-input" value="@loan.SettlementDatePersian" placeholder="1405/01/01" maxlength="10" data-jdp /></td>
+										</tr>
+										<tr>
+											<td>عملیات</td>
+											<td><button type="button" class="btn btn-sm btn-danger" onclick="removeLoanRow(this)">حذف</button></td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</div>
+					}
+				</div>
+
+				<div class="text-center mt-4">
+					<button type="button" class="btn btn-success btn-sm" onclick="addLoanRow()">افزودن وام جدید</button>
+				</div>
+			</div>
+
+			<div class="text-center">
+				<button type="submit" class="btn btn-lg btn-primary px-10">
+					ثبت
+				</button>
+			</div>
+		</form>
+	</div>
+</div>
+
+@section Scripts {
+	<script asp-append-version="true" nonce="@Context.Items["ScriptNonce"]">
+		let loanIndex = @Model.Loans.Count;
+
+		function addLoanRow() {
+			hideNoLoanDiv();
+			const container = document.getElementById("loanContainer");
+			const html = `
+				<div class="loan-block mb-4">
+					<div class="table-responsive">
+						<input type="hidden" name="Loans[${loanIndex}].Id" value="" />
+						<table class="table table-bordered align-middle">
+							<tbody>
+								<tr>
+									<td class="required" width="25%">مبلغ وام (ریال)</td>
+									<td>
+									<div>
+										  <input required name="Loans[${loanIndex}].Amount" type="text" class="form-control text-center ltr currency-input" placeholder="0" step="1000" min="0" />
+									</div>
+									</td>
+								</tr>
+								<tr>
+									<td class="required">نام وام‌گیرنده</td>
+									<td><input required name="Loans[${loanIndex}].BorrowerName" class="form-control text-center" /></td>
+								</tr>
+								<tr>
+									<td>ضامن(ها)</td>
+									<td><input name="Loans[${loanIndex}].Guarantors" class="form-control text-center" /></td>
+								</tr>
+								<tr>
+									<td>تاریخ تسویه</td>
+									<td><input name="Loans[${loanIndex}].SettlementDatePersian" class="form-control text-center persian-date-input" placeholder="1405/01/01" maxlength="10" data-jdp /></td>
+								</tr>
+								<tr>
+									<td>عملیات</td>
+									<td><button type="button" class="btn btn-sm btn-danger" onclick="removeLoanRow(this)">حذف</button></td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</div>`;
+			container.insertAdjacentHTML('beforeend', html);
+			loanIndex++;
+		}
+
+		function removeLoanRow(btn) {
+			btn.closest('.loan-block').remove();
+			checkNoLoanDiv();
+		}
+
+		function hideNoLoanDiv() {
+			const div = document.getElementById("no-loan-div");
+			if (div) div.style.display = "none";
+		}
+		function showNoLoanDiv() {
+			const div = document.getElementById("no-loan-div");
+			if (div) div.style.display = "block";
+		}
+		function checkNoLoanDiv() {
+			const count = document.querySelectorAll('.loan-block').length;
+			if (count === 0) showNoLoanDiv();
+		}
+	</script>
+
+	<script asp-append-version="true" nonce="@Context.Items["ScriptNonce"]">
+					$(document).ready(function () {
+						// جستجو در بانک‌ها
+						$('.searchable-bank').select2({
+							language: "fa",
+							dir: "rtl",
+							placeholder: "جستجو و انتخاب بانک...",
+							allowClear: true
+						});
+
+
+						// فرمت شماره کارت
+						$('.card-input').on('input', function () {
+							let v = this.value.replace(/\D/g, '').substring(0,16);
+							let parts = v.match(/.{1,4}/g);
+							this.value = parts ? parts.join('-') : v;
+						});
+
+						// شماره حساب فقط عدد و ۱۳ رقم
+						$('input[asp-for="AccountNumber"]').on('input', function () {
+							this.value = this.value.replace(/\D/g, '').substring(0,13);
+						});
+					});
+
+
+					//------------------
+
+					// تابع فرمت کردن عدد با جداکننده هزارگان (فقط نمایش)
+		function formatNumberWithCommas(num) {
+			if (!num || num === "0") return "";
+			return parseInt(num).toLocaleString("fa-IR");
+		}
+
+		// تابع حذف کاما و برگرداندن عدد خالص
+		function removeCommas(str) {
+			return str.replace(/,/g, "");
+		}
+
+				function formatAllCurrencyFields() {
+					$(".currencyFormat").each(function () {
+						let rawValue = removeCommas(this.value);
+						if (rawValue && !isNaN(rawValue) && rawValue !== "") {
+							this.value = formatNumberWithCommas(rawValue);
+							$(this).siblings("small").html(`معادل: ${formatNumberWithCommas(rawValue)} ریال`);
+						}
+					});
+				}
+
+		// اعمال فرمت موقع تایپ و blur روی همه inputهای با کلاس currencyFormat
+		$(document).on("blur", ".currencyFormat", function () {
+			let value = this.value.replace(/[^\d]/g, ""); // فقط اعداد
+			if (value === "") {
+				this.value = "";
+				$(this).siblings("small").html("");
+				return;
+			}
+
+			// نمایش با جداکننده هزارگان
+			this.value = formatNumberWithCommas(value);
+
+			// نمایش معادل فارسی زیر فیلد
+			$(this).siblings("small").html(`معادل: ${formatNumberWithCommas(value)} ریال`);
+		});
+
+		// وقتی کاربر از فیلد خارج شد، اگر مقدار خالی بود پاک کن
+		$(document).on("blur", ".currencyFormat", function () {
+			if (!this.value.trim()) {
+				$(this).siblings("small").html("");
+			}
+				});
+
+		// مهم: قبل از ارسال فرم، تمام کاماها رو حذف کن تا عدد خالص بره به سرور
+		$("form").on("submit", function () {
+			$(this).find(".currencyFormat").each(function () {
+				this.value = removeCommas(this.value);
+			});
+		});
+
+				// اجرا در ابتدای لود صفحه
+				$(document).ready(function () {
+					formatAllCurrencyFields(); // این خط مهم‌ترین تغییر است
+				});
+	</script>
+}
+
+@section customStyles
+{
+	<link href="~/css/firststepstyles.css" rel="stylesheet" asp-append-version="true" nonce="@Context.Items["ScriptNonce"]" />
+}

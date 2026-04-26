@@ -1,0 +1,48 @@
+﻿@model int
+@{
+	Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<!--begin::Head-->
+<head>
+	<partial name="_HeadMeta" />
+	<link href="~/css/errorpage.css" rel="stylesheet" asp-append-version="true" />
+	<link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+
+
+@{
+	var errorText = Model switch
+	{
+		500 => "خطای سیستم",
+		404 => "صفحه ای به که دنبال آن بودید، پیدا نشد!",
+		_ => "خطایی رخ داد"
+	};
+}
+
+
+	<div class="face">
+		<div class="band">
+			<div class="red"></div>
+			<div class="white"></div>
+			<div class="blue"></div>
+		</div>
+		<div class="eyes"></div>
+		<div class="dimples"></div>
+		<div class="mouth"></div>
+	</div>
+<p style="text-align:center;color:gray;font-size:130px;font-weight:800;margin-top:10px;margin-bottom:-70px">
+	@Model
+</p>
+<h1 style="direction:rtl">@errorText</h1>
+<div style="display:flex !important;align-content:center; align-items:center;">
+	<a href="/"  class="btn">بازگشت به صفحه اصلی</a>
+</div>
+
+
+</body>
+<!--end::Body-->
+</html>

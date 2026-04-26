@@ -1,0 +1,70 @@
+﻿/* نمایش معمولی دسکتاپ */
+#familyTable td[data-label]::before {
+    display: none;
+}
+
+/* موبایل */
+@media (max-width: 768px) {
+
+    #familyTable thead {
+        display: none !important; /* حذف هد جدول */
+    }
+
+    #familyTable,
+    #familyTable tbody,
+    #familyTable tr,
+    #familyTable td {
+        display: block;
+        width: 100%;
+    }
+
+        #familyTable tr {
+            background: #fff;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        #familyTable td {
+            position: relative;
+            padding-right: 110px; /* جا برای لیبل */
+            margin-bottom: 10px;
+            border: none;
+            text-align: right !important;
+        }
+
+            #familyTable td::before {
+                content: attr(data-label);
+                position: absolute;
+                right: 10px;
+                top: 50%;
+                transform: translateY(-50%);
+                font-weight: 600;
+                color: #555;
+                font-size: 13px;
+            }
+}
+
+.cropper-container{
+    /*width:100% !important;
+    height:100% !important;
+    max-width:100% !important;
+    max-height:100% !important;*/
+}
+
+
+CSS#cropModal .modal-body {
+    max-height: 70vh;
+    overflow: hidden;
+}
+
+.cropper-container {
+    max-height: 60vh !important;
+    max-width: 100% !important;
+}
+
+#cropImage {
+    max-height: 60vh;
+}
+

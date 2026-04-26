@@ -129,7 +129,7 @@ body {
     .phone-digit.filled {
         background: #f1faff;
         border-color: #3699ff;
-        color: #1e40af;
+        color: #1e40af !important;
     }
 
     .phone-prefix.valid-all,
@@ -404,5 +404,21 @@ body {
 #forgotPasswordBtn:not(:disabled) {
     opacity: 1;
     cursor: pointer;
+}
+
+
+
+/* شماره ناقص → سایه قرمز */
+.phone-container.invalid-all .phone-digit {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.45) !important;
+    background: rgba(239, 68, 68, 0.08) !important;
+}
+
+/* این باعث میشه filledها هم مثل current بدرخشند */
+.phone-digit.filled.current {
+    border-color: #3b82f6 !important;
+    background: #eff6ff !important;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3) !important;
 }
 

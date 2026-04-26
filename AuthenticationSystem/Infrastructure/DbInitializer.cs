@@ -25,7 +25,7 @@ namespace AuthenticationSystem.Infrastructure
                 PhoneNumber = "09397812171"
                 });
             }
-            context.SaveChanges();
+            context.SaveChangesAsync();
 
             var role = context.Roles.FirstOrDefault(x=>x.Name == "مدیریت");
 
@@ -35,15 +35,18 @@ namespace AuthenticationSystem.Infrastructure
                 {
                     foreach(var p in project.Permissions)
                     {
-                        context.RolePermissions.Add(new Domain.RolePermission.RolePermissions()
+                        if (!context.RolePermissions.Any(rp => rp.RoleId == role.Id && rp.Permission == p.Permission))
                         {
-                            RoleId = role.Id,
-                            Permission = p.Permission
-                        });
+                            context.RolePermissions.Add(new Domain.RolePermission.RolePermissions()
+                            {
+                                RoleId = role.Id,
+                                Permission = p.Permission
+                            });
+                        }
                     }
                 }
 
-                context.SaveChanges();
+                context.SaveChangesAsync();
             }
 
             var user = context.Users.FirstOrDefault(x => x.PhoneNumber == "09397812171");
@@ -55,7 +58,7 @@ namespace AuthenticationSystem.Infrastructure
                         UserId = user.Id,
                         RoleId = role.Id
                     });
-                    context.SaveChanges();
+                    context.SaveChangesAsync();
                 }
             }
         }

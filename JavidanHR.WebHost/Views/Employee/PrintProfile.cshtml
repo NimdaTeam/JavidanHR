@@ -1,8 +1,9 @@
 ﻿@using _0_Framework.Utilities.Helpers
 @using HrSystem.Domain.Entities
 @model HrSystem.Application.DTO.EmployeeDetailsVM
+
 @{
-    Layout = null; // مهم! بدون لِی‌اوت
+    Layout = null;
     ViewData["Title"] = "چاپ پروفایل پرسنلی - " + Model.FullName;
 }
 
@@ -12,84 +13,354 @@
     <meta charset="utf-8" />
     <title>@ViewData["Title"]</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
-   <link rel="stylesheet" href="~/css/NewEmployeeReport.css" />
+    <link href="~/assets/css/printprofile.css" rel="stylesheet" asp-append-version="true" nonce="@Context.Items["ScriptNonce"]" />
+    <style nonce="@Context.Items["ScriptNonce"]">
+        body {
+            font-family: Vazirmatn, Tahoma, sans-serif;
+            background: #f8f9fa !important;
+            color: #212529 !important;
+            margin: 0 !important;
+            padding: 20px !important;
+        }
+
+        .print-container {
+            max-width: 210mm !important;
+            margin: auto !important;
+            background: white !important;
+            border-radius: 12px !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;
+            overflow: hidden !important;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #0d6efd, #6610f2) !important;
+            color: white !important;
+            padding-bottom: 55px !important;
+            padding-top: 20px !important;
+            text-align: center !important;
+            position: relative !important;
+        }
+
+            .header::after {
+                content: '' !important;
+                position: absolute !important;
+                bottom: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                height: 5px !important;
+                background: linear-gradient(90deg, #ffc107, #0dcaf0, #198754) !important;
+            }
+
+            .header h1 {
+                margin: 0 !important;
+                font-size: 28pt !important;
+                font-weight: 700 !important;
+            }
+
+            .header p {
+                margin: 8px 0 0 !important;
+                font-size: 14pt !important;
+                opacity: 0.95 !important;
+            }
+
+        .profile-photo {
+            width: 140px !important;
+            height: 140px !important;
+            border-radius: 50% !important;
+            object-fit: contain !important;
+            border: 6px solid white !important;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2) !important;
+            margin: -70px auto 20px !important;
+            display: block !important;
+            position: relative !important;
+            z-index: 10 !important;
+            background:white;
+        }
+
+        .info-title {
+            font-size: 18pt !important;
+            font-weight: 700 !important;
+            color: #0d6efd !important;
+            margin: 35px 0 20px !important;
+            padding-bottom: 8px !important;
+            border-bottom: 3px solid #0d6efd !important;
+            position: relative !important;
+        }
+
+            .info-title::after {
+                content: '' !important;
+                position: absolute !important;
+                bottom: -3px !important;
+                left: 0 !important;
+                width: 60px !important;
+                height: 3px !important;
+                background: #ffc107 !important;
+            }
+
+        table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            margin: 15px 0 !important;
+            font-size: 12pt !important;
+        }
+
+        th, td {
+            padding: 12px 15px !important;
+            border: 1px solid #dee2e6 !important;
+            text-align: right !important;
+        }
+
+        th {
+            background: #f8f9fa !important;
+            font-weight: 600 !important;
+            color: #495057 !important;
+            width: 35% !important;
+        }
+
+        .highlight {
+            background: #e3f2fd !important !important;
+            font-weight: bold !important;
+            font-size: 13pt !important;
+        }
+
+        .footer {
+            margin-top: 60px !important;
+            padding: 25px !important;
+            background: #f8f9fa !important;
+            text-align: center !important;
+            color: #6c757d !important;
+            font-size: 11pt !important;
+            border-top: 1px solid #dee2e6 !important;
+        }
+
+        .print-btn {
+            position: fixed !important;
+            top: 20px !important;
+            right: 20px !important;
+            z-index: 9999 !important;
+            background: #0d6efd !important;
+            color: white !important;
+            padding: 12px 24px !important;
+            border: none !important;
+            border-radius: 50px !important;
+            font-size: 14pt !important;
+            cursor: pointer !important;
+            box-shadow: 0 4px 15px rgba(13,110,253,0.3) !important;
+        }
+
+            .print-btn:hover {
+                background: #0b5ed7 !important;
+            }
+
+        @@media print {
+            body {
+                background: white !important;
+                padding: 0 !important;
+            }
+
+            .print-btn {
+                display: none !important;
+            }
+
+            .print-container {
+                box-shadow: none !important;
+                border-radius: 0 !important;
+            }
+        }
+    </style>
 </head>
 <body>
-
-    <button style="font-family:Vazirmatn" class="print-btn" onclick="window.print()">
-        چاپ این صفحه
-    </button>
+    <button class="print-btn" onclick="window.print()">چاپ این صفحه</button>
 
     <div class="print-container">
-
         <div class="header">
             <h1>پروفایل پرسنلی</h1>
-            <p>سیستم مدیریت منابع انسانی</p>
-            <p style="margin-top:8px; color:#666;">
-                تاریخ چاپ: @DateTime.Now.ToShamsiWithTime() — ساعت: @DateTime.Now.ToString("HH:mm")
-            </p>
+            <p>سیستم مدیریت منابع انسانی — صندوق قرض‌الحسنه جاویدان</p>
+            <p>تاریخ چاپ: @DateTime.Now.ToShamsi() — ساعت: @DateTime.Now.ToString("HH:mm")</p>
         </div>
 
-        <div style="text-align:center; margin-bottom:40px;">
+        <div style="text-align:center; padding: 20px 40px 0;">
             <img src="@(string.IsNullOrEmpty(Model.ProfileImageUrl) ? "/assets/media/avatars/blank.png" : "/uploads/Employees/" + Model.ProfileImageUrl)"
                  class="profile-photo" alt="@Model.FullName" />
-            <h2 style="margin:20px 0 8px; font-size:26pt;">@Model.FullName</h2>
+            <h2 style="margin:15px 0 5px; font-size:28pt;">@Model.FullName</h2>
             <p style="font-size:18pt; color:#0d6efd; margin:0;">کد پرسنلی: @Model.EmployeeCode</p>
-            <p style="margin-top:10px; font-size:16pt; color:@(Model.IsActive ? "green" : "red"); font-weight:bold;">
+            <p style="margin:10px 0 0; font-size:16pt; color:@(Model.IsActive ? "#198754" : "#dc3545"); font-weight:bold;">
                 وضعیت: @(Model.IsActive ? "فعال در سازمان" : "ترک کار کرده")
                 @(Model.RetirementStatus == RetirementStatus.Retired ? " — بازنشسته" : "")
             </p>
         </div>
 
-        <div class="info-title">اطلاعات هویتی</div>
-        <table class="table table-bordered">
-            <tr><td>کد ملی</td><td>@Model.NationalCode</td></tr>
-            <tr><td>تاریخ تولد</td><td>@Model.PersianBirthDate (@Model.Age سال)</td></tr>
-            <tr><td>جنسیت</td><td>@Model.GenderDisplay</td></tr>
-            <tr><td>وضعیت تأهل</td><td>@Model.MaritalStatusDisplay</td></tr>
-            <tr><td>تعداد فرزند</td><td>@(Model.ChildrenCount == 0 ? "ندارد" : Model.ChildrenCount + " نفر")</td></tr>
-        </table>
+        <div style="padding: 0 40px 40px;">
+            <div class="info-title">اطلاعات هویتی</div>
+            <table>
+                <tr><th>کد ملی</th><td>@Model.NationalCode</td></tr>
+                <tr><th>شماره شناسنامه</th><td>@(Model.IdNumber ?? "ثبت نشده")</td></tr>
+                <tr><th>محل صدور شناسنامه</th><td>@(Model.IdIssuePlace ?? "—")</td></tr>
+                <tr><th>تاریخ تولد</th><td>@Model.PersianBirthDate (@Model.Age سال)</td></tr>
+                <tr><th>محل تولد</th><td>@(Model.BirthPlace ?? "—")</td></tr>
+                <tr><th>نام پدر</th><td>@(Model.FathersName ?? "—")</td></tr>
+                <tr><th>نام خانوادگی قبلی</th><td>@((!string.IsNullOrWhiteSpace(Model.PreviousLastName)) ? Model.PreviousLastName : "—")</td></tr>
+                <tr><th>نام مستعار</th><td>@((!string.IsNullOrWhiteSpace(Model.Nickname)) ? Model.Nickname : "—")</td></tr>
+                <tr><th>جنسیت</th><td>@Model.GenderDisplay</td></tr>
+                <tr><th>وضعیت تأهل</th><td>@Model.MaritalStatusDisplay</td></tr>
+                @if (Model.MaritalStatus == MaritalStatus.Married)
+                {
+                    <tr><th>تاریخ ازدواج</th><td>@(Model.MarriageDatePersian ?? "—")</td></tr>
+                }
+            </table>
 
-        <div class="info-title">اطلاعات تماس</div>
-        <table>
-            <tr><td>شماره همراه</td><td>@(Model.PhoneNumber ?? "ثبت نشده")</td></tr>
-            <tr><td>ایمیل</td><td>@(Model.Email ?? "ثبت نشده")</td></tr>
-            <tr><td>آدرس</td><td>@(Model.Address ?? "ثبت نشده")</td></tr>
-            <tr><td>تماس اضطراری</td><td>@(string.IsNullOrEmpty(Model.EmergencyContactName) ? "ثبت نشده" : $"{Model.EmergencyContactName} — {Model.EmergencyContactPhone}")</td></tr>
-        </table>
+            @if (Model.Gender == Gender.Male && Model.MilitaryStatus != MilitaryStatus.None)
+            {
+                <div class="info-title">وضعیت نظام وظیفه</div>
+                <table>
+                    <tr><th>وضعیت</th><td>@Model.MilitaryStatusDisplay</td></tr>
+                    @if (Model.MilitaryStatus == MilitaryStatus.Ended)
+                    {
+                        <tr><th>تاریخ پایان خدمت</th><td>@(Model.ServiceEndDatePersian ?? "—")</td></tr>
+                    }
+                    @if (Model.MilitaryStatus == MilitaryStatus.Exempt)
+                    {
+                        <tr><th>علت معافیت</th><td>@(Model.ExemptionReason ?? "—")</td></tr>
+                    }
+                </table>
+            }
 
-        <div class="info-title">اطلاعات سازمانی</div>
-        <table>
-            <tr><td>واحد سازمانی</td><td>@(Model.Department ?? "ثبت نشده")</td></tr>
-            <tr><td>پست سازمانی</td><td>@(Model.Position ?? "ثبت نشده")</td></tr>
-            <tr><td>مدرک تحصیلی</td><td>@Model.EducationLevelDisplay</td></tr>
-            <tr><td>رشته تحصیلی</td><td>@(Model.FieldOfStudy ?? "—")</td></tr>
-            <tr><td>نوع قرارداد</td><td>@Model.ContractTypeDisplay</td></tr>
-            <tr><td>نوع همکاری</td><td>@Model.CooperationTypeDisplay</td></tr>
-            <tr><td>تاریخ استخدام</td><td>@Model.PersianHireDate (@Model.WorkExperienceYears سال سابقه)</td></tr>
-        </table>
+            <div class="info-title">اطلاعات تماس</div>
+            <table>
+                <tr><th>شماره همراه</th><td>@(Model.MobilePhone ?? "ثبت نشده")</td></tr>
+                <tr><th>تلفن ثابت</th><td>@(Model.HomePhone ?? "ثبت نشده")</td></tr>
+            </table>
 
-        <div class="info-title">اطلاعات مالی</div>
-        <table>
-            <tr><td>حقوق پایه</td><td>@(Model.BaseSalary?.ToString("N0") ?? "0") ریال</td></tr>
-            <tr><td>مزایا و فوق‌العاده</td><td>@(Model.Benefits?.ToString("N0") ?? "0") ریال</td></tr>
-            <tr class="highlight"><td>کل دریافتی ماهانه</td><td>@Model.TotalSalary.ToString("N0") ریال</td></tr>
-            <tr><td>بانک</td><td>@(Model.BankName ?? "—")</td></tr>
-            <tr><td>روش پرداخت</td><td>@Model.PaymentMethodDisplay</td></tr>
-        </table>
+            @if (Model.HousingStatus.HasValue)
+            {
+                <div class="info-title">وضعیت مسکن و آدرس</div>
+                <table>
+                    <tr><th>وضعیت</th><td>@Model.HousingStatusDisplay</td></tr>
+                    <tr><th>آدرس</th><td>@(Model.HousingStatus == HousingStatus.Personal ? Model.PersonalAddress : Model.RentalAddress ?? "ثبت نشده")</td></tr>
+                </table>
+            }
 
-        <div class="info-title">اطلاعات تکمیلی</div>
-        <table>
-            <tr><td>شماره بیمه تأمین اجتماعی</td><td>@(Model.InsuranceNumber ?? "ندارد")</td></tr>
-            <tr><td>وضعیت سلامت</td><td>@Model.HealthStatusDisplay</td></tr>
-            <tr><td>مرخصی باقیمانده</td><td><strong>@Model.RemainingLeaveDays روز</strong></td></tr>
-            <tr><td>نمره ارزیابی عملکرد</td><td>@(Model.PerformanceScore.HasValue? Model.PerformanceScore + " از ۱۰۰" : "ارزیابی نشده")</td></tr>
-        </table>
+            @if (Model.EducationLevel.HasValue)
+            {
+                <div class="info-title">تحصیلات</div>
+                <table>
+                    <tr><th>مدرک تحصیلی</th><td>@Model.EducationLevelDisplay</td></tr>
+                    <tr><th>رشته تحصیلی</th><td>@(Model.FieldOfStudy ?? "—")</td></tr>
+                    <tr><th>سال شروع / پایان</th><td>@(Model.EducationStartYear?.ToString() ?? "-") — @(Model.EducationEndYear?.ToString() ?? "-")</td></tr>
+                    <tr><th>دانشگاه/ موسسه آموزشی - شهر محل آموزش</th><td>@(Model.EducationInstituteName ?? "—") — @(Model.EducationInstituteCity ?? "—")</td></tr>
+                </table>
+            }
+			
+            @if (Model.Trainings.Any())
+            {
+	            <div class="info-title">دوره های آموزشی</div>
+	            
+                    @foreach (var item in Model.Trainings)
+                    {
+	                    <table>
+	                    <tr><th>نام دوره</th><td>@(item.CourseName ?? "-")</td></tr>
+	                    <tr><th>موسسه آموزشی</th><td>@(item.Institute ?? "-")</td></tr>
+	                    <tr><th>مدت زمان</th><td>@(item.Hours.ToString() ?? "-") ساعت</td></tr>
+	                    <tr><th>شماره/تاریخ گواهی دوره</th><td>@(item.CertificateNumberAndDate ?? "-")</td></tr>
+	                    </table>
+                    }
+	            
+            }
+
+            <div class="info-title">اطلاعات استخدامی</div>
+            <table>
+                <tr><th>واحد سازمانی</th><td>@(Model.Department ?? "—")</td></tr>
+                <tr><th>سمت</th><td>@(Model.Position ?? "—")</td></tr>
+                <tr><th>نوع قرارداد</th><td>@Model.ContractTypeDisplay</td></tr>
+                <tr><th>نوع همکاری</th><td>@Model.CooperationTypeDisplay</td></tr>
+                <tr><th>تاریخ استخدام</th><td>@Model.PersianHireDate</td></tr>
+                <tr><th>شماره بیمه</th><td>@(Model.InsuranceNumber ?? "ندارد")</td></tr>
+                <tr><th>وضعیت سلامت</th><td>@Model.HealthStatusDisplay</td></tr>
+                <tr><th>مرخصی باقیمانده</th><td>@Model.RemainingLeaveDays روز</td></tr>
+            </table>
+
+            <div class="info-title">اطلاعات مالی</div>
+            <table>
+                <tr><th>حقوق پایه</th><td>@(Model.BaseSalary?.ToString("N0") ?? "0") ریال</td></tr>
+                <tr><th>مزایا و فوق‌العاده</th><td>@(Model.Benefits?.ToString("N0") ?? "0") ریال</td></tr>
+                <tr class="highlight"><th>کل دریافتی ماهانه</th><td>@Model.TotalSalary.ToString("N0") ریال</td></tr>
+                <tr><th>بانک</th><td>@(Model.BankName ?? "—")</td></tr>
+                <tr><th>شماره حساب</th><td>@(Model.AccountNumber ?? "—")</td></tr>
+                <tr><th>شماره کارت</th><td>@(Model.CardNumber ?? "—")</td></tr>
+                <tr><th>روش پرداخت</th><td>@Model.PaymentMethodDisplay</td></tr>
+            </table>
+
+            @if (Model.FamilyMembers.Any())
+            {
+                <div class="info-title">اعضای خانواده</div>
+                <div class="table-responsive">
+                    <table>
+                        <thead class="table-light">
+                            <tr><th>نام و نام خانوادگی</th><th>نسبت</th><th>تاریخ تولد</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var m in Model.FamilyMembers)
+                            {
+                                <tr>
+                                    <td>@m.FullName</td>
+                                    <td>@m.Relation</td>
+                                    <td>@(m.BirthDate?.ToShamsi() ?? "—")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            @if (Model.WorkExperiences.Any())
+            {
+                <div class="info-title">سوابق کاری</div>
+                <div class="table-responsive">
+                    <table>
+                        <thead class="table-light">
+                            <tr><th>سازمان</th><th>سمت</th><th>از تاریخ</th><th>تا تاریخ</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var w in Model.WorkExperiences.OrderByDescending(x => x.StartDate))
+                            {
+                                <tr>
+                                    <td>@(w.Type == WorkExperienceType.JavidanInternal ? "صندوق قرض‌الحسنه جاویدان" : w.Organization)</td>
+                                    <td>@w.Position</td>
+                                    <td>@w.StartDate.ToShamsi()</td>
+                                    <td>@(w.EndDate?.ToShamsi() ?? "تاکنون")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            @if (Model.Loans.Any())
+            {
+                <div class="info-title">وام‌های دریافتی</div>
+                <div class="table-responsive">
+                    <table>
+                        <thead class="table-light">
+                            <tr><th>مبلغ</th><th>وام‌گیرنده</th><th>تاریخ تسویه</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var l in Model.Loans)
+                            {
+                                <tr>
+                                    <td>@l.Amount.ToString("N0") ریال</td>
+                                    <td>@l.BorrowerName</td>
+                                    <td>@(l.SettlementDate?.ToShamsi() ?? "تسویه نشده")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
 
         <div class="footer">
             <p>این سند به صورت خودکار توسط سیستم مدیریت منابع انسانی تولید شده است.</p>
-            <p style="margin-top:8px; color:#aaa;">چاپ شده در تاریخ @DateTime.Now.ToShamsiWithTime()</p>
+            <p>چاپ شده در تاریخ @DateTime.Now.ToShamsiWithTime()</p>
         </div>
     </div>
 </body>

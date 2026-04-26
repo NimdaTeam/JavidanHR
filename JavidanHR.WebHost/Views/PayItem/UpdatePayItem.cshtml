@@ -1,0 +1,1482 @@
+﻿@using PayrollSystem.Domain.Entities.PayItem
+@using PayrollSystem.Domain.Common
+@model PayrollSystem.Application.DTOs.UpdatePayItemDto
+@{
+    ViewData["Title"] = $"ویرایش عامل حقوقی «{Model.Name}»";
+    var allCodesJson = System.Text.Json.JsonSerializer.Serialize(
+        PayItemConstants.GetAllValidItems().Select(x => new { code = x.SystemCode, name = x.Name, group = x.Group })
+    );
+}
+
+<form asp-action="UpdatePayItem" asp-controller="PayItem" asp-route-id="@Model.Id" method="post" id="addPayItemForm">
+    <div class="card mb-5 mb-xl-8 pi-card-main">
+        <div class="card-header pi-card-header">
+            <div class="d-flex align-items-center gap-3">
+                <div class="pi-icon-wrap">
+                    <i class="fas fa-layer-group"></i>
+                </div>
+                <div>
+                    <h3 class="card-title mb-0 pi-title">@ViewData["Title"]</h3>
+                    <span class="pi-subtitle">ویرایش عامل حقوقی در سیستم حقوق و دستمزد</span>
+                </div>
+            </div>
+            <Form-buttons return-url="@ViewBag.ReturnUrl"></Form-buttons>
+        </div>
+
+        <div class="card-body py-8 px-8">
+            @Html.AntiForgeryToken()
+			
+            <input type="hidden" asp-for="Id"/>
+
+            @if (!ViewData.ModelState.IsValid && ViewData.ModelState.ContainsKey(string.Empty))
+            {
+                <div class="pi-alert-error mb-6">
+                    <i class="fas fa-exclamation-circle pi-alert-icon"></i>
+                    <div>
+                        @foreach (var error in ViewData.ModelState[string.Empty]!.Errors)
+                        {
+                            <div>@error.ErrorMessage</div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- ═══════════════ بخش اول: اطلاعات پایه ═══════════════ -->
+            <div class="pi-section-label">
+                <span class="pi-section-num">۱</span>
+                اطلاعات پایه
+            </div>
+
+            <div class="row g-5 mb-6">
+                <div class="col-md-6">
+                    <div class="pi-field">
+                        <label class="pi-label required">نام عامل حقوقی</label>
+                        <input asp-for="Name" class="pi-input" placeholder="مثال: حق نوبتکاری" required />
+                        <span asp-validation-for="Name" class="pi-error-msg"></span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="pi-field">
+                        <label class="pi-label required">کد سیستمی</label>
+                        <input asp-for="SystemCode" id="systemCodeInput"
+                               class="pi-input pi-input-mono"
+                               required placeholder="مثال: PAY_SHIFT_BONUS"
+                               oninput="this.value = this.value.toUpperCase()" />
+                        <span asp-validation-for="SystemCode" class="pi-error-msg"></span>
+                        <div class="pi-hint">
+                            <code class="pi-code-hint">PAY_</code> مزایا &nbsp;·&nbsp;
+                            <code class="pi-code-hint">DED_</code> کسورات &nbsp;·&nbsp;
+                            <code class="pi-code-hint">INF_</code> اطلاعاتی
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══════════════ بخش دوم: تنظیمات ═══════════════ -->
+            <div class="pi-section-label">
+                <span class="pi-section-num">۲</span>
+                تنظیمات عامل
+            </div>
+
+            <div class="row g-5 mb-6">
+                <div class="col-md-4">
+                    <div class="pi-field">
+                        <label class="pi-label required">نوع عامل</label>
+                        <select asp-for="Type"
+                                asp-items="@(ViewBag.PayItemTypes as IEnumerable<SelectListItem>)"
+                                class="pi-select" id="payItemType">
+                        </select>
+                        <span asp-validation-for="Type" class="pi-error-msg"></span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="pi-field">
+                        <label class="pi-label required">نوع داده</label>
+                        <select asp-for="DataType"
+                                asp-items="@(ViewBag.PayItemDataTypes as IEnumerable<SelectListItem>)"
+                                class="pi-select" id="payItemDataType"
+                                onchange="toggleFormulaSection()">
+                        </select>
+                        <span asp-validation-for="DataType" class="pi-error-msg"></span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="pi-field">
+                        <label class="pi-label">ترتیب نمایش</label>
+                        <input type="number" asp-for="SortOrder" class="pi-input text-center" min="0" placeholder="0" />
+                        <span asp-validation-for="SortOrder" class="pi-error-msg"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══════════════ بخش سوم: ویژگی‌ها ═══════════════ -->
+            <div class="pi-section-label">
+                <span class="pi-section-num">۳</span>
+                ویژگی‌ها
+            </div>
+
+            <div class="pi-toggles-grid mb-8">
+                <label class="pi-toggle-card" for="isInsured">
+                    <div class="pi-toggle-icon pi-toggle-blue"><i class="fas fa-shield-alt"></i></div>
+                    <div class="pi-toggle-info">
+                        <span class="pi-toggle-title">مشمول بیمه</span>
+                        <span class="pi-toggle-desc">کسر حق بیمه</span>
+                    </div>
+                    <div class="pi-toggle-switch">
+                        <input class="pi-toggle-input" type="checkbox" asp-for="IsInsured" id="isInsured" />
+                        <span class="pi-toggle-slider"></span>
+                    </div>
+                </label>
+
+                <label class="pi-toggle-card" for="isTaxable">
+                    <div class="pi-toggle-icon pi-toggle-orange"><i class="fas fa-receipt"></i></div>
+                    <div class="pi-toggle-info">
+                        <span class="pi-toggle-title">مشمول مالیات</span>
+                        <span class="pi-toggle-desc">کسر مالیات</span>
+                    </div>
+                    <div class="pi-toggle-switch">
+                        <input class="pi-toggle-input" type="checkbox" asp-for="IsTaxable" id="isTaxable" />
+                        <span class="pi-toggle-slider"></span>
+                    </div>
+                </label>
+
+                <label class="pi-toggle-card" for="isEditable">
+                    <div class="pi-toggle-icon pi-toggle-purple"><i class="fas fa-pen"></i></div>
+                    <div class="pi-toggle-info">
+                        <span class="pi-toggle-title">قابل ویرایش</span>
+                        <span class="pi-toggle-desc">توسط کاربر</span>
+                    </div>
+                    <div class="pi-toggle-switch">
+                        <input class="pi-toggle-input" type="checkbox" asp-for="IsEditable" id="isEditable" />
+                        <span class="pi-toggle-slider"></span>
+                    </div>
+                </label>
+
+                <label class="pi-toggle-card" for="isActive">
+                    <div class="pi-toggle-icon pi-toggle-green"><i class="fas fa-power-off"></i></div>
+                    <div class="pi-toggle-info">
+                        <span class="pi-toggle-title">فعال</span>
+                        <span class="pi-toggle-desc">وضعیت عامل</span>
+                    </div>
+                    <div class="pi-toggle-switch">
+                        <input class="pi-toggle-input" type="checkbox" asp-for="IsActive" id="isActive" />
+                        <span class="pi-toggle-slider"></span>
+                    </div>
+                </label>
+            </div>
+
+            <!-- ═══════════════ بخش فرمول ═══════════════ -->
+            <div id="formulaSection" style="display:none;">
+                <div class="pi-section-label">
+                    <span class="pi-section-num"><i class="fas fa-function" style="font-size:0.75rem;"></i></span>
+                    فرمول محاسباتی
+                </div>
+
+                <div class="pi-formula-wrapper">
+
+                    <!-- ردیف اول: textarea + تاریخ -->
+                    <div class="row g-5 mb-0">
+                        <div class="col-md-8">
+                            <label class="pi-label required">فرمول</label>
+                            <div class="pi-editor-wrap">
+                                <div class="pi-editor-bar">
+                                    <span class="pi-editor-dot red"></span>
+                                    <span class="pi-editor-dot yellow"></span>
+                                    <span class="pi-editor-dot green"></span>
+                                    <span class="pi-editor-lang">FORMULA</span>
+                                </div>
+                                <textarea asp-for="Formula" id="formulaInput"
+                                          class="pi-editor-textarea"
+                                          rows="4"
+                                          placeholder="PAY_BASE * 0.25 + ATT_OVERTIME * 1.4"
+                                          oninput="onFormulaChange()"></textarea>
+                            </div>
+                            <span asp-validation-for="Formula" class="pi-error-msg"></span>
+
+                            <!-- وضعیت ولیدیشن -->
+                            <div id="formulaValidationResult" class="pi-status-bar" style="display:none;">
+                                <div id="formulaValidOk" class="pi-status pi-status-ok" style="display:none;">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span id="formulaTestResult"></span>
+                                </div>
+                                <div id="formulaValidErr" class="pi-status pi-status-err" style="display:none;">
+                                    <i class="fas fa-times-circle"></i>
+                                    <span id="formulaErrorMsg"></span>
+                                </div>
+                                <div id="formulaValidWarn" class="pi-status pi-status-warn" style="display:none;">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span id="formulaWarnMsg"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="pi-label required">تاریخ شروع اعتبار</label>
+                            <input type="date" asp-for="FormulaValidFromDate"
+                                   class="pi-input text-center"
+                                   value="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                            <span asp-validation-for="FormulaValidFromDate" class="pi-error-msg"></span>
+
+                            <!-- راهنمای سریع -->
+                            <div class="pi-formula-tips mt-4">
+                                <div class="pi-tips-title"><i class="fas fa-lightbulb me-1"></i> عملگرها</div>
+                                <div class="pi-tips-grid">
+                                    <span class="pi-tip"><code>+</code> جمع</span>
+                                    <span class="pi-tip"><code>-</code> تفریق</span>
+                                    <span class="pi-tip"><code>*</code> ضرب</span>
+                                    <span class="pi-tip"><code>/</code> تقسیم</span>
+                                    <span class="pi-tip"><code>( )</code> گروه‌بندی</span>
+                                    <span class="pi-tip"><code>Math.round()</code></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- انتخاب‌گر عوامل -->
+                    <div class="pi-picker mt-6">
+                        <div class="pi-picker-header">
+                            <span class="pi-picker-title">
+                                <i class="fas fa-database me-2 text-muted"></i>
+                                انتخاب متغیر برای درج در فرمول
+                            </span>
+                            <div class="pi-search-wrap">
+                                <i class="fas fa-search pi-search-icon"></i>
+                                <input type="text" id="codeSearch"
+                                       class="pi-search-input"
+                                       placeholder="جستجو..."
+                                       oninput="filterCodes(this.value)" />
+                            </div>
+                        </div>
+
+                        <!-- تب‌ها -->
+                        <div class="pi-tabs" id="codeGroupTabs">
+                            <button type="button" class="pi-tab active" onclick="filterByGroup('all', this)">همه</button>
+                            <button type="button" class="pi-tab pi-tab-info" onclick="filterByGroup('کارکرد', this)">
+                                <i class="fas fa-clock me-1"></i>کارکرد
+                            </button>
+                            <button type="button" class="pi-tab pi-tab-success" onclick="filterByGroup('مزایا', this)">
+                                <i class="fas fa-plus me-1"></i>مزایا
+                            </button>
+                            <button type="button" class="pi-tab pi-tab-danger" onclick="filterByGroup('کسورات', this)">
+                                <i class="fas fa-minus me-1"></i>کسورات
+                            </button>
+                            <button type="button" class="pi-tab pi-tab-primary" onclick="filterByGroup('اطلاعاتی', this)">
+                                <i class="fas fa-info me-1"></i>اطلاعاتی
+                            </button>
+                            <button type="button" class="pi-tab pi-tab-warning" onclick="filterByGroup('سفارشی', this)">
+                                <i class="fas fa-star me-1"></i>سفارشی
+                            </button>
+                        </div>
+
+                        <!-- گرید عوامل -->
+                        <div id="codeGrid" class="pi-code-grid"></div>
+                    </div>
+
+                    <!-- پنل تست فرمول -->
+                    <div id="formulaTestPanel" class="pi-test-panel" style="display:none;">
+                        <div class="pi-test-header">
+                            <i class="fas fa-vial me-2"></i>
+                            تست فرمول با مقادیر دلخواه
+                            <span class="pi-test-hint">مقادیر را وارد کنید و دکمه محاسبه را بزنید</span>
+                        </div>
+                        <div id="formulaVarInputs" class="pi-var-grid"></div>
+                        <div class="d-flex align-items-center gap-3 mt-4">
+                            <button type="button" class="pi-calc-btn" onclick="runFormulaTest()">
+                                <i class="fas fa-play me-2"></i>محاسبه نتیجه
+                            </button>
+                            <button type="button" class="pi-reset-btn" onclick="resetTestInputs()">
+                                <i class="fas fa-redo me-1"></i>صفر کردن
+                            </button>
+                        </div>
+                        <div id="formulaTestOutput" class="pi-test-output" style="display:none;"></div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        // ─────────────────────────────────────────────
+        // داده‌ها
+        // ─────────────────────────────────────────────
+        const ALL_CODES = @Html.Raw(allCodesJson);
+
+        const GROUP_META = {
+            'کارکرد':   { cls: 'grp-info',    icon: 'fa-clock'        },
+            'مزایا':    { cls: 'grp-success',  icon: 'fa-plus-circle'  },
+            'کسورات':   { cls: 'grp-danger',   icon: 'fa-minus-circle' },
+            'اطلاعاتی': { cls: 'grp-primary',  icon: 'fa-info-circle'  },
+            'سفارشی':   { cls: 'grp-warning',  icon: 'fa-star'         },
+        };
+
+        const VALID_CODES_SET = new Set(ALL_CODES.map(x => x.code.toUpperCase()));
+
+        let activeGroup  = 'all';
+        let searchText   = '';
+        let debounceTimer = null;
+
+        // ─────────────────────────────────────────────
+        // گرید عوامل
+        // ─────────────────────────────────────────────
+        function renderCodeGrid() {
+            const grid = document.getElementById('codeGrid');
+            grid.innerHTML = '';
+
+            const filtered = ALL_CODES.filter(item => {
+                const matchGroup  = activeGroup === 'all' || item.group === activeGroup;
+                const matchSearch = !searchText ||
+                    item.name.includes(searchText) ||
+                    item.code.toLowerCase().includes(searchText.toLowerCase());
+                return matchGroup && matchSearch;
+            });
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div class="pi-empty">
+                        <i class="fas fa-search-minus"></i>
+                        <span>موردی یافت نشد</span>
+                    </div>`;
+                return;
+            }
+
+            filtered.forEach(item => {
+                const meta = GROUP_META[item.group] || { cls: 'grp-secondary', icon: 'fa-tag' };
+                const chip = document.createElement('div');
+                chip.className = `pi-chip ${meta.cls}`;
+                chip.title = 'کلیک برای درج در فرمول';
+                chip.innerHTML = `
+                    <i class="fas ${meta.icon} pi-chip-icon"></i>
+                    <div class="pi-chip-body">
+                        <span class="pi-chip-name">${item.name}</span>
+                        <code class="pi-chip-code">${item.code}</code>
+                    </div>`;
+                chip.addEventListener('click', () => insertCodeAtCursor(item.code));
+                grid.appendChild(chip);
+            });
+        }
+
+        function filterByGroup(group, btn) {
+            activeGroup = group;
+            document.querySelectorAll('#codeGroupTabs .pi-tab').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderCodeGrid();
+        }
+
+        function filterCodes(val) {
+            searchText = val;
+            renderCodeGrid();
+        }
+
+        // ─────────────────────────────────────────────
+        // درج در cursor
+        // ─────────────────────────────────────────────
+        function insertCodeAtCursor(code) {
+            const ta    = document.getElementById('formulaInput');
+            const start = ta.selectionStart;
+            const end   = ta.selectionEnd;
+            const val   = ta.value;
+            const before = (start > 0 && val[start - 1] !== ' ') ? ' ' : '';
+            const after  = (end < val.length && val[end] !== ' ') ? ' ' : '';
+            ta.value = val.substring(0, start) + before + code + after + val.substring(end);
+            ta.selectionStart = ta.selectionEnd = start + before.length + code.length + after.length;
+            ta.focus();
+            onFormulaChange();
+        }
+
+        // ─────────────────────────────────────────────
+        // استخراج متغیرها
+        // ─────────────────────────────────────────────
+        function extractVars(formula) {
+            const matches = formula.match(/\b([A-Z][A-Z0-9_]*)\b/g) || [];
+            return [...new Set(matches.map(v => v.toUpperCase()))];
+        }
+
+        function escapeRegex(s) {
+            return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        // ─────────────────────────────────────────────
+        // ولیدیشن ساختاری
+        // ─────────────────────────────────────────────
+        function onFormulaChange() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(_doValidate, 350);
+        }
+
+        function _doValidate() {
+            const formula   = document.getElementById('formulaInput').value.trim();
+            const resultDiv = document.getElementById('formulaValidationResult');
+            const testPanel = document.getElementById('formulaTestPanel');
+            const testOut   = document.getElementById('formulaTestOutput');
+
+            // پاک‌سازی
+            hideAll();
+            resultDiv.style.display = 'none';
+            testPanel.style.display = 'none';
+            testOut.style.display   = 'none';
+
+            if (!formula) return;
+
+            resultDiv.style.display = 'block';
+
+            const vars        = extractVars(formula);
+            const invalidVars = vars.filter(v => !VALID_CODES_SET.has(v));
+
+            if (vars.length === 0) {
+                showWarn('فرمول باید حداقل شامل یک متغیر (عامل حقوقی) باشد');
+                return;
+            }
+            if (invalidVars.length > 0) {
+                showError(`کدهای ناشناخته: <strong>${invalidVars.join('، ')}</strong>`);
+                return;
+            }
+
+            // بررسی ساختاری با مقدار ۱
+            let testFormula = formula;
+            vars.forEach(v => {
+                testFormula = testFormula.replace(new RegExp(`\\b${escapeRegex(v)}\\b`, 'gi'), '(1)');
+            });
+
+            try {
+                // eslint-disable-next-line no-new-func
+                const result = new Function('"use strict"; return (' + testFormula + ')')();
+                if (typeof result !== 'number' || isNaN(result)) {
+                    showError('فرمول مقدار عددی برنمی‌گرداند');
+                    return;
+                }
+                if (!isFinite(result)) {
+                    showWarn('احتمال تقسیم بر صفر — مقادیر را در پنل تست بررسی کنید');
+                } else {
+                    showOk('ساختار فرمول صحیح است');
+                }
+                buildTestPanel(vars);
+                testPanel.style.display = 'block';
+            } catch (e) {
+                showError(`خطای ساختاری: ${friendlyError(e.message)}`);
+            }
+        }
+
+        function hideAll() {
+            ['formulaValidOk','formulaValidErr','formulaValidWarn'].forEach(id => {
+                document.getElementById(id).style.display = 'none';
+            });
+        }
+        function showOk(msg) {
+            const el = document.getElementById('formulaValidOk');
+            document.getElementById('formulaTestResult').textContent = msg;
+            el.style.display = 'flex';
+        }
+        function showError(msg) {
+            const el = document.getElementById('formulaValidErr');
+            document.getElementById('formulaErrorMsg').innerHTML = msg;
+            el.style.display = 'flex';
+        }
+        function showWarn(msg) {
+            const el = document.getElementById('formulaValidWarn');
+            document.getElementById('formulaWarnMsg').textContent = msg;
+            el.style.display = 'flex';
+        }
+
+        function friendlyError(msg) {
+            if (msg.includes('Unexpected token') || msg.includes('expected expression')) return 'عبارت ناقص یا پرانتز اشتباه';
+            if (msg.includes('is not defined')) return 'متغیر تعریف‌نشده';
+            if (msg.includes('Invalid'))        return 'عبارت نامعتبر';
+            return msg;
+        }
+
+        // ─────────────────────────────────────────────
+        // پنل تست
+        // ─────────────────────────────────────────────
+        function buildTestPanel(vars) {
+            const container = document.getElementById('formulaVarInputs');
+            // مقادیر قبلی را نگه دار
+            const oldVals = {};
+            container.querySelectorAll('.pi-var-input').forEach(inp => {
+                oldVals[inp.dataset.var] = inp.value;
+            });
+
+            container.innerHTML = '';
+            vars.forEach(v => {
+                const info  = ALL_CODES.find(x => x.code.toUpperCase() === v);
+                const label = info ? info.name : v;
+                const meta  = info ? (GROUP_META[info.group] || {}) : {};
+                const prevVal = oldVals[v] ?? '0';
+
+                const wrap = document.createElement('div');
+                wrap.className = 'pi-var-item';
+                wrap.innerHTML = `
+                    <label class="pi-var-label">
+                        <i class="fas ${meta.icon || 'fa-tag'} me-1 opacity-50"></i>${label}
+                    </label>
+                    <code class="pi-var-code">${v}</code>
+                    <input type="number"
+                           class="pi-var-input"
+                           data-var="${v}"
+                           value="${prevVal}"
+                           step="any"
+                           placeholder="0"
+                           onkeydown="if(event.key==='Enter'){event.preventDefault();runFormulaTest();}" />`;
+                container.appendChild(wrap);
+            });
+        }
+
+        function runFormulaTest() {
+            const formula = document.getElementById('formulaInput').value.trim();
+            const output  = document.getElementById('formulaTestOutput');
+            output.style.display = 'none';
+            if (!formula) return;
+
+            const inputs = document.querySelectorAll('.pi-var-input');
+            let testFormula = formula;
+
+            inputs.forEach(inp => {
+                const val = parseFloat(inp.value);
+                const num = isNaN(val) ? 0 : val;
+                testFormula = testFormula.replace(
+                    new RegExp(`\\b${escapeRegex(inp.dataset.var)}\\b`, 'gi'),
+                    `(${num})`
+                );
+            });
+
+            output.style.display = 'block';
+            try {
+                // eslint-disable-next-line no-new-func
+                const result = new Function('"use strict"; return (' + testFormula + ')')();
+
+                if (typeof result !== 'number' || isNaN(result)) {
+                    output.innerHTML = `<div class="pi-result pi-result-err"><i class="fas fa-times-circle me-2"></i>فرمول مقدار عددی برنمی‌گرداند</div>`;
+                    return;
+                }
+                if (!isFinite(result)) {
+                    output.innerHTML = `<div class="pi-result pi-result-warn"><i class="fas fa-exclamation-triangle me-2"></i>تقسیم بر صفر — مقادیر متغیرها را بررسی کنید</div>`;
+                    return;
+                }
+
+                const formatted = result.toLocaleString('fa-IR', { maximumFractionDigits: 4 });
+                const exprClean = testFormula.replace(/\((\d+(\.\d+)?)\)/g, '$1');
+                output.innerHTML = `
+                    <div class="pi-result pi-result-ok">
+                        <div class="pi-result-label">نتیجه محاسبه</div>
+                        <div class="pi-result-value">${formatted}</div>
+                        <div class="pi-result-expr" dir="ltr">${exprClean}</div>
+                    </div>`;
+            } catch (e) {
+                output.innerHTML = `<div class="pi-result pi-result-err"><i class="fas fa-times-circle me-2"></i>خطا: ${friendlyError(e.message)}</div>`;
+            }
+        }
+
+        function resetTestInputs() {
+            document.querySelectorAll('.pi-var-input').forEach(inp => inp.value = '0');
+            document.getElementById('formulaTestOutput').style.display = 'none';
+        }
+
+        // ─────────────────────────────────────────────
+        // نمایش/مخفی بخش فرمول
+        // ─────────────────────────────────────────────
+        function toggleFormulaSection() {
+            const dataType = parseInt(document.getElementById('payItemDataType').value);
+            document.getElementById('formulaSection').style.display = (dataType === 2) ? 'block' : 'none';
+        }
+
+        // ─────────────────────────────────────────────
+        // ولیدیشن submit
+        // ─────────────────────────────────────────────
+        document.getElementById('addPayItemForm').addEventListener('submit', function (e) {
+            const dataType = parseInt(document.getElementById('payItemDataType').value);
+            if (dataType !== 2) return;
+
+            const formula = document.getElementById('formulaInput').value.trim();
+            const errEl   = document.getElementById('formulaValidErr');
+
+            if (!formula) {
+                e.preventDefault();
+                document.getElementById('formulaInput').classList.add('is-invalid');
+                return;
+            }
+            if (errEl && errEl.style.display !== 'none') {
+                e.preventDefault();
+                errEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+
+        // ─────────────────────────────────────────────
+        // راه‌اندازی اولیه
+        // ─────────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', function () {
+            renderCodeGrid();
+            toggleFormulaSection();
+            const formula = document.getElementById('formulaInput').value;
+            if (formula) onFormulaChange();
+        });
+    </script>
+}
+
+@section customStyles {
+    <link href="~/css/firststepstyles.css" rel="stylesheet" asp-append-version="true" nonce="@Context.Items["ScriptNonce"]" />
+    <style>
+        /* ════════════════════════════════════════════
+                   متغیرها
+                ════════════════════════════════════════════ */
+        :root {
+            --pi-radius: 10px;
+            --pi-radius-sm: 6px;
+            --pi-border: #e4e6ef;
+            --pi-bg: #f9fafb;
+            --pi-bg-hover: #f1f3f9;
+            --pi-text: #1e2a45;
+            --pi-muted: #8896ae;
+            --pi-accent: #3b5bdb;
+            --pi-accent-soft: #eef2ff;
+            --grp-info-bg: #e0f5ff;
+            --grp-info-text: #0077a8;
+            --grp-info-border: #a5d8f0;
+            --grp-success-bg: #e6faf0;
+            --grp-success-text: #1a7a45;
+            --grp-success-border: #a3dfc1;
+            --grp-danger-bg: #fff0f0;
+            --grp-danger-text: #c0392b;
+            --grp-danger-border: #f5b7b1;
+            --grp-primary-bg: #eef2ff;
+            --grp-primary-text: #3b5bdb;
+            --grp-primary-border: #c5cff7;
+            --grp-warning-bg: #fff9e6;
+            --grp-warning-text: #a06800;
+            --grp-warning-border: #f7d990;
+            --grp-secondary-bg: #f0f0f0;
+            --grp-secondary-text: #555;
+            --grp-secondary-border: #ccc;
+        }
+
+        /* ════════════════════════════════════════════
+                   کارت اصلی
+                ════════════════════════════════════════════ */
+        .pi-card-main {
+            border: 1px solid var(--pi-border);
+            border-radius: 14px !important;
+            box-shadow: 0 2px 20px rgba(0,0,0,.06) !important;
+        }
+
+        .pi-card-header {
+            background: linear-gradient(135deg, #1e2a45 0%, #2d3f6e 100%) !important;
+            border-radius: 14px 14px 0 0 !important;
+            padding: 1.25rem 1.75rem !important;
+            border-bottom: none !important;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .pi-icon-wrap {
+            width: 44px;
+            height: 44px;
+            background: rgba(255,255,255,.12);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 1.1rem;
+        }
+
+        .pi-title {
+            color: #fff !important;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .pi-subtitle {
+            color: rgba(255,255,255,.55);
+            font-size: .75rem;
+            display: block;
+        }
+
+        /* ════════════════════════════════════════════
+                   برچسب بخش
+                ════════════════════════════════════════════ */
+        .pi-section-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            font-size: .8rem;
+            color: var(--pi-muted);
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            margin-bottom: 1rem;
+            padding-bottom: .5rem;
+            border-bottom: 1px solid var(--pi-border);
+        }
+
+        .pi-section-num {
+            width: 22px;
+            height: 22px;
+            background: var(--pi-accent);
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .7rem;
+            font-weight: 800;
+        }
+
+        /* ════════════════════════════════════════════
+                   فیلدها
+                ════════════════════════════════════════════ */
+        .pi-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .pi-label {
+            font-weight: 600;
+            font-size: .82rem;
+            color: var(--pi-text);
+        }
+
+            .pi-label.required::after {
+                content: '*';
+                color: #e74c3c;
+                margin-right: 3px;
+            }
+
+        .pi-input, .pi-select {
+            height: 42px;
+            border: 1.5px solid var(--pi-border);
+            border-radius: var(--pi-radius-sm);
+            background: var(--pi-bg);
+            padding: 0 .85rem;
+            font-size: .875rem;
+            color: var(--pi-text);
+            transition: border-color .2s, box-shadow .2s;
+            width: 100%;
+        }
+
+            .pi-input:focus, .pi-select:focus {
+                outline: none;
+                border-color: var(--pi-accent);
+                box-shadow: 0 0 0 3px rgba(59,91,219,.1);
+                background: #fff;
+            }
+
+        .pi-input-mono {
+            font-family: 'Courier New', monospace;
+            letter-spacing: .04em;
+        }
+
+        .pi-error-msg {
+            font-size: .78rem;
+            color: #e74c3c;
+        }
+
+        .pi-hint {
+            font-size: .75rem;
+            color: var(--pi-muted);
+            margin-top: 4px;
+        }
+
+        .pi-code-hint {
+            background: #f0f0f0;
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: .72rem;
+            color: var(--pi-accent);
+            font-family: monospace;
+        }
+
+        /* ════════════════════════════════════════════
+                   toggle کارت‌ها
+                ════════════════════════════════════════════ */
+        .pi-toggles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .pi-toggle-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            border: 1.5px solid var(--pi-border);
+            border-radius: var(--pi-radius);
+            cursor: pointer;
+            transition: border-color .2s, background .2s, transform .15s;
+            background: var(--pi-bg);
+            user-select: none;
+        }
+
+            .pi-toggle-card:hover {
+                background: #fff;
+                border-color: #c5cff7;
+                transform: translateY(-1px);
+            }
+
+        .pi-toggle-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .85rem;
+            flex-shrink: 0;
+        }
+
+        .pi-toggle-blue {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .pi-toggle-orange {
+            background: #ffedd5;
+            color: #c2410c;
+        }
+
+        .pi-toggle-purple {
+            background: #ede9fe;
+            color: #7c3aed;
+        }
+
+        .pi-toggle-green {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .pi-toggle-info {
+            flex-grow: 1;
+        }
+
+        .pi-toggle-title {
+            display: block;
+            font-weight: 600;
+            font-size: .82rem;
+            color: var(--pi-text);
+        }
+
+        .pi-toggle-desc {
+            display: block;
+            font-size: .72rem;
+            color: var(--pi-muted);
+        }
+
+        /* سوئیچ سفارشی */
+        .pi-toggle-switch {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .pi-toggle-input {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .pi-toggle-slider {
+            display: block;
+            width: 40px;
+            height: 22px;
+            background: #d1d5db;
+            border-radius: 99px;
+            transition: background .2s;
+            cursor: pointer;
+        }
+
+            .pi-toggle-slider::after {
+                content: '';
+                position: absolute;
+                top: 3px;
+                left: 3px;
+                width: 16px;
+                height: 16px;
+                background: #fff;
+                border-radius: 50%;
+                transition: transform .2s;
+                box-shadow: 0 1px 4px rgba(0,0,0,.2);
+            }
+
+        .pi-toggle-input:checked ~ .pi-toggle-slider {
+            background: var(--pi-accent);
+        }
+
+            .pi-toggle-input:checked ~ .pi-toggle-slider::after {
+                transform: translateX(18px);
+            }
+
+        /* ════════════════════════════════════════════
+                   بخش فرمول wrapper
+                ════════════════════════════════════════════ */
+        .pi-formula-wrapper {
+            border: 1.5px solid #e8d87a;
+            border-radius: 12px;
+            background: linear-gradient(180deg, #fffef5 0%, #fff 100%);
+            padding: 1.5rem;
+            box-shadow: 0 2px 12px rgba(240,190,0,.1);
+        }
+
+        /* ویرایشگر کد */
+        .pi-editor-wrap {
+            border: 1.5px solid var(--pi-border);
+            border-radius: var(--pi-radius);
+            overflow: hidden;
+            background: #1a1f2e;
+        }
+
+        .pi-editor-bar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: #141826;
+            border-bottom: 1px solid #2d3451;
+        }
+
+        .pi-editor-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+            .pi-editor-dot.red {
+                background: #ff5f57;
+            }
+
+            .pi-editor-dot.yellow {
+                background: #febc2e;
+            }
+
+            .pi-editor-dot.green {
+                background: #28c840;
+            }
+
+        .pi-editor-lang {
+            margin-right: auto;
+            font-size: .65rem;
+            color: #5a6480;
+            letter-spacing: .1em;
+            font-family: monospace;
+        }
+
+        .pi-editor-textarea {
+            width: 100%;
+            min-height: 90px;
+            background: #1a1f2e;
+            color: #a8d8a8;
+            border: none;
+            outline: none;
+            padding: 14px 16px;
+            font-family: 'Courier New', monospace;
+            font-size: .9rem;
+            line-height: 1.6;
+            direction: ltr;
+            text-align: left;
+            resize: vertical;
+        }
+
+            .pi-editor-textarea::placeholder {
+                color: #3d4b6e;
+            }
+
+        /* وضعیت ولیدیشن */
+        .pi-status-bar {
+            margin-top: 8px;
+        }
+
+        .pi-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: var(--pi-radius-sm);
+            font-size: .82rem;
+            font-weight: 500;
+        }
+
+        .pi-status-ok {
+            background: #e6faf0;
+            color: #15803d;
+            border: 1px solid #a3dfc1;
+        }
+
+        .pi-status-err {
+            background: #fff0f0;
+            color: #c0392b;
+            border: 1px solid #f5b7b1;
+        }
+
+        .pi-status-warn {
+            background: #fff9e6;
+            color: #a06800;
+            border: 1px solid #f7d990;
+        }
+
+        /* راهنمای عملگرها */
+        .pi-formula-tips {
+            background: var(--pi-bg);
+            border-radius: var(--pi-radius-sm);
+            padding: 10px 12px;
+            border: 1px dashed var(--pi-border);
+        }
+
+        .pi-tips-title {
+            font-size: .72rem;
+            font-weight: 700;
+            color: var(--pi-muted);
+            margin-bottom: 6px;
+        }
+
+        .pi-tips-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .pi-tip {
+            font-size: .72rem;
+            color: var(--pi-text);
+        }
+
+            .pi-tip code {
+                background: #fff;
+                border: 1px solid var(--pi-border);
+                border-radius: 4px;
+                padding: 1px 5px;
+                font-family: monospace;
+                color: var(--pi-accent);
+                margin-left: 3px;
+            }
+
+        /* ════════════════════════════════════════════
+                   picker عوامل
+                ════════════════════════════════════════════ */
+        .pi-picker {
+            border: 1.5px solid var(--pi-border);
+            border-radius: var(--pi-radius);
+            background: #fff;
+            overflow: hidden;
+        }
+
+        .pi-picker-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: var(--pi-bg);
+            border-bottom: 1px solid var(--pi-border);
+            gap: 12px;
+        }
+
+        .pi-picker-title {
+            font-size: .8rem;
+            font-weight: 600;
+            color: var(--pi-text);
+            white-space: nowrap;
+        }
+
+        .pi-search-wrap {
+            position: relative;
+            flex: 1;
+            max-width: 220px;
+        }
+
+        .pi-search-icon {
+            position: absolute;
+            top: 50%;
+            right: 10px;
+            transform: translateY(-50%);
+            color: var(--pi-muted);
+            font-size: .75rem;
+        }
+
+        .pi-search-input {
+            width: 100%;
+            height: 32px;
+            padding: 0 10px 0 32px;
+            border: 1.5px solid var(--pi-border);
+            border-radius: 20px;
+            font-size: .8rem;
+            background: #fff;
+            color: var(--pi-text);
+            transition: border-color .2s;
+        }
+
+            .pi-search-input:focus {
+                outline: none;
+                border-color: var(--pi-accent);
+            }
+
+        /* تب‌ها */
+        .pi-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--pi-border);
+            background: var(--pi-bg);
+        }
+
+        .pi-tab {
+            height: 28px;
+            padding: 0 12px;
+            border-radius: 99px;
+            border: 1.5px solid var(--pi-border);
+            background: #fff;
+            font-size: .75rem;
+            font-weight: 600;
+            color: var(--pi-muted);
+            cursor: pointer;
+            transition: all .15s;
+            white-space: nowrap;
+        }
+
+            .pi-tab:hover {
+                background: var(--pi-bg-hover);
+                color: var(--pi-text);
+            }
+
+            .pi-tab.active {
+                background: var(--pi-accent);
+                color: #fff;
+                border-color: var(--pi-accent);
+            }
+
+        .pi-tab-info.active {
+            background: var(--grp-info-text);
+            border-color: var(--grp-info-text);
+        }
+
+        .pi-tab-success.active {
+            background: var(--grp-success-text);
+            border-color: var(--grp-success-text);
+        }
+
+        .pi-tab-danger.active {
+            background: var(--grp-danger-text);
+            border-color: var(--grp-danger-text);
+        }
+
+        .pi-tab-primary.active {
+            background: var(--grp-primary-text);
+            border-color: var(--grp-primary-text);
+        }
+
+        .pi-tab-warning.active {
+            background: var(--grp-warning-text);
+            border-color: var(--grp-warning-text);
+            color: #fff;
+        }
+
+        /* گرید عوامل */
+        .pi-code-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 12px;
+            max-height: 240px;
+            overflow-y: auto;
+        }
+
+            .pi-code-grid::-webkit-scrollbar {
+                width: 5px;
+            }
+
+            .pi-code-grid::-webkit-scrollbar-track {
+                background: var(--pi-bg);
+            }
+
+            .pi-code-grid::-webkit-scrollbar-thumb {
+                background: #c5cff7;
+                border-radius: 99px;
+            }
+
+        /* chip عوامل */
+        .pi-chip {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 6px 10px;
+            border-radius: var(--pi-radius-sm);
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: transform .12s, box-shadow .12s, opacity .12s;
+            max-width: 200px;
+        }
+
+            .pi-chip:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 3px 8px rgba(0,0,0,.12);
+            }
+
+            .pi-chip:active {
+                transform: translateY(0);
+            }
+
+            .pi-chip.grp-info {
+                background: var(--grp-info-bg);
+                border-color: var(--grp-info-border);
+                color: var(--grp-info-text);
+            }
+
+            .pi-chip.grp-success {
+                background: var(--grp-success-bg);
+                border-color: var(--grp-success-border);
+                color: var(--grp-success-text);
+            }
+
+            .pi-chip.grp-danger {
+                background: var(--grp-danger-bg);
+                border-color: var(--grp-danger-border);
+                color: var(--grp-danger-text);
+            }
+
+            .pi-chip.grp-primary {
+                background: var(--grp-primary-bg);
+                border-color: var(--grp-primary-border);
+                color: var(--grp-primary-text);
+            }
+
+            .pi-chip.grp-warning {
+                background: var(--grp-warning-bg);
+                border-color: var(--grp-warning-border);
+                color: var(--grp-warning-text);
+            }
+
+            .pi-chip.grp-secondary {
+                background: var(--grp-secondary-bg);
+                border-color: var(--grp-secondary-border);
+                color: var(--grp-secondary-text);
+            }
+
+        .pi-chip-icon {
+            font-size: .7rem;
+            flex-shrink: 0;
+            opacity: .8;
+        }
+
+        .pi-chip-body {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .pi-chip-name {
+            font-size: .75rem;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pi-chip-code {
+            font-family: monospace;
+            font-size: .62rem;
+            opacity: .65;
+            white-space: nowrap;
+        }
+
+        .pi-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            color: var(--pi-muted);
+            font-size: .82rem;
+            padding: 24px;
+            width: 100%;
+        }
+
+            .pi-empty i {
+                font-size: 1.4rem;
+                opacity: .4;
+            }
+
+        /* ════════════════════════════════════════════
+                   پنل تست
+                ════════════════════════════════════════════ */
+        .pi-test-panel {
+            margin-top: 16px;
+            border: 1.5px solid #c5cff7;
+            border-radius: var(--pi-radius);
+            background: var(--pi-accent-soft);
+            overflow: hidden;
+        }
+
+        .pi-test-header {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 10px 16px;
+            background: var(--pi-accent);
+            color: #fff;
+            font-weight: 600;
+            font-size: .82rem;
+        }
+
+        .pi-test-hint {
+            font-weight: 400;
+            opacity: .7;
+            font-size: .75rem;
+        }
+
+        .pi-var-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 14px 16px;
+        }
+
+        .pi-var-item {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            min-width: 120px;
+            flex: 1;
+        }
+
+        .pi-var-label {
+            font-size: .75rem;
+            font-weight: 600;
+            color: var(--pi-text);
+        }
+
+        .pi-var-code {
+            font-family: monospace;
+            font-size: .62rem;
+            color: var(--pi-muted);
+        }
+
+        .pi-var-input {
+            height: 36px;
+            width: 100%;
+            border: 1.5px solid #c5cff7;
+            border-radius: var(--pi-radius-sm);
+            background: #fff;
+            padding: 0 .75rem;
+            font-size: .85rem;
+            text-align: center;
+            color: var(--pi-text);
+            transition: border-color .2s;
+        }
+
+            .pi-var-input:focus {
+                outline: none;
+                border-color: var(--pi-accent);
+                box-shadow: 0 0 0 3px rgba(59,91,219,.12);
+            }
+
+        .pi-calc-btn {
+            height: 36px;
+            padding: 0 20px;
+            background: var(--pi-accent);
+            color: #fff;
+            border: none;
+            border-radius: var(--pi-radius-sm);
+            font-size: .82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity .15s, transform .1s;
+            margin-right: 16px;
+            margin-bottom: 4px;
+        }
+
+            .pi-calc-btn:hover {
+                opacity: .88;
+                transform: translateY(-1px);
+            }
+
+        .pi-reset-btn {
+            height: 36px;
+            padding: 0 14px;
+            background: transparent;
+            color: var(--pi-muted);
+            border: 1.5px solid var(--pi-border);
+            border-radius: var(--pi-radius-sm);
+            font-size: .78rem;
+            cursor: pointer;
+            transition: all .15s;
+            margin-bottom: 4px;
+        }
+
+            .pi-reset-btn:hover {
+                border-color: var(--pi-accent);
+                color: var(--pi-accent);
+            }
+
+        .pi-test-output {
+            padding: 0 16px 14px;
+        }
+
+        .pi-result {
+            border-radius: var(--pi-radius-sm);
+            padding: 14px 16px;
+            font-size: .82rem;
+        }
+
+        .pi-result-ok {
+            background: #e6faf0;
+            border: 1px solid #a3dfc1;
+            color: var(--grp-success-text);
+        }
+
+        .pi-result-warn {
+            background: var(--grp-warning-bg);
+            border: 1px solid var(--grp-warning-border);
+            color: var(--grp-warning-text);
+        }
+
+        .pi-result-err {
+            background: var(--grp-danger-bg);
+            border: 1px solid var(--grp-danger-border);
+            color: var(--grp-danger-text);
+        }
+
+        .pi-result-label {
+            font-size: .72rem;
+            font-weight: 700;
+            opacity: .7;
+            margin-bottom: 4px;
+        }
+
+        .pi-result-value {
+            font-size: 1.6rem;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        .pi-result-expr {
+            font-family: monospace;
+            font-size: .7rem;
+            opacity: .55;
+            margin-top: 4px;
+            word-break: break-all;
+        }
+
+        /* ════════════════════════════════════════════
+                   خطا
+                ════════════════════════════════════════════ */
+        .pi-alert-error {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 16px;
+            border-radius: var(--pi-radius);
+            background: var(--grp-danger-bg);
+            border: 1px solid var(--grp-danger-border);
+            color: var(--grp-danger-text);
+            font-size: .85rem;
+        }
+
+        .pi-alert-icon {
+            font-size: 1.1rem;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+    </style>
+}

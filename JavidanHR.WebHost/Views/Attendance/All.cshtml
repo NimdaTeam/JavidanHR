@@ -1,0 +1,313 @@
+﻿@using _0_Framework.Utilities.Helpers
+@using AuthenticationSystem.SystemPermissions
+@using HrSystem.Domain.Entities
+@using Microsoft.AspNetCore.Mvc.TagHelpers
+@using WebHost.Helpers.GlobalHelpers
+@model IEnumerable<AttendanceSystem.Infrastructure.Dto.AttendanceLogItem>
+@{
+
+    var filteredDate =Context.Request.Query["persianDateString"];
+    var filteredUser = ViewBag.filteredUser;
+    ViewData["Title"] = string.IsNullOrWhiteSpace(filteredDate) 
+        ? "لیست آخرین تردد های ثبت شده" 
+    : $"لیست تردد های ثبت شده در تاریخ «{filteredDate}»";
+
+    if (!string.IsNullOrWhiteSpace(filteredUser))
+    {
+        ViewData["Title"] += $" برای کارمند «{filteredUser}»";
+    }
+
+
+    var cooperationTypeQuery = int.TryParse(Context.Request.Query["cooperationType"], out var ct) ? ct : (int?)null;
+
+    var users = ViewBag.users as List<Employee>;
+    var index = 1;
+}
+
+<div class="card mb-5 mb-xl-8">
+    <!--begin::Header-->
+    <div class="card-header border-0 pt-5">
+        <h3 class="card-title align-items-start flex-column">
+            <span class="text-muted fw-semibold fs-6">تعداد کل تردد ها: @Model.Count()</span>
+        </h3>
+        <div class="card-toolbar d-flex flex-wrap gap-3 text-center">
+	        <label class="fw-semibold mb-0">فیلتر تاریخ</label>
+            <input id="dateFilter" class="form-control form-control-solid text-center persian-date-input" style="width: 250px; height:41px !important" placeholder="مثلا:  @DateTime.Now.AddDays(2).ToShamsi()" data-jdp />
+
+	        <label class="fw-semibold mb-0">فیلتر کاربر</label>
+	        <select id="userFilter" class="text-center form-select form-select-solid" style="width: 250px; height:41px !important">
+		        <option value="" selected>انتخاب کاربر</option>
+
+		        @if (users is not null)
+		        {
+			        @foreach (var s in users.OrderBy(x => x.LastName).ThenBy(x=>x.FirstName))
+			        {
+				        <option value="@s.UserId">@s.FirstName @s.LastName</option>
+			        }
+		        }
+	        </select>
+
+            <!-- دکمه ایجاد کارمند جدید -->
+            <div class="d-flex align-items-end">
+	            <a  href="" class="btn btn-lg btn-light-primary">
+		            <i class="ki-duotone ki-plus fs-2"></i> ثبت تردد جدید (در حال حاضر غیرفعال است) 
+	            </a>
+            </div>
+        </div>
+    </div>
+    <!--end::Header-->
+    <!--begin::Body-->
+    <div class="card-body py-3">
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle text-center table-hover">
+                <thead>
+                <tr class="fw-bold text-muted bg-light">
+	                <th style="max-width:20px !important">ردیف</th>
+	                <th>تصویر</th>
+	                <th>نام و نام خانوادگی</th>
+	                <th>ساعت ورود</th>
+	                <th>ساعت خروج</th>
+	                <th>مدت زمان حضور</th>
+	                <th style="max-width:30px !important">وضعیت ثبت تردد</th>
+	                <th class="min-w-150px">عملیات</th>
+                </tr>
+                </thead>
+                <tbody>
+                    @foreach (var at in Model.OrderBy(x=>x.SessionId))
+                    {
+                        var status = bool.Parse(at.IsIncomplete) ? "danger" : "success";
+                        var statusText = bool.Parse(at.IsIncomplete) ? "ناقص" : "کامل";
+	                    <tr>
+		                    <td class="fw-bold" >@index</td>
+		                    <td>
+			                    <div class="symbol symbol-70px">
+				                    <img src="@(string.IsNullOrEmpty(at.UserAvatar) ? "/assets/media/avatars/blank.png" : "/uploads/Employees/" + at.UserAvatar)"
+				                         alt="@at.UserFullName" />
+			                    </div>
+		                    </td>
+		                    <td class="fw-bold">@at.UserFullName</td>
+		                    <td class="fw-bold">
+			                    @at.InDateTime.ToShamsiWithoutDate()
+			                    <br/>
+                                @if (bool.Parse(at.IsInManual))
+			                    {
+				                    <span class="badge badge-light-primary fs-7 fw-semibold">ثبت دستی</span>
+			                    }
+
+		                    </td>
+		                    <td class="fw-bold"> 
+			                    @if (at.OutDateTime is null)
+			                    {
+				                    <span class="badge badge-light-danger fs-7 fw-semibold">تردد ثبت نشده</span>
+			                    }
+			                    else
+			                    {
+				                    @at.OutDateTime.ToShamsiWithoutDate()
+				                    <br/>
+				                    @if (bool.Parse(at.IsOutManual))
+				                    {
+					                    <span class="badge badge-light-primary fs-7 fw-semibold">ثبت دستی</span>
+				                    }
+			                    }
+		                    </td>
+		                    <td class="fw-bold">@at.DurationMinutes.ToHourMinuteFormat()</td>
+		                    <td class="fw-bold">  <span class="badge badge-light-@status fs-7 fw-semibold"> @statusText</span>  </td>
+		                    <td>
+			                    <a style="margin:2.5px"  class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm" href="/attendance/EditRecord/@at.SessionId/@at.UserId/@at.WorkDate.ToString().Replace("/","-").Split(" ")[0]"
+			                       title="ویرایش تردد" data-bs-toggle="tooltip">
+				                    <i class="fas fa-edit fs-2"></i>
+			                    </a>
+
+			                    @* <button disabled="" style="margin:2.5px" class="btn btn-icon btn-bg-light btn-active-color-danger btn-sm delete-button"
+			                            data-url="#" title="حذف تردد(در حال حاضر غیر فعال است)" data-bs-toggle="tooltip">
+				                    <i class="fas fa-trash fs-2"></i>
+			                    </button> *@
+		                    </td>
+	                    </tr>
+	                    index++;
+	                    @*  <td>
+                                <div class="d-flex flex-column w-100">
+                                    <div class="progress h-6px w-100 bg-light-primary">
+                                        <div class="progress-bar rounded" role="progressbar"
+                                             style="width: @completion%"
+                                             aria-valuenow="@completion"
+                                             aria-valuemin="0" aria-valuemax="100"
+                                             class="@(completion >= 80 ? "bg-success" : completion >= 50 ? "bg-warning" : "bg-danger")">
+                                        </div>
+                                    </div>
+                                    <small class="text-muted mt-1">@completion% تکمیل</small>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge badge-light-@statusColor fs-7 fw-semibold">@statusText</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-light-@completionStatusColor fs-7 fw-semibold">@completionStatusText</span>
+                            </td>
+                            <td>
+                                <a permissions="[(long)SystemPermissions.PermissionList.ViewEmployeeDetails]" style="margin:2.5px" href="/employee/Details?empId=@emp.Id"
+                                   class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="خلاصه پرونده پرسنلی کارمند" data-bs-toggle="tooltip">
+                                    <i class="	fas fa-address-card fs-2"></i>
+                                </a>
+
+                                @if (!emp.Step1Completed)
+                                {
+                                    <a style="margin:2.5px;background-color:darkorange;" permissions="[(long)SystemPermissions.PermissionList.EditEmployeePersonalInfo]" href="/employee/AddEmployee?isUpdating=true&employeeId=@emp.Id"
+                                       class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="اطلاعات هویتی - اطلاعات تکمیل نیست !" data-bs-toggle="tooltip">
+                                        <i style="color:white !important" class="fas fa-user fs-2"></i>
+                                    </a>
+                                }
+                                else
+                                {
+                                    <a style="margin:2.5px" permissions="[(long)SystemPermissions.PermissionList.EditEmployeePersonalInfo]" href="/employee/AddEmployee?isUpdating=true&employeeId=@emp.Id"
+                                       class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="اطلاعات هویتی" data-bs-toggle="tooltip">
+                                        <i class="fas fa-user fs-2"></i>
+                                    </a>
+                                }
+
+                                @if (!emp.Step2Completed)
+                                {
+                                    <a style="margin:2.5px;background-color:darkorange;" permissions="[(long)SystemPermissions.PermissionList.EditEmployeeEducationInfo]" asp-action="EducationAndTrainings" asp-route-employeeId="@emp.Id"
+                                       class="btn btn-icon btn-bg-light btn-active-color btn-sm me-1" title="تحصیلات و دوره های آموزشی - اطلاعات تکمیل نیست !" data-bs-toggle="tooltip">
+                                        <i style="color:white !important" class="fas fa-chalkboard-teacher fs-2"></i>
+                                    </a>
+                                }
+                                else
+                                {
+                                    <a style="margin:2.5px" permissions="[(long)SystemPermissions.PermissionList.EditEmployeeEducationInfo]" asp-action="EducationAndTrainings" asp-route-employeeId="@emp.Id"
+                                       class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="تحصیلات و دوره های آموزشی" data-bs-toggle="tooltip">
+                                        <i class="fas fa-chalkboard-teacher fs-2"></i>
+                                    </a>
+                                }
+
+                                @if (!emp.Step3Completed)
+                                {
+                                    <a style="margin:2.5px;background-color:darkorange;" permissions="[(long)SystemPermissions.PermissionList.EditEmployeeWorkExperienceInfo]" asp-action="WorkExperiences" asp-route-employeeId="@emp.Id"
+                                       class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="سوابق کاری - اطلاعات تکمیل نیست !" data-bs-toggle="tooltip">
+                                        <i style="color:white !important" class="fas fa-user-clock fs-2"></i>
+                                    </a>
+                                }
+                                else
+                                {
+                                    <a style="margin:2.5px" permissions="[(long)SystemPermissions.PermissionList.EditEmployeeWorkExperienceInfo]" asp-action="WorkExperiences" asp-route-employeeId="@emp.Id"
+                                       class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="سوابق کاری" data-bs-toggle="tooltip">
+                                        <i class="	fas fa-user-clock fs-2"></i>
+                                    </a>
+                                }
+
+                                @if (!emp.Step4Completed)
+                                {
+                                    <a style="margin:2.5px;background-color:darkorange;" permissions="[(long)SystemPermissions.PermissionList.EditEmployeeOrganizationalInfo]" asp-action="OrganizationalInformation" asp-route-employeeId="@emp.Id"
+                                       class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="اطلاعات استخدامی و سازمانی - اطلاعات تکمیل نیست !" data-bs-toggle="tooltip">
+                                        <i style="color:white !important" class="fas fa-building fs-2"></i>
+                                    </a>
+                                }
+                                else
+                                {
+                                    <a style="margin:2.5px" permissions="[(long)SystemPermissions.PermissionList.EditEmployeeOrganizationalInfo]" asp-action="OrganizationalInformation" asp-route-employeeId="@emp.Id"
+                                       class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="اطلاعات استخدامی و سازمانی" data-bs-toggle="tooltip">
+                                        <i class="fas fa-building fs-2"></i>
+                                    </a>
+                                }
+
+                                @if (!emp.Step5Completed)
+                                {
+                                    <a style="margin:2.5px;background-color:darkorange;" permissions="[(long)SystemPermissions.PermissionList.EditEmployeeFinancialInfo]" asp-action="FinancialInformation" asp-route-employeeId="@emp.Id"
+                                       class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="اطلاعات مالی و وام ها - اطلاعات تکمیل نیست !" data-bs-toggle="tooltip">
+                                        <i style="color:white !important" class="fas fa-credit-card	 fs-2"></i>
+                                    </a>
+                                }
+                                else
+                                {
+                                    <a style="margin:2.5px" permissions="[(long)SystemPermissions.PermissionList.EditEmployeeFinancialInfo]" asp-action="FinancialInformation" asp-route-employeeId="@emp.Id"
+                                       class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="اطلاعات مالی و وام ها" data-bs-toggle="tooltip">
+                                        <i class="fas fa-credit-card fs-2"></i>
+                                    </a>
+                                }
+
+                                @if (emp.IsInformationConfirmed)
+                                {
+                                    <a style="margin:2.5px" permissions="[(long)SystemPermissions.PermissionList.UnlockEmployeeDataForReEditByEmployee]" asp-action="UnlockProfile" asp-route-employeeId="@emp.Id"
+                                       class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="بازگشایی قفل ویرایش پروفایل" data-bs-toggle="tooltip">
+                                        <i class="fas fa-lock-open fs-2"></i>
+                                    </a>
+                                }
+
+                                <button style="margin:2.5px" permissions="[(long)SystemPermissions.PermissionList.DeleteEmployee]" class="btn btn-icon btn-bg-light btn-active-color-danger btn-sm delete-button"
+                                        data-url="/Employee/Delete/@emp.Id" title="حذف کارمند" data-bs-toggle="tooltip">
+                                    <i class="fas fa-trash fs-2"></i>
+                                </button>
+                            </td> *@
+
+                    }
+                </tbody>
+            </table>
+
+          @*   <pagination page-model="@Model"></pagination> *@
+        </div>
+    </div>
+</div>
+
+@section SearchBox
+{
+    @* <searchBox search-query="@Model.SearchQuery"></searchBox> *@
+}
+
+@section Scripts {
+
+    <Simple-CU-Modal add-route=""
+                     update-route="">
+    </Simple-CU-Modal>
+
+    <script nonce="@Context.Items["ScriptNonce"]">
+        $(document).ready(function () {
+            // مقدار اولیه از query string
+            const urlParams = new URLSearchParams(window.location.search);
+
+            const selectedUser = urlParams.get('userFilter');
+            const selectedDate = urlParams.get('persianDateString');
+
+            $('#userFilter').select2({
+                placeholder: "انتخاب کاربر",
+                allowClear: true,
+                width: 'resolve',
+                dir: "rtl"
+            });
+
+
+
+            if (selectedUser) {
+                $('#userFilter').val(selectedUser).trigger('change');
+            }
+
+            if (selectedDate) {
+                $('#dateFilter').val(selectedDate).trigger('change');
+            }
+
+
+            // تابع برای بروزرسانی URL بر اساس هردو فیلتر
+            function updateUrl() {
+                const user = $('#userFilter').val();
+                const date = $('#dateFilter').val();
+
+                let baseUrl = '/attendance/All';
+                let queryParams = [];
+
+                 if (date) queryParams.push('persianDateString=' + date);
+                if (user) queryParams.push('userFilter=' + user);
+               
+
+                if (queryParams.length > 0) {
+                    baseUrl += '?' + queryParams.join('&');
+                }
+
+                window.location.href = baseUrl;
+            }
+
+            $('#userFilter').on('change', updateUrl);
+            $('#dateFilter').on('change', updateUrl);
+        });
+    </script>
+
+    
+}

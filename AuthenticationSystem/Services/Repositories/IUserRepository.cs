@@ -1,6 +1,7 @@
 ﻿using _0_Framework.DTO;
 using _0_Framework.GenericRepositoy.Interface;
 using AuthenticationSystem.Domain.User;
+using System.Security.Claims;
 
 namespace AuthenticationSystem.Services.Repositories
 {
@@ -11,7 +12,8 @@ namespace AuthenticationSystem.Services.Repositories
 
         Task<List<AllUsersViewModel>> GetAllUsersForGrid();
 
-        Task<Users?> GetUserByPhoneNumber(string phoneNumber);
+        Task<Users?> GetUserByPhoneNumber(ClaimsPrincipal? user);
+        Task<Users?> GetUserByPhoneNumber(string? phoneNumber);
 
         Task<bool> IsPhoneNumberDuplicate(string phoneNumber);
 
@@ -35,5 +37,6 @@ namespace AuthenticationSystem.Services.Repositories
         Task<int> CountRecentOtpCodesForResetPassword(string phoneNumber);
 
         Task<UserLoginHistory?> GetLastRequestedOtpSent(string phoneNumber);
+
     }
 }

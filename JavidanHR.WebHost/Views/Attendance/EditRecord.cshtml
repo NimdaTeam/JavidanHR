@@ -1,0 +1,78 @@
+﻿@using _0_Framework.Utilities.Helpers
+@using AttendanceSystem.Infrastructure.Dto
+@using AuthenticationSystem.Domain.User
+@using AuthenticationSystem.SystemPermissions
+@using DNTPersianUtils.Core
+@using Microsoft.AspNetCore.Mvc.TagHelpers
+@using WebHost.Helpers.GlobalHelpers
+@model AttendanceSystem.Infrastructure.Dto.EditAttendanceRecordVM
+@{
+	var user = ViewBag.user as Users;
+	var record = ViewBag.item as AttendanceLogItem;
+	ViewData["Title"] = $"ویرایش تردد برای کارمند «{user?.FullName ?? "-"}» در تاریخ «{record?.WorkDate.ToShamsi()}»";
+}
+
+<div class="card mb-5 mb-xl-8">
+	<!--begin::Header-->
+	<div class="card-header border-0 pt-5">
+		<div class="card-toolbar d-flex flex-wrap gap-3 text-center">
+			<!-- دکمه ایجاد کارمند جدید -->
+			<div class="d-flex align-items-end">
+			</div>
+		</div>
+	</div>
+	<!--end::Header-->
+	<!--begin::Body-->
+	<div class="card-body py-3">
+		<form asp-action="EditRecord" asp-controller="Attendance" method="post">
+			@Html.AntiForgeryToken()
+			<input type="hidden" asp-for="UserId" value="@user?.Id"/>
+			<input type="hidden" asp-for="WorkDate" value="@record?.WorkDate"/>
+			<input type="hidden" asp-for="SessionId" value="@record?.SessionId"/>
+
+			<div class="row g-7">
+				
+				<div class="col-12 mb-7">
+					<label class="required fw-bold fs-6">روز کاری</label>
+					<input readonly=""  type="text" class="form-control form-control-solid text-center" required value="@record?.WorkDate.ToShamsi()" />
+				</div>
+
+				<div class="col-md-6 col-lg-6 col-sm-12 mb-7">
+					<label class="required fw-bold fs-6">ساعت ورود</label>
+					<input asp-for="EntranceTime" class="form-control form-control-solid text-center" required data-jdp-with-time value="@record?.InDateTime.ToShamsiWithoutDate()"/>
+					<span asp-validation-for="EntranceTime" class="text-danger"></span>
+				</div>
+
+				<div class="col-md-6 col-lg-6 col-sm-12 mb-7">
+					<label class="required fw-bold fs-6">ساعت خروج</label>
+					<input asp-for="ExitTime" class="form-control form-control-solid text-center" required data-jdp-with-time value="@record?.OutDateTime.ToShamsiWithoutDate()"/>
+					<span asp-validation-for="ExitTime" class="text-danger"></span>
+				</div>
+			</div>
+			<Form-buttons return-url="@ViewBag.ReturnUrl"></Form-buttons>
+		</form>
+	</div>
+</div>
+
+@section SearchBox
+{
+	@* <searchBox search-query="@Model.SearchQuery"></searchBox> *@
+}
+
+@section Scripts {
+
+	<Simple-CU-Modal add-route=""
+					 update-route="">
+	</Simple-CU-Modal>
+
+	<script asp-append-version="true" nonce="@Context.Items["ScriptNonce"]">
+		jalaliDatepicker.startWatch({
+			autoReadOnlyInput:true,
+			date:false,
+			time:true,
+			hasSecond:false,
+			minDate:"today",
+			selector: "input[data-jdp-with-time]"
+		});
+	</script>
+}

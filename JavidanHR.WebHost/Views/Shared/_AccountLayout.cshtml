@@ -14,20 +14,20 @@
 	<meta property="og:site_name" content="سامانه مدیریت منابع انسانی صندوق قرض الحسنه جاویدان" />
 	<link rel="shortcut icon" href="/assets/media/logos/Javidan-logo.webp" />
 
-	<link href="/assets/plugins/global/plugins.bundle.rtl.css" rel="stylesheet" type="text/css" />
-	<link href="/assets/css/style.bundle.rtl.css" rel="stylesheet" type="text/css" />
-	<link rel="stylesheet" href="/css/SweetAlert2.css">
+	<link href="/assets/plugins/global/plugins.bundle.rtl.css" rel="stylesheet" type="text/css" asp-append-version="true" nonce="@Context.Items["ScriptNonce"]" />
+	<link href="/assets/css/style.bundle.rtl.css" rel="stylesheet" type="text/css" asp-append-version="true" nonce="@Context.Items["ScriptNonce"]" />
+	<link rel="stylesheet" href="/css/SweetAlert2.css" asp-append-version="true" nonce="@Context.Items["ScriptNonce"]">
 
-	<link href="/css/toastR.css" rel="stylesheet" />
+	<link href="/css/toastR.css" rel="stylesheet" asp-append-version="true" nonce="@Context.Items["ScriptNonce"]" />
 
-	<link href="/css/AccountLayout.css" rel="stylesheet" />
+	<link href="/css/AccountLayout.css" rel="stylesheet" asp-append-version="true" nonce="@Context.Items["ScriptNonce"]"  />
 
-	<script>// Frame-busting to prevent site from being loaded within a frame without permission (click-jacking) if (window.top != window.self) { window.top.location.replace(window.self.location.href); }</script>
+	<script nonce="@Context.Items["ScriptNonce"]">if (window.top != window.self) { window.top.location.replace(window.self.location.href); }</script>
 </head>
 
 <body id="kt_body" class="app-blank bgi-size-cover bgi-attachment-fixed bgi-position-center bgi-no-repeat">
 <!--begin::Theme mode setup on page load-->
-<script>
+	<script asp-append-version="true" nonce="@Context.Items["ScriptNonce"]">
 		(() => {
 			const ROOT = document.documentElement;
 			if (!ROOT) return;
@@ -70,15 +70,15 @@
 
 	<script>var hostUrl = "/assets/";</script>
 
-	<script src="/assets/plugins/global/plugins.bundle.js"></script>
-	<script src="/assets/js/scripts.bundle.js"></script>
+	<script src="/assets/plugins/global/plugins.bundle.js" asp-append-version="true" nonce="@Context.Items["ScriptNonce"]"></script>
+	<script src="/assets/js/scripts.bundle.js" asp-append-version="true" nonce="@Context.Items["ScriptNonce"]"></script>
 
 	@* <script src="/assets/js/custom/authentication/sign-in/general.js"></script>  *@
 
-	<script src="/js/SweetAlert2.js"></script>
+	<script src="/js/SweetAlert2.js" asp-append-version="true" nonce="@Context.Items["ScriptNonce"]"></script>
 
-	<script src="/js/toastR.js"></script>
-	<script>
+	<script src="/js/toastR.js" asp-append-version="true" nonce="@Context.Items["ScriptNonce"]"></script>
+	<script asp-append-version="true">
 		function showToastNotification(title, message, icon = 'success') {
 			Swal.fire({
 				title: title,
@@ -123,7 +123,7 @@
 		}
 		});
 	</script>
-	@RenderSection("scripts", false)
+	@await RenderSectionAsync("scripts", false)
 </body>
 
 </html>

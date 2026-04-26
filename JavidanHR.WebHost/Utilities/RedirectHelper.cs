@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 
-namespace WebHost.Utilities
+namespace JavidanHR.WebHost.Utilities
 {
     public static class RedirectHelper
     {
@@ -13,9 +13,13 @@ namespace WebHost.Utilities
         public static IActionResult RedirectToReferrer(this ControllerBase controller, string defaultRedirectUrl = "/")
         {
             var referrer = controller.Request.Headers["Referer"].ToString();
+
+            var currentUrl = $"{controller.Request.Scheme}://{controller.Request.Host}{controller.Request.Path}";
+
             if (!string.IsNullOrEmpty(referrer) &&
                 Uri.TryCreate(referrer, UriKind.Absolute, out var uri) &&
-                uri.Host == controller.Request.Host.Host)
+                uri.Host == controller.Request.Host.Host &&
+                uri.AbsoluteUri != currentUrl)
             {
                 return controller.Redirect(referrer);
             }

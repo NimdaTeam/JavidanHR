@@ -12,7 +12,7 @@
             <span class="card-label fw-bold fs-3 mb-1">لیست سطوح دسترسی</span>
         </h3>
         <div class="card-toolbar">
-            <button permissions="[SystemPermissions.AddNewRole]"  class="btn btn-sm btn-light-primary AddModalTrigger">
+            <button permissions="[(long)SystemPermissions.PermissionList.AddNewRole]"  class="btn btn-sm btn-light-primary AddModalTrigger">
                 <i class="ki-duotone ki-plus fs-2"></i>سطح دسترسی جدید
             </button>
         </div>
@@ -57,12 +57,12 @@
 
 
                         <td class="text-end">
-                                <button permissions="[SystemPermissions.UpdateRole]" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1 EditModalTrigger" data-id="@item.Id">
+                                <button permissions="[(long)SystemPermissions.PermissionList.UpdateRole]" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1 EditModalTrigger" data-id="@item.Id">
                                 <i class="fa fa-edit fs-2"></i>
                             </button>
                             @if (item.Name != "پیش فرض")
                             {
-                                <button permissions="[SystemPermissions.DeleteRole]" data-url="/DeleteRole/@item.Id" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm delete-button">
+                                <button permissions="[(long)SystemPermissions.PermissionList.DeleteRole]" data-url="/DeleteRole/@item.Id" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm delete-button">
                                     <i class="fa fa-trash fs-2"></i>
                                 </button>
                             }

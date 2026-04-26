@@ -6,18 +6,11 @@
 @model _0_Framework.Utilities.Pagination.PaginationResult<HrSystem.Application.DTO.EmployeeListItemDTO>
 @{
     ViewData["Title"] = "لیست کارمندان";
+    var maritalStatusQuery = int.TryParse(Context.Request.Query["maritalStatus"], out var ms) ? ms : (int?)null;
+    var cooperationTypeQuery = int.TryParse(Context.Request.Query["cooperationType"], out var ct) ? ct : (int?)null;
 }
 
-<link rel="stylesheet" href="/assets/select2/select2.min.css" />
-<style>
-    .select2-container, .select2-selection {
-        height: 41px !important;
-    }
 
-    .select2-results__option {
-        text-align: center;
-    }
-</style>
 <div class="card mb-5 mb-xl-8">
     <!--begin::Header-->
     <div class="card-header border-0 pt-5">
@@ -32,7 +25,7 @@
                 <label class="fw-semibold mb-0">واحد سازمانی</label>
                 <select id="departmentFilter" class="form-select form-select-solid text-center" style="width: 220px;">
                     <option value="">همه واحدها</option>
-                    @foreach (var dept in ViewBag.Departments as List<string>)
+                    @foreach (var dept in ViewBag.Departments as List<string> ?? [])
                     {
                         <option value="@dept" selected="@(Context.Request.Query["department"] == dept)">@dept</option>
                     }
@@ -44,7 +37,7 @@
                 <label class="fw-semibold mb-0">پست سازمانی</label>
                 <select id="positionFilter" class="form-select form-select-solid text-center" style="width: 220px;">
                     <option value="">همه پست‌ها</option>
-                    @foreach (var pos in ViewBag.Positions as List<string>)
+                    @foreach (var pos in ViewBag.Positions as List<string> ?? [])
                     {
                         <option value="@pos" selected="@(Context.Request.Query["position"] == pos)">@pos</option>
                     }
@@ -55,11 +48,11 @@
             <div>
                 <label class="fw-semibold mb-0">وضعیت تأهل</label>
                 <select id="maritalFilter" class="form-select form-select-solid text-center" style="width: 180px;">
-                    <option value="">همه</option>
-                    <option value="1">مجرد</option>
-                    <option value="2">متاهل</option>
-                    <option value="3">مطلقه</option>
-                    <option value="4">همسر فوت‌شده</option>
+                    <option selected="@(maritalStatusQuery == null)" value="">همه</option>
+                    <option selected="@(maritalStatusQuery == 1)" value="1">مجرد</option>
+                    <option selected="@(maritalStatusQuery == 2)" value="2">متاهل</option>
+                    <option selected="@(maritalStatusQuery == 3)" value="3">مطلقه</option>
+                    <option selected="@(maritalStatusQuery == 4)" value="4">همسر فوت‌شده</option>
                 </select>
             </div>
 
@@ -67,17 +60,17 @@
             <div>
                 <label class="fw-semibold mb-0">نوع همکاری</label>
                 <select id="coopFilter" class="form-select form-select-solid text-center" style="width: 200px;">
-                    <option value="">همه</option>
+                    <option selected="@(cooperationTypeQuery == null)" value="">همه</option>
                     @foreach (var coop in Enum.GetValues(typeof(CooperationType)).Cast<CooperationType>())
                     {
-                        <option value="@((int)coop)">@coop.ToPersian()</option>
+                        <option selected="@(cooperationTypeQuery == (int)coop)" value="@((int)coop)">@coop.ToPersian()</option>
                     }
                 </select>
             </div>
 
             <!-- دکمه ایجاد کارمند جدید -->
             <div class="d-flex align-items-end">
-                <a permissions="[SystemPermissions.CreateEmployee]" href="@Url.Action("AddEmployee", "Employee")" class="btn btn-lg btn-light-primary">
+                <a permissions="[(long)SystemPermissions.PermissionList.CreateNewEmployee]" href="@Url.Action("AddEmployee", "Employee", new { isAdminCreatingNewEmployee = true})" class="btn btn-lg btn-light-primary">
 		            <i class="ki-duotone ki-plus fs-2"></i>کارمند جدید
 	            </a>
             </div>
@@ -96,6 +89,7 @@
                         <th>واحد / پست</th>
                         <th>تکمیل پروفایل</th>
                         <th>وضعیت</th>
+                        <th>تأیید نهایی اطلاعات</th>
                         <th class="min-w-150px">عملیات</th>
                     </tr>
                 </thead>
@@ -105,6 +99,9 @@
                         var completion = emp.ProfileCompletionPercentage;
                         var statusColor = emp.IsActive ? "success" : "danger";
                         var statusText = emp.IsActive ? "فعال" : "غیرفعال";
+
+                        var completionStatusColor = emp.IsInformationConfirmed ? "success" : "danger";
+                        var completionStatusText = emp.IsInformationConfirmed ? "تأیید شده" : "تأیید نشده";
 
                         <tr>
                             <td>
@@ -133,24 +130,27 @@
                                 </div>
                             </td>
                             <td>
-                                <span class="badge badge-light-@statusColor fs-7 fw-semibold">@statusText</span>
+	                            <span class="badge badge-light-@statusColor fs-7 fw-semibold">@statusText</span>
                             </td>
                             <td>
-	                            <a style="margin:2.5px" permissions="[SystemPermissions.ViewEmployeeDetails]" href="/employee/EmployeeDetails/@emp.Id"
+	                            <span class="badge badge-light-@completionStatusColor fs-7 fw-semibold">@completionStatusText</span>
+                            </td>
+                            <td>
+                                <a permissions="[(long)SystemPermissions.PermissionList.ViewEmployeeDetails]" style="margin:2.5px" href="/employee/Details?empId=@emp.Id"
 	                               class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="خلاصه پرونده پرسنلی کارمند" data-bs-toggle="tooltip">
-		                            <i class="	fas fa-address-card fs-2"></i>
+                                    <i class="	fas fa-address-card fs-2"></i>
 	                            </a>
 								
                                 @if (!emp.Step1Completed)
 	                            {
-                                    <a style="margin:2.5px;background-color:darkorange;" permissions="[SystemPermissions.CreateEmployee]" href="/employee/AddEmployee?isUpdating=true&employeeId=@emp.Id"
+                                    <a style="margin:2.5px;background-color:darkorange;" permissions="[(long)SystemPermissions.PermissionList.EditEmployeePersonalInfo]" href="/employee/AddEmployee?isUpdating=true&employeeId=@emp.Id"
 		                               class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="اطلاعات هویتی - اطلاعات تکمیل نیست !" data-bs-toggle="tooltip">
                                         <i style="color:white !important" class="fas fa-user fs-2"></i>
 		                            </a>
 	                            }
                                 else
                                 {
-	                                <a style="margin:2.5px" permissions="[SystemPermissions.CreateEmployee]" href="/employee/AddEmployee?isUpdating=true&employeeId=@emp.Id"
+                                    <a style="margin:2.5px" permissions="[(long)SystemPermissions.PermissionList.EditEmployeePersonalInfo]" href="/employee/AddEmployee?isUpdating=true&employeeId=@emp.Id"
 	                                   class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="اطلاعات هویتی" data-bs-toggle="tooltip">
 		                                <i class="fas fa-user fs-2"></i>
 	                                </a>
@@ -158,65 +158,73 @@
 	                            
                                 @if (!emp.Step2Completed)
                                 {
-	                                <a style="margin:2.5px;background-color:darkorange;" permissions="[SystemPermissions.EditEmployeeContactInfo]" asp-action="AddContactInformationToEmployee" asp-route-employeeId="@emp.Id"
-                                       class="btn btn-icon btn-bg-light btn-active-color btn-sm me-1" title="اطلاعات تماس - اطلاعات تکمیل نیست !" data-bs-toggle="tooltip">
-                                        <i style="color:white !important" class="fas fa-phone fs-2"></i>
+	                                <a style="margin:2.5px;background-color:darkorange;" permissions="[(long)SystemPermissions.PermissionList.EditEmployeeEducationInfo]" asp-action="EducationAndTrainings" asp-route-employeeId="@emp.Id"
+                                       class="btn btn-icon btn-bg-light btn-active-color btn-sm me-1" title="تحصیلات و دوره های آموزشی - اطلاعات تکمیل نیست !" data-bs-toggle="tooltip">
+                                        <i style="color:white !important" class="fas fa-chalkboard-teacher fs-2"></i>
 	                                </a>
                                 }
                                 else
                                 {
-	                                <a style="margin:2.5px" permissions="[SystemPermissions.EditEmployeeContactInfo]" asp-action="AddContactInformationToEmployee" asp-route-employeeId="@emp.Id"
-	                                   class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="اطلاعات تماس" data-bs-toggle="tooltip">
-		                                <i class="fas fa-phone fs-2"></i>
+                                    <a style="margin:2.5px" permissions="[(long)SystemPermissions.PermissionList.EditEmployeeEducationInfo]" asp-action="EducationAndTrainings" asp-route-employeeId="@emp.Id"
+	                                   class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="تحصیلات و دوره های آموزشی" data-bs-toggle="tooltip">
+                                        <i class="fas fa-chalkboard-teacher fs-2"></i>
 	                                </a>
                                 }
 								
                                 @if (!emp.Step3Completed)
                                 {
-                                    <a style="margin:2.5px;background-color:darkorange;" permissions="[SystemPermissions.EditEmployeeOrganizationalInfo]" asp-action="AddOrganizationalInformationToEmployee" asp-route-employeeId="@emp.Id"
-                                       class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="اطلاعات سازمانی - اطلاعات تکمیل نیست !" data-bs-toggle="tooltip">
-                                        <i style="color:white !important" class="fas fa-building fs-2"></i>
+                                    <a style="margin:2.5px;background-color:darkorange;" permissions="[(long)SystemPermissions.PermissionList.EditEmployeeWorkExperienceInfo]" asp-action="WorkExperiences" asp-route-employeeId="@emp.Id"
+                                       class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="سوابق کاری - اطلاعات تکمیل نیست !" data-bs-toggle="tooltip">
+                                        <i style="color:white !important" class="fas fa-user-clock fs-2"></i>
 	                                </a>
                                 }
                                 else
                                 {
-	                                <a style="margin:2.5px" permissions="[SystemPermissions.EditEmployeeOrganizationalInfo]" asp-action="AddOrganizationalInformationToEmployee" asp-route-employeeId="@emp.Id"
-	                                   class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="اطلاعات سازمانی" data-bs-toggle="tooltip">
-		                                <i class="fas fa-building fs-2"></i>
+                                    <a style="margin:2.5px" permissions="[(long)SystemPermissions.PermissionList.EditEmployeeWorkExperienceInfo]" asp-action="WorkExperiences" asp-route-employeeId="@emp.Id"
+	                                   class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="سوابق کاری" data-bs-toggle="tooltip">
+                                        <i class="	fas fa-user-clock fs-2"></i>
 	                                </a>
                                 }
 	                            
                                 @if (!emp.Step4Completed)
                                 {
-                                    <a style="margin:2.5px;background-color:darkorange;" permissions="[SystemPermissions.EditEmployeeFinancialInfo]" asp-action="AddFinancialInformationToEmployee" asp-route-employeeId="@emp.Id"
-                                       class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="اطلاعات مالی - اطلاعات تکمیل نیست !" data-bs-toggle="tooltip">
-                                        <i style="color:white !important" class="fas fa-credit-card fs-2"></i>
+                                    <a style="margin:2.5px;background-color:darkorange;" permissions="[(long)SystemPermissions.PermissionList.EditEmployeeOrganizationalInfo]" asp-action="OrganizationalInformation" asp-route-employeeId="@emp.Id"
+                                       class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="اطلاعات استخدامی و سازمانی - اطلاعات تکمیل نیست !" data-bs-toggle="tooltip">
+                                        <i style="color:white !important" class="fas fa-building fs-2"></i>
 	                                </a>
                                 }
                                 else
                                 {
-	                                <a style="margin:2.5px" permissions="[SystemPermissions.EditEmployeeFinancialInfo]" asp-action="AddFinancialInformationToEmployee" asp-route-employeeId="@emp.Id"
-	                                   class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="اطلاعات مالی" data-bs-toggle="tooltip">
-		                                <i class="fas fa-credit-card fs-2"></i>
+                                    <a style="margin:2.5px" permissions="[(long)SystemPermissions.PermissionList.EditEmployeeOrganizationalInfo]" asp-action="OrganizationalInformation" asp-route-employeeId="@emp.Id"
+                                       class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="اطلاعات استخدامی و سازمانی" data-bs-toggle="tooltip">
+                                        <i class="fas fa-building fs-2"></i>
 	                                </a>
                                 }
                                
                                 @if (!emp.Step5Completed)
                                 {
-                                    <a style="margin:2.5px;background-color:darkorange;" permissions="[SystemPermissions.EditEmployeeAdditionalInfo]" asp-action="AddAdditionalInformationToEmployee" asp-route-employeeId="@emp.Id"
-                                       class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="اطلاعات تکمیلی - اطلاعات تکمیل نیست !" data-bs-toggle="tooltip">
-                                        <i style="color:white !important" class="far fa-list-alt	 fs-2"></i>
+                                    <a style="margin:2.5px;background-color:darkorange;" permissions="[(long)SystemPermissions.PermissionList.EditEmployeeFinancialInfo]" asp-action="FinancialInformation" asp-route-employeeId="@emp.Id"
+                                       class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="اطلاعات مالی و وام ها - اطلاعات تکمیل نیست !" data-bs-toggle="tooltip">
+                                        <i style="color:white !important" class="fas fa-credit-card	 fs-2"></i>
 	                                </a>
                                 }
                                 else
                                 {
-	                                <a style="margin:2.5px" permissions="[SystemPermissions.EditEmployeeAdditionalInfo]" asp-action="AddAdditionalInformationToEmployee" asp-route-employeeId="@emp.Id"
-	                                   class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="اطلاعات تکمیلی" data-bs-toggle="tooltip">
-		                                <i class="far fa-list-alt	 fs-2"></i>
+                                    <a style="margin:2.5px" permissions="[(long)SystemPermissions.PermissionList.EditEmployeeFinancialInfo]" asp-action="FinancialInformation" asp-route-employeeId="@emp.Id"
+                                       class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="اطلاعات مالی و وام ها" data-bs-toggle="tooltip">
+                                        <i class="fas fa-credit-card fs-2"></i>
 	                                </a>
                                 }
-	                            
-	                            <button style="margin:2.5px" permissions="[SystemPermissions.DeleteEmployee]" class="btn btn-icon btn-bg-light btn-active-color-danger btn-sm delete-button"
+								
+                                @if (emp.IsInformationConfirmed)
+                                {
+                                    <a style="margin:2.5px" permissions="[(long)SystemPermissions.PermissionList.UnlockEmployeeDataForReEditByEmployee]" asp-action="UnlockProfile" asp-route-employeeId="@emp.Id"
+	                                   class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="بازگشایی قفل ویرایش پروفایل" data-bs-toggle="tooltip">
+                                        <i class="fas fa-lock-open fs-2"></i>
+	                                </a>
+                                }
+
+                                <button style="margin:2.5px" permissions="[(long)SystemPermissions.PermissionList.DeleteEmployee]" class="btn btn-icon btn-bg-light btn-active-color-danger btn-sm delete-button"
 	                                    data-url="/Employee/Delete/@emp.Id" title="حذف کارمند" data-bs-toggle="tooltip">
 		                            <i class="fas fa-trash fs-2"></i>
 	                            </button>
@@ -242,9 +250,8 @@
 	                 update-route="">
 	</Simple-CU-Modal>
 
-	<script src="/assets/select2/select2.min.js"></script>
 
-    <script>
+    <script asp-append-version="true" nonce="@Context.Items["ScriptNonce"]">
         $(document).ready(function () {
             // فعال‌سازی Select2 برای تمام فیلترها
             $('#departmentFilter, #positionFilter, #maritalFilter, #coopFilter').select2({

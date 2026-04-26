@@ -1,0 +1,415 @@
+﻿@using _0_Framework.Utilities.Helpers
+@using HrSystem.Domain.Entities
+@using Microsoft.AspNetCore.Mvc.TagHelpers
+@model HrSystem.Application.DTO.Step3WorkExperienceVM
+
+@{
+	ViewData["Title"] = "سوابق کاری (مرحله ۳ از ۵)";
+	var employeeName = ViewData["EmployeeName"]?.ToString() ?? "";
+}
+
+<div class="card mb-5 mb-xl-8">
+	<div class="card-header border-0 pt-5 bg-primary text-white">
+		<h3 class="card-title text-white text-center mb-0">
+			@(Model.IsUpdating ? $"ویرایش اطلاعات سوابق کاری کارمند: {employeeName ?? "-"}" : "سوابق کاری")
+		</h3>
+	</div>
+
+	<div class="card-body py-6">
+		<div class="alert alert-info text-center mb-8">
+			<strong>نکته:</strong> لطفاً تمام سوابق کاری خود را وارد کنید. برای جایگاه شغلی فعلی فیلد «تاریخ پایان» را خالی بگذارید.
+		</div>
+
+		<form asp-action="WorkExperiences" method="post">
+			@Html.AntiForgeryToken()
+			<input type="hidden" asp-for="EmployeeId" />
+
+			<div class="col-12 mb-10">
+				<h5 class="text-primary text-center mb-5">سوابق کاری</h5>
+
+				@if (!Model.WorkExperiences.Any())
+				{
+					<div class="alert alert-info text-center" id="no-member-div">
+						هیچ سابقه کاری اضافه نشده است.
+					</div>
+				}
+
+				<div id="experienceContainer">
+					@for (int i = 0; i < Model.WorkExperiences.Count; i++)
+					{
+						var exp = Model.WorkExperiences[i];
+						var index = i;
+
+						<div class="experience-block mb-4">
+							<div class="table-responsive">
+								<input type="hidden" asp-for="@Model.WorkExperiences[@index].Id" />
+								<table class="table table-bordered align-middle">
+									<tbody>
+										<tr>
+											<td width="25%" class="required">نوع سابقه کاری</td>
+											<td>
+												<select required asp-for="@Model.WorkExperiences[@index].Type"
+														class="form-select form-select-solid text-center work-type-select"
+														onchange="toggleJavidanOrganization(this, @index)">
+													<option value="@WorkExperienceType.JavidanInternal">صندوق قرض الحسنه جاویدان</option>
+													<option value="@WorkExperienceType.External">سازمان/شرکت غیر از صندوق قرض الحسنه جاویدان</option>
+													<option value="@WorkExperienceType.SelfEmployed">شغل آزاد</option>
+												</select>
+											</td>
+										</tr>
+										<tr class="orgRow">
+											<td class="required">نام سازمان / شرکت</td>
+											<td>
+												@if (exp.Type == WorkExperienceType.JavidanInternal)
+												{
+													<input required asp-for="@Model.WorkExperiences[@index].Organization"
+														   class="form-control form-control-solid text-center organization-field" readonly="" />
+												}
+												else
+												{
+													<input required asp-for="@Model.WorkExperiences[@index].Organization"
+														   class="form-control form-control-solid text-center organization-field" />
+												}
+
+											</td>
+										</tr>
+										<tr>
+											<td class="required">عنوان شغلی</td>
+											<td><input required asp-for="@Model.WorkExperiences[@index].Position" class="form-control text-center" value="@exp.Position" /></td>
+										</tr>
+										<tr>
+											<td>نام مدیر مستقیم</td>
+											<td><input asp-for="@Model.WorkExperiences[@index].DirectManager" class="form-control text-center" value="@exp.DirectManager" /></td>
+										</tr>
+										<tr>
+											<td class="required">تاریخ شروع</td>
+											<td><input required asp-for="@Model.WorkExperiences[@index].StartDatePersian" class="form-control text-center persian-date-input" value="@exp.StartDatePersian" placeholder="1398/05/01" maxlength="10" onchange="validateWorkDates(@index)" data-jdp /></td>
+										</tr>
+										<tr>
+											<td>تاریخ پایان (شغل فعلی: خالی)</td>
+											<td><input asp-for="@Model.WorkExperiences[@index].EndDatePersian" class="form-control text-center persian-date-input" placeholder="1402/10/15" maxlength="10" onchange="validateWorkDates(@index)" data-jdp /></td>
+										</tr>
+										<tr>
+											<td>بیمه داشته‌ام</td>
+											<td>
+												<div class="form-check form-check-custom form-check-solid">
+													<input asp-for="@Model.WorkExperiences[@index].HasInsurance" type="checkbox" class="form-check-input" />
+													<label class="form-check-label">بله</label>
+												</div>
+											</td>
+										</tr>
+										<tr>
+											<td>دلیل خاتمه همکاری</td>
+											<td><textarea asp-for="@Model.WorkExperiences[@index].TerminationReason" class="form-control" rows="2">@exp.TerminationReason</textarea></td>
+										</tr>
+										<tr>
+											<td>توضیحات</td>
+											<td><textarea asp-for="@Model.WorkExperiences[@index].Notes" class="form-control" rows="3">@exp.Notes</textarea></td>
+										</tr>
+										<tr>
+											<td>عملیات</td>
+											<td><button type="button" class="btn btn-sm btn-danger" onclick="removeFamilyRow(this)">حذف</button></td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</div>
+					}
+				</div>
+
+				<div class="text-center mt-4">
+					<button type="button" class="btn btn-success btn-sm" onclick="addExperienceRow()">افزودن سابقه کاری جدید</button>
+				</div>
+			</div>
+
+			<div class="text-center">
+				<button type="submit" class="btn btn-lg btn-primary px-10">
+					ثبت
+				</button>
+			</div>
+		</form>
+	</div>
+</div>
+
+@section Scripts {
+	<script src="https://cdn.jsdelivr.net/npm/jalaali-js/dist/jalaali.min.js"></script>
+	<script asp-append-version="true" nonce="@Context.Items["ScriptNonce"]">
+					let expIndex = @Model.WorkExperiences.Count;
+
+					function addExperienceRow() {
+						hideNoMemberDiv();
+						const container = document.getElementById("experienceContainer");
+						const html = `
+							<div class="experience-block mb-4">
+								<div class="table-responsive">
+									<input type="hidden"  name="WorkExperiences[${expIndex}].Id" value="" />
+									<table class="table table-bordered align-middle">
+										<tbody>
+											<tr>
+												<td class="required" width="25%">نوع سابقه کاری</td>
+												<td>
+													<select id="WorkExperiencesType[${expIndex}]" required  name="WorkExperiences[${expIndex}].Type"
+															class="form-select form-select-solid text-center work-type-select"
+															onchange="toggleJavidanOrganization(this, ${expIndex})">
+														<option value="0">صندوق قرض الحسنه جاویدان</option>
+														<option value="1">سازمان/شرکت غیر از صندوق قرض الحسنه جاویدان</option>
+														<option value="2">شغل آزاد</option>
+													</select>
+												</td>
+											</tr>
+											<tr class="orgRow">
+												<td class="required">نام سازمان / شرکت</td>
+												<td>
+													<input required id="WorkExperiences[${expIndex}].Organization"  name="WorkExperiences[${expIndex}].Organization"
+														   class="form-control form-control-solid text-center organization-field" />
+												</td>
+											</tr>
+											<tr><td class="required">عنوان شغلی</td><td><input required name="WorkExperiences[${expIndex}].Position" class="form-control text-center" /></td></tr>
+											<tr><td>نام مدیر مستقیم</td><td><input  name="WorkExperiences[${expIndex}].DirectManager" class="form-control text-center" /></td></tr>
+											<tr><td class="required">تاریخ شروع</td><td><input required  name="WorkExperiences[${expIndex}].StartDatePersian" class="form-control text-center persian-date-input" placeholder="1398/05/01" maxlength="10" onchange="validateWorkDates(${expIndex})" data-jdp /></td></tr>
+											<tr><td>تاریخ پایان (شغل فعلی: خالی)</td><td><input  name="WorkExperiences[${expIndex}].EndDatePersian" class="form-control text-center persian-date-input" placeholder="1402/10/15" maxlength="10" onchange="validateWorkDates(${expIndex})" data-jdp /></td></tr>
+											<tr>
+												<td>بیمه داشته‌ام</td>
+												<td>
+													<div class="form-check form-check-custom form-check-solid">
+																<input type="hidden" name="WorkExperiences[${expIndex}].HasInsurance" value="false" />
+																<input type="checkbox" name="WorkExperiences[${expIndex}].HasInsurance" value="true" class="form-check-input" />
+																<label class="form-check-label">بله</label>
+													</div>
+												</td>
+											</tr>
+											<tr><td>دلیل خاتمه همکاری</td><td><textarea  name="WorkExperiences[${expIndex}].TerminationReason" class="form-control" rows="2"></textarea></td></tr>
+											<tr><td>توضیحات</td><td><textarea  name="WorkExperiences[${expIndex}].Notes" class="form-control" rows="3"></textarea></td></tr>
+											<tr>
+												<td>عملیات</td>
+												<td><button type="button" class="btn btn-sm btn-danger" onclick="removeFamilyRow(this)">حذف</button></td>
+											</tr>
+										</tbody>
+									</table>
+								</div>
+							</div>`;
+
+						container.insertAdjacentHTML('beforeend', html);
+
+						let currentSelect = document.getElementById(`WorkExperiencesType[${expIndex}]`);
+						toggleJavidanOrganization(currentSelect, expIndex);
+
+
+						expIndex++;
+
+					const newIndex = expIndex - 1;
+					setTimeout(() => {
+							const start = document.querySelector(`input[name="WorkExperiences[${newIndex}].StartDatePersian"]`);
+							const end   = document.querySelector(`input[name="WorkExperiences[${newIndex}].EndDatePersian"]`);
+							if (start) start.addEventListener("change", () => validateWorkDates(newIndex));
+							if (end)   end.addEventListener("change",   () => validateWorkDates(newIndex));
+						}, 100);
+
+					}
+
+			function toggleJavidanOrganization(select, index) {
+
+		const orgInput = $(`input[name="WorkExperiences[${index}].Organization"]`);
+
+		if (orgInput.length === 0)
+			return;
+
+		if (select.value == 0) {
+			orgInput.val("صندوق قرض الحسنه جاویدان");
+			orgInput.prop("readonly", true);
+		} else {
+			orgInput.val("");
+			orgInput.prop("readonly", false);
+		}
+			}
+
+
+					function removeFamilyRow(btn) {
+						btn.closest('.experience-block').remove();
+						checkNoMemberDiv();
+					}
+
+					function hideNoMemberDiv() {
+						const div = document.getElementById("no-member-div");
+						if (div) div.style.display = "none";
+					}
+
+					function showNoMemberDiv() {
+						const div = document.getElementById("no-member-div");
+						if (div) div.style.display = "block";
+					}
+
+					function checkNoMemberDiv() {
+						const count = document.querySelectorAll('.experience-block').length;
+						if (count === 0) showNoMemberDiv();
+					}
+
+	</script>
+
+	<script asp-append-version="true" nonce="@Context.Items["ScriptNonce"]">
+		// محاسبه خودکار سال جاری شمسی
+		const CURRENT_YEAR = @DateTime.Now.ToShamsi().Split("/")[0];
+		const MIN_YEAR = 1300;
+
+		// فرمت کردن تاریخ در حین تایپ
+		$(document).on("input", ".persian-date-input", function () {
+			let value = this.value.replace(/\D/g, "");
+			if (value.length >= 4) value = value.substring(0, 4) + "/" + value.substring(4);
+			if (value.length >= 7) value = value.substring(0, 7) + "/" + value.substring(7, 10);
+			if (value.length > 10) value = value.substring(0, 10);
+			this.value = value;
+
+			if (value.length === 10) {
+				validateSingleDate(this);
+			} else {
+				this.style.borderColor = "";
+			}
+		});
+
+		// اعتبارسنجی وقتی فیلد ترک شد
+		$(document).on("blur", ".persian-date-input", function () {
+			const value = this.value.trim();
+			if (value.length > 0 && value.length < 10) {
+				this.value = "";
+				this.style.borderColor = "";
+				return;
+			}
+			if (value.length === 10) {
+				validateSingleDate(this);
+			}
+		});
+
+		// تابع اعتبارسنجی یک تاریخ شمسی (درست بودن فرمت و روز/ماه/سال)
+		function validateSingleDate(input) {
+			const value = input.value.trim();
+			if (!value || value.length !== 10) {
+				input.style.borderColor = "#dc3545";
+				return false;
+			}
+
+			const match = value.match(/^(\d{4})\/(\d{2})\/(\d{2})$/);
+			if (!match) {
+				input.style.borderColor = "#dc3545";
+				return false;
+			}
+
+			const year = parseInt(match[1], 10);
+			const month = parseInt(match[2], 10);
+			const day = parseInt(match[3], 10);
+
+			if (year < MIN_YEAR || year > CURRENT_YEAR) {
+				input.style.borderColor = "#dc3545";
+				return false;
+			}
+			if (month < 1 || month > 12) {
+				input.style.borderColor = "#dc3545";
+				return false;
+			}
+			if (day < 1 || day > 31) {
+				input.style.borderColor = "#dc3545";
+				return false;
+			}
+			if (month <= 6 && day > 31) {
+				input.style.borderColor = "#dc3545";
+				return false;
+			}
+			if (month >= 7 && month <= 11 && day > 30) {
+				input.style.borderColor = "#dc3545";
+				return false;
+			}
+			if (month === 12) {
+				const isLeap = jalaali.isLeapJalaaliYear(year);
+				if (day > (isLeap ? 30 : 29)) {
+					input.style.borderColor = "#dc3545";
+					return false;
+				}
+			}
+
+			input.style.borderColor = "#28a745";
+			return true;
+		}
+
+		/* -----------------------------------------------------------
+		   اعتبارسنجی مقایسه تاریخ شروع و پایان سابقه کاری
+		   (اول چک می‌کنه هر دو تاریخ معتبر باشن، بعد مقایسه می‌کنه)
+		----------------------------------------------------------- */
+		function validateWorkDates(index) {
+			const startInput = document.querySelector(`input[name="WorkExperiences[${index}].StartDatePersian"]`);
+			const endInput   = document.querySelector(`input[name="WorkExperiences[${index}].EndDatePersian"]`);
+
+			if (!startInput || !endInput) return;
+
+			const startStr = startInput.value.trim();
+			const endStr   = endInput.value.trim();
+
+			// اگر تاریخ پایان خالی باشه → مجاز (شغل فعلی)
+			if (!endStr) {
+				endInput.style.borderColor = ""; // بدون حاشیه (خالی مجاز)
+				// endInput.classList.remove("is-invalid");
+				const tooltip = bootstrap.Tooltip.getInstance(endInput);
+				if (tooltip) tooltip.hide();
+				return;
+			}
+
+			// چک اول: هر دو تاریخ باید معتبر باشند
+			const startValid = validateSingleDate(startInput);
+			const endValid   = validateSingleDate(endInput);
+
+			if (!startValid || !endValid) {
+				return; // اگر یکی نامعتبر بود، رنگ قرمز از تابع بالا اعمال شده
+			}
+
+			// چک دوم: تاریخ پایان باید بزرگتر از تاریخ شروع باشد
+			const [sy, sm, sd] = startStr.split("/").map(Number);
+			const [ey, em, ed] = endStr.split("/").map(Number);
+
+			let isAfter = false;
+			if (ey > sy) isAfter = true;
+			else if (ey === sy && em > sm) isAfter = true;
+			else if (ey === sy && em === sm && ed > sd) isAfter = true;
+
+			if (!isAfter) {
+				// نمایش تولتیپ
+				endInput.setAttribute("data-bs-toggle", "tooltip");
+				endInput.setAttribute("data-bs-placement", "top");
+				endInput.setAttribute("title", "تاریخ پایان باید بزرگ‌تر از تاریخ شروع باشد");
+
+				new bootstrap.Tooltip(endInput).show();
+
+				endInput.style.borderColor = "#dc3545";
+				endInput.classList.add("is-invalid");
+				endInput.value = "";
+
+				setTimeout(() => {
+					const tooltip = bootstrap.Tooltip.getInstance(endInput);
+					if (tooltip) tooltip.hide();
+			   }, 5000);
+
+			} else {
+				endInput.style.borderColor = "#28a745";
+				endInput.classList.remove("is-invalid");
+			}
+		}
+
+		/* -----------------------------------------------------------
+		   فعال‌سازی تولتیپ و بایند کردن رویدادها
+		----------------------------------------------------------- */
+		document.addEventListener("DOMContentLoaded", () => {
+			const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+			tooltipTriggerList.map(el => new bootstrap.Tooltip(el));
+
+			// بایند کردن اعتبارسنجی برای ردیف‌های موجود
+			document.querySelectorAll('.experience-block').forEach((block, i) => {
+				const start = block.querySelector(`input[name="WorkExperiences[${i}].StartDatePersian"]`);
+				const end   = block.querySelector(`input[name="WorkExperiences[${i}].EndDatePersian"]`);
+				if (start) start.addEventListener("change", () => validateWorkDates(i));
+				if (end)   end.addEventListener("change",   () => validateWorkDates(i));
+			});
+		});
+	</script>
+}
+
+@section customStyles
+{
+	<link href="~/css/firststepstyles.css" rel="stylesheet" asp-append-version="true" nonce="@Context.Items["ScriptNonce"]" />
+}

@@ -1,7 +1,11 @@
-﻿@using AuthenticationSystem.SystemPermissions
+﻿@using AuthenticationSystem.Services.Repositories
+@using AuthenticationSystem.SystemPermissions
 @using WebHost.Helpers.GlobalHelpers
+@inject IUserRepository UserService
 @{
 	ViewData["Title"] = "داشبورد";
+	var isEmployeeCreated = (bool)ViewBag.IsEmployeeCreated;
+	var currentUser = await UserService.GetUserByPhoneNumber(User.Identity.Name);
 }
 
 <div style="border-radius:12px;box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;padding:20px;overflow-y:scroll">
@@ -19,31 +23,19 @@
 		<!--begin::Stats-->
 		<div class="row g-4 mb-8 mb-lg-10">
 			<!--begin::Stat-->
-			<div permissions="[SystemPermissions.UsersList]" class="col-12 col-md-6 col-lg-4">
-				<a href="/AllUsers" class="btn btn-icon btn-outline btn-bg-light btn-active-light-primary btn-flex flex-column flex-center w-100 h-150px border-gray-200 mb-3" data-kt-button="true">
-					<span class="mb-2">
-						<i class="fa fa-users fs-1"></i>
-					</span>
-					<span class="fs-7 fw-bold">مدیریت کاربران</span>
-				</a>
-			</div>
-			<div permissions="[SystemPermissions.RolesList]" class="col-12 col-md-6 col-lg-4">
-				<a href="/AllRoles" class="btn btn-icon btn-outline btn-bg-light btn-active-light-primary btn-flex flex-column flex-center w-100 h-150px border-gray-200 mb-3" data-kt-button="true">
-					<span class="mb-2">
-						<i class="fas fa-user-cog fs-1"></i>
-					</span>
-					<span class="fs-7 fw-bold">مدیریت نقش های کاربری</span>
-				</a>
-			</div>
-			 <div permissions="[SystemPermissions.CreateEmployee]" class="col-12 col-md-6 col-lg-4">
-				<a href="/Employee/AddEmployee" class="btn btn-icon btn-outline btn-bg-light btn-active-light-primary btn-flex flex-column flex-center w-100 h-150px border-gray-200 mb-3" data-kt-button="true">
+			
+			<h6 permissions="[(long)SystemPermissions.PermissionList.CreateNewEmployee,(long)SystemPermissions.PermissionList.EmployeesList]" class="text-right">مدیریت کارمندان </h6>
+
+
+			<div permissions="[(long)SystemPermissions.PermissionList.CreateNewEmployee]" class="col-12 col-md-6 col-lg-4">
+				<a href="/Employee/AddEmployee?isAdminCreatingNewEmployee=True" class="btn btn-icon btn-outline btn-bg-light btn-active-light-primary btn-flex flex-column flex-center w-100 h-150px border-gray-200 mb-3" data-kt-button="true">
 					<span class="mb-2">
 						<i class="fas fa-user-plus	 fs-1"></i>
 					</span>
 					<span class="fs-7 fw-bold">افزودن کارمند جدید</span>
 				</a>
 			</div>
-			<div permissions="[SystemPermissions.EmployeesList]" class="col-12 col-md-6 col-lg-4">
+			<div permissions="[(long)SystemPermissions.PermissionList.EmployeesList]" class="col-12 col-md-6 col-lg-4">
 				<a href="/Employee/All" class="btn btn-icon btn-outline btn-bg-light btn-active-light-primary btn-flex flex-column flex-center w-100 h-150px border-gray-200 mb-3" data-kt-button="true">
 					<span class="mb-2">
 						<i class="fas fa-user-friends  fs-1"></i>
@@ -51,9 +43,135 @@
 					<span class="fs-7 fw-bold">لیست کارمندان</span>
 				</a>
 			</div>
-	
 			
-			<div  class="col-12 col-md-6 col-lg-4">
+
+			<hr permissions="[(long)SystemPermissions.PermissionList.AttendanceLiveStatus,(long)SystemPermissions.PermissionList.AttendanceAllEmployeesMonthlyReport,(long)SystemPermissions.PermissionList.AttendanceAllRecordsList,(long)SystemPermissions.PermissionList.AttendanceAllManualRequestList]" />
+			<h6 permissions="[(long)SystemPermissions.PermissionList.AttendanceLiveStatus,(long)SystemPermissions.PermissionList.AttendanceAllEmployeesMonthlyReport,(long)SystemPermissions.PermissionList.AttendanceAllRecordsList]" class="text-right">مدیریت حضور و غیاب</h6>
+			
+			<div permissions="[(long)SystemPermissions.PermissionList.AttendanceLiveStatus]" class="col-12 col-md-6 col-lg-4">
+				<a href="/Attendance/AttendanceLiveStatus" class="btn btn-icon btn-outline btn-bg-light btn-active-light-primary btn-flex flex-column flex-center w-100 h-150px border-gray-200 mb-3" data-kt-button="true">
+					<span class="mb-2">
+						<i class="fas fa-calendar-check  fs-1"></i>
+					</span>
+					<span class="fs-7 fw-bold">وضعیت فعلی حضور و غیاب کارمندان</span>
+				</a>
+			</div>
+			<div permissions="[(long)SystemPermissions.PermissionList.AttendanceAllEmployeesMonthlyReport]" class="col-12 col-md-6 col-lg-4">
+				<a href="/Attendance/AllEmployeesMonthlyReport" class="btn btn-icon btn-outline btn-bg-light btn-active-light-primary btn-flex flex-column flex-center w-100 h-150px border-gray-200 mb-3" data-kt-button="true">
+					<span class="mb-2">
+						<i class="fas fa-calendar-day  fs-1"></i>
+					</span>
+					<span class="fs-7 fw-bold">گزارش ماهانه حضور و غیاب کارمندان</span>
+				</a>
+			</div>
+			<div permissions="[(long)SystemPermissions.PermissionList.AttendanceAllRecordsList]" class="col-12 col-md-6 col-lg-4">
+				<a href="/Attendance/All" class="btn btn-icon btn-outline btn-bg-light btn-active-light-primary btn-flex flex-column flex-center w-100 h-150px border-gray-200 mb-3" data-kt-button="true">
+					<span class="mb-2">
+						<i class="fas fa-calendar-days  fs-1"></i>
+					</span>
+					<span class="fs-7 fw-bold">لیست کل تردد ها</span>
+				</a>
+			</div>
+			
+			<div permissions="[(long)SystemPermissions.PermissionList.AttendanceAllManualRequestList]" class="col-12 col-md-6 col-lg-4">
+				<a href="/Attendance/ManualRequests/All" class="btn btn-icon btn-outline btn-bg-light btn-active-light-primary btn-flex flex-column flex-center w-100 h-150px border-gray-200 mb-3" data-kt-button="true">
+					<span class="mb-2">
+						<i class="fas fa-calendar-days  fs-1"></i>
+					</span>
+					<span class="fs-7 fw-bold">درخواست های تردد دستی</span>
+				</a>
+			</div>
+		
+			<hr permissions="[(long)SystemPermissions.PermissionList.UsersList,(long)SystemPermissions.PermissionList.RolesList]" />
+			<h6 permissions="[(long)SystemPermissions.PermissionList.UsersList,(long)SystemPermissions.PermissionList.RolesList]" class="text-right">مدیریت کاربران سیستم و سطوح دسترسی </h6>
+
+			<div permissions="[(long)SystemPermissions.PermissionList.UsersList]" class="col-12 col-md-6 col-lg-4">
+				<a href="/AllUsers" class="btn btn-icon btn-outline btn-bg-light btn-active-light-primary btn-flex flex-column flex-center w-100 h-150px border-gray-200 mb-3" data-kt-button="true">
+					<span class="mb-2">
+						<i class="fa fa-users fs-1"></i>
+					</span>
+					<span class="fs-7 fw-bold">مدیریت کاربران</span>
+				</a>
+			</div>
+			<div permissions="[(long)SystemPermissions.PermissionList.RolesList]" class="col-12 col-md-6 col-lg-4">
+				<a href="/AllRoles" class="btn btn-icon btn-outline btn-bg-light btn-active-light-primary btn-flex flex-column flex-center w-100 h-150px border-gray-200 mb-3" data-kt-button="true">
+					<span class="mb-2">
+						<i class="fas fa-user-cog fs-1"></i>
+					</span>
+					<span class="fs-7 fw-bold">مدیریت نقش های کاربری</span>
+				</a>
+			</div>
+
+			
+			<hr />
+			<h6  class="text-right">خدمات عمومی</h6>
+
+			@if (isEmployeeCreated)
+			{
+				<div class="col-12 col-md-6 col-lg-4">
+					<a href="/Employee/Details" class="btn btn-icon btn-outline btn-bg-light btn-active-light-primary btn-flex flex-column flex-center w-100 h-150px border-gray-200 mb-3" data-kt-button="true">
+						<span class="mb-2">
+							<i class="fas fa-address-card fs-1"></i>
+						</span>
+						<span class="fs-7 fw-bold">مشاهده پرونده پرسنلی</span>
+					</a>
+				</div>
+			}
+			else
+			{
+				<div class="col-12 col-md-6 col-lg-4">
+					<a href="/Employee/AddEmployee" class="btn btn-icon btn-outline btn-bg-light btn-active-light-primary btn-flex flex-column flex-center w-100 h-150px border-gray-200 mb-3" style="border:3px dashed blue !important" data-kt-button="true">
+						<span class="mb-2">
+							<i class="fas fa-user-plus fs-1"></i>
+						</span>
+						<span class="fs-7 fw-bold">ایجاد پرونده پرسنلی</span>
+					</a>
+				</div>
+			}
+
+			
+			<div class="col-12 col-md-6 col-lg-4">
+				<a href="/Attendance/UserTodayAttendance" class="btn btn-icon btn-outline btn-bg-light btn-active-light-primary btn-flex flex-column flex-center w-100 h-150px border-gray-200 mb-3" data-kt-button="true">
+					<span class="mb-2">
+						<i class="fas fa-user-clock fs-1"></i>
+					</span>
+					<span class="fs-7 fw-bold">تردد های امروز من</span>
+				</a>
+			</div>
+			
+			<div class="col-12 col-md-6 col-lg-4">
+				@if (currentUser is not null)
+				{
+					<a href="/Attendance/EmployeeMonthlyReport?userId=@currentUser.Id" class="btn btn-icon btn-outline btn-bg-light btn-active-light-primary btn-flex flex-column flex-center w-100 h-150px border-gray-200 mb-3" data-kt-button="true">
+						<span class="mb-2">
+							<i class="fas fa-calendar-days fs-1"></i>
+						</span>
+						<span class="fs-7 fw-bold">گزارش ماهانه حضور و غیاب من</span>
+					</a>
+				}
+				else
+				{
+
+					<a href="#" class="btn btn-icon btn-outline btn-bg-light btn-active-light-primary btn-flex flex-column flex-center w-100 h-150px border-gray-200 mb-3" data-kt-button="true">
+						<span class="mb-2">
+							<i class="fas fa-calendar-days fs-1"></i>
+						</span>
+						<span class="fs-7 fw-bold">گزارش ماهانه حضور و غیاب من</span>
+					</a>
+
+				}
+			</div>
+			
+			<div class="col-12 col-md-6 col-lg-4">
+				<a href="/Attendance/ManualRequests/MyRequests" class="btn btn-icon btn-outline btn-bg-light btn-active-light-primary btn-flex flex-column flex-center w-100 h-150px border-gray-200 mb-3" data-kt-button="true">
+					<span class="mb-2">
+						<i class="fas fa-user-clock fs-1"></i>
+					</span>
+					<span class="fs-7 fw-bold">درخواست های تردد دستی من</span>
+				</a>
+			</div>
+			
+			<div class="col-12 col-md-6 col-lg-4">
 				<a href="/User/ChangePassword" class="btn btn-icon btn-outline btn-bg-light btn-active-light-primary btn-flex flex-column flex-center w-100 h-150px border-gray-200 mb-3" data-kt-button="true">
 					<span class="mb-2">
 						<i class="fas fa-user-lock fs-1"></i>

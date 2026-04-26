@@ -53,7 +53,7 @@ namespace AuthenticationSystem.Services
                         RoleId = role
                     });
                 }
-                await SaveChanges();
+                await SaveChangesAsync();
                 return true;
             }
             catch (Exception e)
@@ -71,12 +71,11 @@ namespace AuthenticationSystem.Services
 
                 foreach (var role in userRoles)
                 {
-                    role.IsDeleted = true;
-                    role.DeletedAt = DateTime.Now;
+                    role.SoftDelete();
                     _context.UserRoles.Update(role);
                 }
 
-                await SaveChanges();
+                await SaveChangesAsync();
                 return true;
             }
             catch (Exception e)
@@ -98,7 +97,7 @@ namespace AuthenticationSystem.Services
 
             foreach (var r in roleList)
             {
-                var role = await Get(r);
+                var role = await GetAsNoTrackingAsync(r);
                 if (role is null)
                     continue;
 
@@ -147,7 +146,7 @@ namespace AuthenticationSystem.Services
         {
             try
             {
-                var role = await Get(roleId);
+                var role = await GetAsync(roleId);
                 if (role is null)
                 {
                     return new OperationResult()
@@ -163,7 +162,7 @@ namespace AuthenticationSystem.Services
                    await RemovePermissionsFromRole(roleId);
                 }
 
-                await Update(role);
+                await UpdateAsync(role);
 
                 await AddPermissionsToRole(permissions, roleId);
 
@@ -198,11 +197,10 @@ namespace AuthenticationSystem.Services
             {
                 foreach (var p in _context.RolePermissions.Where(x => x.RoleId == roleId))
                 {
-                    p.IsDeleted = true;
-                    p.DeletedAt = DateTime.Now;
+                    p.SoftDelete();
                     _context.RolePermissions.Update(p);
                 }
-                await SaveChanges();
+                await SaveChangesAsync();
 
                 return new OperationResult()
                 {
@@ -240,7 +238,7 @@ namespace AuthenticationSystem.Services
                     _context.Update(ur);
                 }
 
-                await SaveChanges();
+                await SaveChangesAsync();
 
                 return new OperationResult()
                 {
@@ -264,7 +262,7 @@ namespace AuthenticationSystem.Services
 
         public async Task<List<EditUserRolesViewModel>> GetUserRolesForEditUser(long userId)
         {
-            var AllRoles = await GetAll();
+            var AllRoles = await GetAllAsync();
 
             var userRoles = await GetUserRoles(userId);
 
@@ -354,7 +352,7 @@ namespace AuthenticationSystem.Services
                     });
                 }
 
-                await SaveChanges();
+                await SaveChangesAsync();
                 return true;
             }
             catch (Exception e)
@@ -372,12 +370,11 @@ namespace AuthenticationSystem.Services
 
                 foreach (var p in permissions)
                 {
-                    p.IsDeleted = true;
-                    p.DeletedAt = DateTime.Now;
+                    p.SoftDelete();
                     _context.RolePermissions.Update(p);
                 }
 
-                await SaveChanges();
+                await SaveChangesAsync();
                 return true;
             }
             catch (Exception e)
@@ -467,7 +464,7 @@ namespace AuthenticationSystem.Services
         public async void DeleteOTPCode(OtpCodes code)
         {
             _context.OtpCodes.Remove(code);
-            await SaveChanges();
+            await SaveChangesAsync();
         }
 
         public async void DeleteOTPCode(long id)
@@ -476,7 +473,7 @@ namespace AuthenticationSystem.Services
             if (otp != null)
             {
                 _context.OtpCodes.Remove(otp);
-                await SaveChanges();
+                await SaveChangesAsync();
             }
         }
 
@@ -493,7 +490,7 @@ namespace AuthenticationSystem.Services
                 ExpireDate = DateTime.Now.AddSeconds(120)
             });
 
-            await SaveChanges();
+            await SaveChangesAsync();
 
             return otp;
         }
@@ -506,7 +503,7 @@ namespace AuthenticationSystem.Services
         public async void UpdateOTP(OtpCodes code)
         {
             _context.OtpCodes.Update(code);
-            await SaveChanges();
+            await SaveChangesAsync();
         }
 
         public async void DeactivateOTP(long id)

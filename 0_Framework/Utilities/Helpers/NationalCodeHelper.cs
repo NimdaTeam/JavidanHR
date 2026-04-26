@@ -1,4 +1,5 @@
 ﻿using System.Text.RegularExpressions;
+using DNTPersianUtils.Core;
 
 namespace _0_Framework.Utilities.Helpers
 {
@@ -14,6 +15,8 @@ namespace _0_Framework.Utilities.Helpers
             //در صورتی که کد ملی وارد شده طولش کمتر از 10 رقم باشد
             if (nationalCode.Length != 10)
                 return false;
+
+            nationalCode = nationalCode.ToEnglishNumbers();
 
             //در صورتی که کد ملی ده رقم عددی نباشد
             var regex = new Regex(@"\d{10}");

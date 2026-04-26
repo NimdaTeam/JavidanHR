@@ -1,0 +1,332 @@
+﻿@using _0_Framework.Utilities.Helpers
+@using HrSystem.Domain.Entities
+@using Microsoft.AspNetCore.Mvc.TagHelpers
+@model HrSystem.Application.DTO.Step4EmploymentVM
+
+@{
+	ViewData["Title"] = "اطلاعات استخدامی و سازمانی (مرحله ۴ از ۵)";
+	var employeeName = ViewData["EmployeeName"]?.ToString() ?? "";
+}
+
+<div class="card mb-5 mb-xl-8">
+	<div class="card-header border-0 pt-5 bg-primary text-white">
+		<h3 class="card-title text-white text-center mb-0">
+			@(Model.IsUpdating ? $"ویرایش اطلاعات  استخدامی و سازمانی کارمند: {employeeName ?? "-"}" : " استخدامی و سازمانی")
+		</h3>
+	</div>
+
+	<div class="card-body py-6">
+		<div class="alert alert-info text-center mb-8">
+			<strong>نکته:</strong> لطفاً اطلاعات استخدامی، بیمه، مرخصی و وضعیت خود را با دقت وارد کنید.
+		</div>
+
+		<form asp-action="OrganizationalInformation" asp-route-employeeId="@Model.EmployeeId" method="post">
+			@Html.AntiForgeryToken()
+			<input type="hidden" asp-for="EmployeeId" />
+
+			<div class="row g-7">
+
+				<!--Hidden Fields for organizational information-->
+				<input type="hidden" id="hiddenManagement" value="@Model.Management" />
+				<input type="hidden" id="hiddenDepartment" value="@Model.Department" />
+				<input type="hidden" id="hiddenUnit" value="@Model.Unit" />
+				<input type="hidden" id="hiddenPosition" value="@Model.Position" />
+
+				<div class="divider-with-text">
+					<span>واحد سازمانی و سمت شغلی</span>
+				</div>
+
+				<div class="form-group">
+					<label class="required fw-bold fs-6">معاونت / مدیریت</label>
+					<select asp-for="Management" id="management" class="form-select form-select-solid text-center" required="">
+						<option value="">انتخاب کنید...</option>
+						<option value="دفتر مدیرعامل">دفتر مدیرعامل</option>
+						<option value="مدیریت اعتبارات">مدیریت اعتبارات</option>
+						<option value="مدیریت خزانه">مدیریت خزانه</option>
+						<option value="مدیریت مالی و اداری">مدیریت مالی و اداری</option>
+					</select>
+				</div>
+
+				<div class="form-group">
+					<label class="required fw-bold fs-6">دپارتمان</label>
+					<select asp-for="Department" id="department" class="form-select form-select-solid text-center" disabled required="">
+						<option value="">ابتدا معاونت / مدیریت را انتخاب کنید...</option>
+					</select>
+				</div>
+
+				<div class="form-group">
+					<label class="required fw-bold fs-6">واحد سازمانی</label>
+					<select asp-for="Unit" id="unit" class="form-select form-select-solid text-center" disabled required="">
+						<option value="">ابتدا واحد دپارتمان را انتخاب کنید...</option>
+					</select>
+				</div>
+
+				<div class="form-group">
+					<label class="required fw-bold fs-6">سمت شغلی</label>
+					<select asp-for="Position" id="position" class="form-select form-select-solid text-center" disabled required="">
+						<option value="">ابتدا واحد سازمانی را انتخاب کنید...</option>
+					</select>
+				</div>
+
+				<hr />
+				<div class="col-md-6 mb-7">
+					<label class="required fw-bold fs-6">نوع قرارداد</label>
+					<select asp-for="ContractType" class="form-select form-select-solid text-center" required>
+						<option value="">انتخاب کنید</option>
+						<option value="1">رسمی</option>
+						<option value="2">پیمانی/قراردادی</option>
+						<option value="3">روزمزد</option>
+						<option value="4">پاره‌وقت</option>
+						<option value="5">کارمزدی</option>
+					</select>
+				</div>
+
+				<div class="col-md-6 mb-7">
+					<label class="required fw-bold fs-6">نوع همکاری</label>
+					<select asp-for="CooperationType" class="form-select form-select-solid text-center" required>
+						<option value="">انتخاب کنید</option>
+						<option value="1">تمام‌وقت</option>
+						<option value="2">پاره‌وقت</option>
+						<option value="3">مشاور</option>
+						<option value="4">داوطلب</option>
+						<option value="5">هیئت امنا</option>
+					</select>
+				</div>
+
+				<div class="col-md-6 mb-7">
+					<label class="required fw-bold fs-6">تاریخ استخدام</label>
+					<input asp-for="HireDatePersian" class="form-control form-control-solid text-center persian-date-input" placeholder="1400/01/01" maxlength="10" required data-jdp />
+				</div>
+
+				<div class="col-md-6 mb-7">
+					<label class="fw-bold fs-6">شماره بیمه تأمین اجتماعی</label>
+					<input asp-for="InsuranceNumber" class="form-control form-control-solid text-center ltr" />
+				</div>
+
+				<div class="col-md-6 mb-7">
+					<label class="required fw-bold fs-6">وضعیت سلامت</label>
+					<select asp-for="HealthStatus" class="form-select form-select-solid text-center" required>
+						<option value="">انتخاب کنید</option>
+						<option value="1">سالم</option>
+						<option value="2">بیماری مزمن</option>
+						<option value="3">معافیت پزشکی</option>
+					</select>
+				</div>
+
+				<div class="col-md-3 mb-7">
+					<label class="fw-bold fs-6">مرخصی سالیانه (روز)</label>
+					<input asp-for="AnnualLeaveDays" type="number" class="form-control form-control-solid text-center" value="26" />
+				</div>
+				<div class="col-md-3 mb-7">
+					<label class="fw-bold fs-6">مرخصی استفاده شده</label>
+					<input asp-for="UsedLeaveDays" type="number" class="form-control form-control-solid text-center" value="0" />
+				</div>
+
+				<div class="col-md-6 mb-7">
+					<label class="fw-bold fs-6">امتیاز عملکرد (از ۱۰۰)</label>
+					<input asp-for="PerformanceScore" type="number" min="0" max="100" class="form-control form-control-solid text-center" />
+				</div>
+
+				<div class="col-md-6 mb-7">
+					<label class="fw-bold fs-6">وضعیت بازنشستگی</label>
+					<select asp-for="RetirementStatus" class="form-select form-select-solid text-center">
+						<option value="">انتخاب کنید</option>
+						<option value="1">فعال</option>
+						<option value="2">نزدیک به بازنشستگی</option>
+						<option value="3">بازنشسته</option>
+					</select>
+				</div>
+
+				<div class="col-md-6 mb-7">
+					<label class="fw-bold fs-6">تاریخ بازنشستگی</label>
+					<input asp-for="RetirementDatePersian" class="form-control form-control-solid text-center persian-date-input" placeholder="1410/01/01" maxlength="10" data-jdp />
+				</div>
+
+				<div class="col-md-6 mb-7">
+					<label class="required fw-bold fs-6">وضعیت فعالیت</label>
+					<select asp-for="IsActive" class="form-select form-select-solid text-center" required onchange="toggleTerminationFields()">
+						<option value="true">فعال</option>
+						<option value="false">غیرفعال</option>
+					</select>
+				</div>
+
+				<div class="col-md-12 mb-7" id="terminationSection" style="display: none;">
+					<label class="fw-bold fs-6">دلیل خاتمه همکاری</label>
+					<textarea asp-for="TerminationReason" class="form-control form-control-solid" rows="3"></textarea>
+				</div>
+
+				<div class="col-md-6 mb-7" id="terminationDateSection" style="display: none;">
+					<label class="fw-bold fs-6">تاریخ خاتمه همکاری</label>
+					<input asp-for="TerminationDatePersian" class="form-control form-control-solid text-center persian-date-input" placeholder="1403/10/15" maxlength="10" data-jdp />
+				</div>
+			</div>
+
+			<div class="text-center">
+				<button type="submit" class="btn btn-lg btn-primary px-10">
+					ثبت
+				</button>
+			</div>
+		</form>
+	</div>
+</div>
+
+@section Scripts {
+
+	<script asp-append-version="true" nonce="@Context.Items["ScriptNonce"]">
+		function toggleTerminationFields() {
+			const isActive = document.querySelector('[name="IsActive"]').value === "true";
+			document.getElementById("terminationSection").style.display = isActive ? "none" : "block";
+			document.getElementById("terminationDateSection").style.display = isActive ? "none" : "block";
+		}
+		document.addEventListener("DOMContentLoaded", toggleTerminationFields);
+	</script>
+
+	<script asp-append-version="true" nonce="@Context.Items["ScriptNonce"]">
+		const organizationalData = {
+			"دفتر مدیرعامل": {
+				"دفتر ریاست و روابط عمومی": {
+					"دفتر ریاست": ["رئیس دفتر ریاست و روابط عمومی", "کارشناس دفتر ریاست"],
+					"روابط عمومی": ["کارشناس روابط عمومی"]
+				},
+				"برنامه ریزی و توسعه": {
+					"برنامه و بودجه": ["رئیس برنامه و بودجه", "کارشناس برنامه و بودجه"],
+					"تحول و توسعه": ["رئیس تحول و توسعه", "کارشناس تحول و توسعه"]
+				},
+				"حقوقی": {
+					"حقوقی": ["رئیس حقوقی", "کارشناس حقوقی"]
+				},
+				"فناوری اطلاعات (IT)": {
+					"توسعه خدمات": ["کارشناس توسعه خدمات فناوری اطلاعات"],
+					"ارزیابی و کنترل": ["کارشناس ارزیابی و کنترل فناوری اطلاعات"]
+				}
+			},
+			"مدیریت اعتبارات": {
+				"اعتبارات": {
+					"تسهیلات": ["رئیس امور اعتبارات", "کارشناس اعتبارات"],
+					"معوقات": ["کارشناس معوقات"]
+				}
+			},
+			"مدیریت خزانه": {
+				"خزانه": {
+					"صندوق": ["رئیس امور خزانه", "کارشناس صندوق"],
+					"ارائه خدمات": ["کارشناس ارائه خدمات خزانه"]
+				}
+			},
+			"مدیریت مالی و اداری": {
+				"مالی": {
+					"مالی": ["رئیس امور مالی", "کارشناس مالی"],
+					"حسابداری": ["کارشناس حسابداری"]
+				},
+				"اداری": {
+					"کارگزینی": ["رئیس امور اداری و کارگزینی", "کارشناس کارگزینی"],
+					"تدارکات و خدمات": ["کارشناس تدارکات و خدمات"],
+					"نقلیه": ["کارشناس نقلیه"],
+					"خدمات": ["کارشناس خدمات"]
+				}
+			}
+		};
+
+			function populateDepartment(selectedManagement) {
+			const deptSelect = document.getElementById('department');
+			deptSelect.innerHTML = '<option value="">انتخاب کنید...</option>';
+			deptSelect.disabled = !selectedManagement;
+
+			if (selectedManagement && organizationalData[selectedManagement]) {
+				Object.keys(organizationalData[selectedManagement]).forEach(dept => {
+					const option = document.createElement('option');
+					option.value = dept;
+					option.text = dept;
+					deptSelect.appendChild(option);
+				});
+			}
+		}
+
+		function populateUnit(selectedManagement, selectedDept) {
+			const unitSelect = document.getElementById('unit');
+			unitSelect.innerHTML = '<option value="">انتخاب کنید...</option>';
+			unitSelect.disabled = !selectedDept;
+
+			if (selectedManagement && selectedDept && organizationalData[selectedManagement][selectedDept]) {
+				Object.keys(organizationalData[selectedManagement][selectedDept]).forEach(unit => {
+					const option = document.createElement('option');
+					option.value = unit;
+					option.text = unit;
+					unitSelect.appendChild(option);
+				});
+			}
+		}
+
+		function populatePosition(selectedManagement, selectedDept, selectedUnit) {
+			const positionSelect = document.getElementById('position');
+			positionSelect.innerHTML = '<option value="">انتخاب کنید...</option>';
+			positionSelect.disabled = !selectedUnit;
+
+			if (selectedManagement && selectedDept && selectedUnit && organizationalData[selectedManagement][selectedDept][selectedUnit]) {
+				organizationalData[selectedManagement][selectedDept][selectedUnit].forEach(pos => {
+					const option = document.createElement('option');
+					option.value = pos;
+					option.text = pos;
+					positionSelect.appendChild(option);
+				});
+			}
+		}
+
+		// eventهای تغییر (برای ایجاد جدید و تغییر دستی در ویرایش)
+		document.getElementById('management').addEventListener('change', function () {
+			populateDepartment(this.value);
+			document.getElementById('unit').innerHTML = '<option value="">ابتدا دپارتمان را انتخاب کنید...</option>';
+			document.getElementById('position').innerHTML = '<option value="">ابتدا واحد سازمانی را انتخاب کنید...</option>';
+			document.getElementById('unit').disabled = true;
+			document.getElementById('position').disabled = true;
+		});
+
+		document.getElementById('department').addEventListener('change', function () {
+			const management = document.getElementById('management').value;
+			populateUnit(management, this.value);
+			document.getElementById('position').innerHTML = '<option value="">ابتدا واحد سازمانی را انتخاب کنید...</option>';
+			document.getElementById('position').disabled = true;
+		});
+
+		document.getElementById('unit').addEventListener('change', function () {
+			const management = document.getElementById('management').value;
+			const dept = document.getElementById('department').value;
+			populatePosition(management, dept, this.value);
+		});
+
+		// ==== مهم: لود اولیه برای ویرایش ====
+		window.addEventListener('load', function () {
+			// مقدارها رو از hiddenها بگیر (همیشه معتبرن)
+			const initManagement = document.getElementById('hiddenManagement').value;
+			const initDept = document.getElementById('hiddenDepartment').value;
+			const initUnit = document.getElementById('hiddenUnit').value;
+			const initPos = document.getElementById('hiddenPosition').value;
+
+			if (initManagement) {
+				// سلکت اول رو ست کن (اگر هنوز نشده)
+				document.getElementById('management').value = initManagement;
+
+				// دپارتمان رو پر کن
+				populateDepartment(initManagement);
+
+				if (initDept) {
+					document.getElementById('department').value = initDept;
+					populateUnit(initManagement, initDept);
+
+					if (initUnit) {
+						document.getElementById('unit').value = initUnit;
+						populatePosition(initManagement, initDept, initUnit);
+
+						if (initPos) {
+							document.getElementById('position').value = initPos;
+						}
+					}
+				}
+			}
+		});
+	</script>
+}
+
+@section customStyles
+{
+	<link href="~/css/firststepstyles.css" rel="stylesheet" asp-append-version="true" />
+}

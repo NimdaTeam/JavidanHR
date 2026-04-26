@@ -1,8 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc.ViewFeatures;
+﻿using System.Text;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Razor.TagHelpers;
-using System.Text;
 
-namespace WebHost.Helpers.GlobalHelpers
+namespace JavidanHR.WebHost.Helpers.GlobalHelpers
 {
     [HtmlTargetElement("Modal-Buttons")]
     public class ModalButtons : TagHelper

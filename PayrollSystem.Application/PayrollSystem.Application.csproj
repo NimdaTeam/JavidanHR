@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HrSystem.Application\HrSystem.Application.csproj" />
+    <ProjectReference Include="..\HrSystem.Infrastructure\HrSystem.Infrastructure.csproj" />
+    <ProjectReference Include="..\PayrollSystem.Domain\PayrollSystem.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

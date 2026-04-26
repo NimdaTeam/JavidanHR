@@ -14,7 +14,7 @@
             <span class="card-label fw-bold fs-3 mb-1">لیست کاربران</span>
         </h3>
         <div class="card-toolbar">
-            <button permissions="[SystemPermissions.AddNewUser]"  class="btn btn-sm btn-light-primary AddModalTrigger">
+            <button permissions="[(long)SystemPermissions.PermissionList.AddNewUser]"  class="btn btn-sm btn-light-primary AddModalTrigger">
                 <i class="ki-duotone ki-plus fs-2"></i>کاربر جدید
             </button>
         </div>
@@ -71,25 +71,25 @@
                             <td class="text-end">
                                 @if (currentUserId!= null && item.Id != currentUserId && item.IsActive)
                                 {
-	                                <a href="/Users/ChangeUserStatus/@item.Id/Deactivate" permissions="[SystemPermissions.ActivateAndDeactivateUsers]" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1 "  title="غیرفعالسازی حساب کاربری" data-bs-toggle="tooltip">
+	                                <a href="/Users/ChangeUserStatus/@item.Id/Deactivate" permissions="[(long)SystemPermissions.PermissionList.ActivateAndDeactivateUsers]" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1 "  title="غیرفعالسازی حساب کاربری" data-bs-toggle="tooltip">
                                         <i class="fas fa-ban fs-2"></i>
 	                                </a>
                                 }
                                 else if (currentUserId != null && item.Id != currentUserId && !item.IsActive)
                                 {
-	                                <a href="/Users/ChangeUserStatus/@item.Id/Activate" permissions="[SystemPermissions.ActivateAndDeactivateUsers]" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1 "  title="فعالسازی حساب کاربری" data-bs-toggle="tooltip">
+	                                <a href="/Users/ChangeUserStatus/@item.Id/Activate" permissions="[(long)SystemPermissions.PermissionList.ActivateAndDeactivateUsers]" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1 "  title="فعالسازی حساب کاربری" data-bs-toggle="tooltip">
                                         <i class="	fas fa-lock-open fs-2"></i>
 	                                </a>
                                 }
-	                            <button permissions="[SystemPermissions.UpdateUser]" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1 EditModalTrigger" data-id="@item.Id" title="ویرایش کاربر" data-bs-toggle="tooltip">
+	                            <button permissions="[(long)SystemPermissions.PermissionList.UpdateUser]" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1 EditModalTrigger" data-id="@item.Id" title="ویرایش کاربر" data-bs-toggle="tooltip">
 		                            <i class="fa fa-edit fs-2"></i>
 	                            </button>
-	                            <a permissions="[SystemPermissions.ChangeUserPasswordFromAdmin]" href="/User/ChangeUserPasswordFromAdmin/@item.Id" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="تغییر کلمه عبور" data-bs-toggle="tooltip">
+	                            <a permissions="[(long)SystemPermissions.PermissionList.ChangeUserPasswordFromAdmin]" href="/User/ChangeUserPasswordFromAdmin/@item.Id" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="تغییر کلمه عبور" data-bs-toggle="tooltip">
 		                            <i class="fas fa-user-lock  fs-2"></i>
 	                            </a>
 	                            @if (currentUserId != null && item.Id != currentUserId)
 	                            {
-		                            <button permissions="[SystemPermissions.DeleteUser]" data-url="/DeleteUser/@item.Id" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm delete-button" title="حذف کاربر" data-bs-toggle="tooltip">
+		                            <button permissions="[(long)SystemPermissions.PermissionList.DeleteUser]" data-url="/DeleteUser/@item.Id" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm delete-button" title="حذف کاربر" data-bs-toggle="tooltip">
 			                            <i class="fa fa-trash fs-2"></i>
 		                            </button>
 	                            }

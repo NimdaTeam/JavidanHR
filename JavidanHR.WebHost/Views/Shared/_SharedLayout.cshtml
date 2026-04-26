@@ -5,12 +5,13 @@
 <head>
 	<partial name="_HeadMeta"/>
 	<partial name="_HeadCssJs"/>
+	@await RenderSectionAsync("customStyles", false);
 </head>
 <!--end::Head-->
 <!--begin::Body-->
 <body id="kt_app_body" data-kt-app-layout="light-sidebar" data-kt-app-header-fixed="true" data-kt-app-sidebar-enabled="true" data-kt-app-sidebar-fixed="true" data-kt-app-sidebar-hoverable="true" data-kt-app-sidebar-push-header="true" data-kt-app-sidebar-push-toolbar="true" data-kt-app-sidebar-push-footer="true" data-kt-app-toolbar-enabled="true" class="app-default">
 <!--begin::Theme mode setup on page load-->
-<script>
+	<script asp-append-version="true" nonce="@Context.Items["ScriptNonce"]">
 		(() => {
 			const ROOT = document.documentElement;
 			if (!ROOT) return;
@@ -99,7 +100,7 @@
 					<!--begin::کپیright-->
 					<div class="text-gray-900 order-2">
 						<span class="text-muted fw-semibold me-1">طراحی و پشتیبانی سامانه </span>
-						<a href="https://nimdateam.ir" target="_blank" class="text-gray-800 text-hover-primary">گروه برنامه نویسی نیمدا</a>
+						<a href="https://nimdateam.ir" target="_blank" class="text-gray-800 text-hover-primary">گروه برنامه نویسی نیمدا</a> |  (Version: 2.0.1)
 					</div>
 					<!--end::کپیright-->
 					<!--begin::Menu-->
@@ -121,21 +122,8 @@
 		<!--end:::اصلی-->
 	</div>
 
-	<div class="modal fade" id="StockInformationModal" tabindex="-1" aria-hidden="true" style="display: none;">
-	</div>
-
 	<!--end::Wrapper-->
-	<!--end::اپلیکیشن-->
-	<!--begin::کشوs-->
-	<!--begin::فعالیتها drawer-->
-	<partial name="_UserNotifications" />
-	<!-- Chat Window  -->
 
-	<div id="kt_drawer_chat" class="bg-body drawer drawer-end" data-kt-drawer="true" data-kt-drawer-name="chat" data-kt-drawer-activate="true" data-kt-drawer-overlay="true" data-kt-drawer-width="{default:'100%', 'md': '100%'}" data-kt-drawer-direction="end" data-kt-drawer-toggle="#kt_drawer_chat_toggle" data-kt-drawer-close="#kt_drawer_chat_close" style="width: 75% !important;">
-	</div>
-
-	<!--end::فعالیتها drawer-->
-	<!--end::کشوs-->
 	<!--begin::Scrolltop-->
 	<div id="kt_scrolltop" class="scrolltop" data-kt-scrolltop="true">
 		<i class="ki-outline ki-arrow-up"></i>

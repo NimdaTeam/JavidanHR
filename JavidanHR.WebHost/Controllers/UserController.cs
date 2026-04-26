@@ -7,6 +7,7 @@ using AuthenticationSystem.Domain.User;
 using AuthenticationSystem.Services.Repositories;
 using AuthenticationSystem.SystemPermissions;
 using AuthenticationSystem.Utilities;
+using JavidanHR.WebHost.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WebHost.Helpers.GlobalHelpers;
@@ -30,7 +31,7 @@ namespace JavidanHR.WebHost.Controllers
         }
 
         [Route("AllUsers")]
-        [Permission(SystemPermissions.UsersList)]
+        [Permission(SystemPermissions.PermissionList.UsersList)]
         public async Task<IActionResult> AllUsers(string searchQuery = "", int page = 1)
         {
             var users = await _userService.GetAllUsersForGrid();
@@ -52,24 +53,24 @@ namespace JavidanHR.WebHost.Controllers
                 SearchQuery = searchQuery.SanitizeString()
             });
 
-            var currentUser = await _userService.GetUserByPhoneNumber(User.Identity.Name);
+            var currentUser = await _userService.GetUserByPhoneNumber(User);
             if (currentUser?.Id != null) ViewBag.currentUserId = currentUser.Id;
 
             return View(paginationResult);
         }
 
         [Route("AddUser")]
-        [Permission(SystemPermissions.AddNewUser)]
+        [Permission(SystemPermissions.PermissionList.AddNewUser)]
         public async Task<IActionResult> AddUser()
         {
-            ViewBag.roles = await _roleService.GetAll();
+            ViewBag.roles = await _roleService.GetAllWithIncludesAsync();
 
             return PartialView();
         }
 
         [Route("AddUser")]
         [HttpPost]
-        [Permission(SystemPermissions.AddNewUser)]
+        [Permission(SystemPermissions.PermissionList.AddNewUser)]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AddUser(Users user, List<long> roles)
         {
@@ -103,10 +104,10 @@ namespace JavidanHR.WebHost.Controllers
         }
 
         [Route("UpdateUser/{userId}")]
-        [Permission(SystemPermissions.UpdateUser)]
+        [Permission(SystemPermissions.PermissionList.UpdateUser)]
         public async Task<IActionResult> UpdateUser(long userId)
         {
-            var user = await _userService.Get(userId);
+            var user = await _userService.GetAsNoTrackingAsync(userId);
 
             ViewBag.roles = await _roleService.GetUserRolesForEditUser(userId);
 
@@ -114,7 +115,7 @@ namespace JavidanHR.WebHost.Controllers
         }
 
         [Route("UpdateUser/{userId}")]
-        [Permission(SystemPermissions.UpdateUser)]
+        [Permission(SystemPermissions.PermissionList.UpdateUser)]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateUser(Users user, List<long> roles)
@@ -130,7 +131,9 @@ namespace JavidanHR.WebHost.Controllers
             try
             {
                 await _roleService.RemoveRolesFromUser(user.Id);
-                await _userService.Update(user);
+                await _userService.UpdateAsync(user);
+                await _userService.SaveChangesAsync();
+
                 await _roleService.AddRoleToUser(roles, user.Id);
 
                 NotificationSystem
@@ -146,12 +149,12 @@ namespace JavidanHR.WebHost.Controllers
         }
 
         [Route("DeleteUser/{userId}")]
-        [Permission(SystemPermissions.DeleteUser)]
+        [Permission(SystemPermissions.PermissionList.DeleteUser)]
         public async Task<IActionResult> DeleteUser(long userId)
         {
             try
             {
-                var user = await _userService.Get(userId);
+                var user = await _userService.GetAsync(userId);
                 if (user == null)
                 {
                     NotificationSystem.ShowNotification(TempData, ApplicationMessages.NotFound, "", ApplicationMessagesIcon.ErrorIcon);
@@ -160,11 +163,10 @@ namespace JavidanHR.WebHost.Controllers
 
                 await _roleService.RemoveRolesFromUser(userId);
 
-                user.IsDeleted = true;
-                user.DeletedAt = DateTime.Now;
-                await _userService.Update(user);
+                user.SoftDelete();
+                await _userService.UpdateAsync(user);
 
-                await _userService.SaveChanges();
+                await _userService.SaveChangesAsync();
 
                 NotificationSystem
                     .ShowNotification(TempData, ApplicationMessages.OperationSuccessful, "", ApplicationMessagesIcon.SuccessIcon);
@@ -196,7 +198,7 @@ namespace JavidanHR.WebHost.Controllers
         [Route("EditUserInfo/{userId}")]
         public async Task<IActionResult> EditUserInfo(long userId)
         {
-            var user = await _userService.Get(userId);
+            var user = await _userService.GetAsNoTrackingAsync(userId);
             if (user == null)
             {
                 NotificationSystem.ShowNotification(TempData, ApplicationMessages.NotFound, "", ApplicationMessagesIcon.ErrorIcon);
@@ -216,7 +218,7 @@ namespace JavidanHR.WebHost.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditUserInfo(Users user)
         {
-            var foundUser = await _userService.Get(user.Id);
+            var foundUser = await _userService.GetAsync(user.Id);
             if (foundUser == null)
             {
                 NotificationSystem.ShowNotification(TempData, ApplicationMessages.NotFound, "", ApplicationMessagesIcon.ErrorIcon);
@@ -246,21 +248,13 @@ namespace JavidanHR.WebHost.Controllers
                 foundUser.FullName = user.FullName.SanitizeString();
                 foundUser.FatherName = user.FatherName!.SanitizeString();
 
-                var result = await _userService.Update(foundUser);
+                await _userService.UpdateAsync(foundUser);
 
-                await _userService.SaveChanges();
-                if (result)
-                {
-                    NotificationSystem
-                        .ShowNotification(TempData, ApplicationMessages.OperationSuccessful, "", ApplicationMessagesIcon.SuccessIcon);
+                await _userService.SaveChangesAsync();
 
-                }
-                else
-                {
-                    NotificationSystem
-                        .ShowNotification(TempData, ApplicationMessages.OperationFailed, "", ApplicationMessagesIcon.ErrorIcon);
+                NotificationSystem
+                    .ShowNotification(TempData, ApplicationMessages.OperationSuccessful, "", ApplicationMessagesIcon.SuccessIcon);
 
-                }
                 return RedirectToAction("Index", "Home");
             }
             catch (Exception e)
@@ -274,7 +268,7 @@ namespace JavidanHR.WebHost.Controllers
         [Route("User/ChangePassword")]
         public async Task<IActionResult> ChangePassword()
         {
-            var user = await _userService.GetUserByPhoneNumber(User.Identity.Name);
+            var user = await _userService.GetUserByPhoneNumber(User);
 
             if (user is null)
             {
@@ -294,10 +288,10 @@ namespace JavidanHR.WebHost.Controllers
             if (string.IsNullOrEmpty(currentPassword) || string.IsNullOrEmpty(newPassword) || string.IsNullOrEmpty(confirmPassword))
             {
                 NotificationSystem.ShowNotification(TempData, "همه فیلدها الزامی هستند", "همه فیلدها الزامی هستند.", ApplicationMessagesIcon.ErrorIcon);
-                return View(await _userService.GetUserByPhoneNumber(User.Identity.Name));
+                return View(await _userService.GetUserByPhoneNumber(User));
             }
 
-            var user = await _userService.GetUserByPhoneNumber(User.Identity.Name);
+            var user = await _userService.GetUserByPhoneNumber(User);
             if (user == null) return NotFound();
 
             // ۱. چک رمز فعلی
@@ -326,8 +320,8 @@ namespace JavidanHR.WebHost.Controllers
             user.PasswordHash = PasswordSecurity.PasswordHasher.HashPassword(newPassword);
             user.LastPasswordChangedAt = DateTime.UtcNow;
 
-            await _userService.Update(user);
-            await _userService.SaveChanges();
+            await _userService.UpdateAsync(user);
+            await _userService.SaveChangesAsync();
 
             // ۵. لاگ تغییر رمز
             var log = new UserLoginHistory
@@ -349,10 +343,10 @@ namespace JavidanHR.WebHost.Controllers
         }
 
         [Route("User/ChangeUserPasswordFromAdmin/{userId}")]
-        [Permission(SystemPermissions.ChangeUserPasswordFromAdmin)]
+        [Permission(SystemPermissions.PermissionList.ChangeUserPasswordFromAdmin)]
         public async Task<IActionResult> ChangeUserPasswordFromAdmin(long userId)
         {
-            var user = await _userService.Get(userId);
+            var user = await _userService.GetAsNoTrackingAsync(userId);
             if (user == null)
             {
                 NotificationSystem.ShowNotification(TempData, ApplicationMessages.NotFound, "", ApplicationMessagesIcon.ErrorIcon);
@@ -367,10 +361,10 @@ namespace JavidanHR.WebHost.Controllers
         [Route("User/ChangeUserPasswordFromAdmin/{userId}")]
         [Authorize]
         [ValidateAntiForgeryToken]
-        [Permission(SystemPermissions.ChangeUserPasswordFromAdmin)]
+        [Permission(SystemPermissions.PermissionList.ChangeUserPasswordFromAdmin)]
         public async Task<IActionResult> ChangePassword(long userId, string newPassword, string confirmPassword)
         {
-            var user = await _userService.Get(userId);
+            var user = await _userService.GetAsync(userId);
             if (user is null)
             {
                 NotificationSystem.ShowNotification(TempData, ApplicationMessages.NotFound, "", ApplicationMessagesIcon.ErrorIcon);
@@ -402,8 +396,8 @@ namespace JavidanHR.WebHost.Controllers
             user.PasswordHash = PasswordSecurity.PasswordHasher.HashPassword(newPassword);
             user.LastPasswordChangedAt = DateTime.UtcNow;
 
-            await _userService.Update(user);
-            await _userService.SaveChanges();
+            await _userService.UpdateAsync(user);
+            await _userService.SaveChangesAsync();
 
             // ۵. لاگ تغییر رمز
             var log = new UserLoginHistory
@@ -425,12 +419,12 @@ namespace JavidanHR.WebHost.Controllers
         }
 
         [Route("Users/ChangeUserStatus/{userId}/{status}")]
-        [Permission(SystemPermissions.ActivateAndDeactivateUsers)]
+        [Permission(SystemPermissions.PermissionList.ActivateAndDeactivateUsers)]
         public async Task<IActionResult> ChangeUserStatus(long userId, string status)
         {
             try
             {
-                var user = await _userService.Get(userId);
+                var user = await _userService.GetAsync(userId);
                 if (user is null)
                 {
                     NotificationSystem.ShowNotification(TempData, ApplicationMessages.NotFound, "",
@@ -448,20 +442,13 @@ namespace JavidanHR.WebHost.Controllers
                         break;
                 }
 
-                var updateStatus = await _userService.Update(user);
-                updateStatus = await _userService.SaveChanges();
+                await _userService.UpdateAsync(user);
+                await _userService.SaveChangesAsync();
 
-                if (updateStatus)
-                {
-                    NotificationSystem.ShowNotification(TempData, ApplicationMessages.OperationSuccessful, "",
-                        ApplicationMessagesIcon.SuccessIcon);
-                    return this.RedirectToReferrer();
-                }
 
-                NotificationSystem.ShowNotification(TempData, ApplicationMessages.OperationFailed, "",
-                    ApplicationMessagesIcon.ErrorIcon);
+                NotificationSystem.ShowNotification(TempData, ApplicationMessages.OperationSuccessful, "",
+                    ApplicationMessagesIcon.SuccessIcon);
                 return this.RedirectToReferrer();
-
             }
             catch (Exception e)
             {

@@ -1,0 +1,219 @@
+﻿@using _0_Framework.Utilities.Helpers
+@using HrSystem.Application.common.Extensions
+@using HrSystem.Application.DTO
+@using HrSystem.Domain.Entities
+@using Microsoft.AspNetCore.Mvc.TagHelpers
+@model HrSystem.Application.DTO.Step2EducationVM
+@{
+	ViewData["Title"] = "تحصیلات و دوره‌های آموزشی (مرحله ۲ از ۵)";
+	var employeeName = ViewData["EmployeeName"]?.ToString() ?? "";
+}
+
+<div class="card mb-5 mb-xl-8">
+	<div class="card-header border-0 pt-5 bg-primary text-white">
+		<h3 class="card-title text-white text-center mb-0">
+			@(Model.IsUpdating ? $"ویرایش اطلاعات تحصیلات و دوره های آموزشی کارمند: {employeeName ?? "-"}" : "تحصیلات و دوره های آموزشی")
+		</h3>
+
+	</div>
+
+	<div class="card-body py-6">
+		<form asp-action="EducationAndTrainings" asp-route-employeeId="@Model.EmployeeId" method="post">
+			@Html.AntiForgeryToken()
+			<input type="hidden" asp-for="EmployeeId" />
+
+			<!-- تحصیلات رسمی -->
+			<div class="mb-10">
+				<h4 class="text-primary mb-5">تحصیلات رسمی</h4>
+				<div class="row g-7">
+					<div class="col-md-6">
+						<label class="required fw-bold fs-6">آخرین مدرک تحصیلی</label>
+						<select required asp-for="AcademicLevel" class="form-select form-select-solid">
+							<option value="">انتخاب کنید</option>
+							@foreach (var level in Enum.GetValues(typeof(EducationLevel)).Cast<EducationLevel>())
+							{
+								<option value="@((int)level)">@level.ToPersian()</option>
+							}
+						</select>
+					</div>
+					<div class="col-md-6">
+						<label class="fw-bold fs-6 required">رشته تحصیلی</label>
+						<input required asp-for="FieldOfStudy" class="form-control form-control-solid text-center" />
+					</div>
+					<div class="col-md-3">
+						<label class="fw-bold fs-6 required">سال شروع</label>
+						<input required asp-for="StartYearPersian" class="form-control form-control-solid text-center persian-year-input" type="number" maxlength="4" min="1300" placeholder="مثلا: 1390" />
+					</div>
+					<div class="col-md-3">
+						<label class="fw-bold fs-6 required">سال پایان</label>
+						<input required asp-for="EndYearPersian" class="form-control form-control-solid text-center persian-year-input" type="number" maxlength="4" max="@DateTime.Now.ToShamsi().Split("/")[0]" placeholder="مثلا: 1395" />
+					</div>
+					<div class="col-md-6">
+						<label class="fw-bold fs-6 required">نام موسسه/دانشگاه</label>
+						<input required asp-for="InstituteName" class="form-control form-control-solid text-center" />
+					</div>
+					<div class="col-md-6">
+						<label class="fw-bold fs-6">شهر موسسه</label>
+						<input asp-for="InstituteCity" class="form-control form-control-solid text-center" />
+					</div>
+					<div class="col-md-12">
+						<label class="fw-bold fs-6">آدرس موسسه</label>
+						<textarea asp-for="InstituteAddress" class="form-control form-control-solid" rows="2"></textarea>
+					</div>
+				</div>
+			</div>
+
+			<!-- دوره‌های آموزشی -->
+			<div class="mb-10">
+				<h4 class="text-primary mb-5">دوره‌های آموزشی گذرانده شده</h4>
+
+				@if (!Model.Trainings.Any())
+				{
+					<div class="alert alert-info text-center" id="no-training-info-div">
+						هیچ دوره ای اضافه نشده است.
+					</div>
+				}
+				<div id="trainingContainer">
+					@for (int i = 0; i < Model.Trainings.Count; i++)
+					{
+						<partial name="_TrainingRow" model="@Model.Trainings[i]" view-data='new ViewDataDictionary(ViewData) { { "index", i } }' />
+					}
+				</div>
+				<div class="text-center mt-4">
+					<button type="button" class="btn btn-primary btn-sm" onclick="addTrainingRow()">افزودن دوره جدید</button>
+				</div>
+			</div>
+
+			<div class="text-center">
+				<button type="submit" class="btn btn-lg btn-success px-10">
+					ثبت
+				</button>
+			</div>
+		</form>
+	</div>
+</div>
+
+
+@section Scripts {
+
+	<!-- فعال‌سازی تولتیپ بوت‌استرپ -->
+	<script asp-append-version="true" nonce="@Context.Items["ScriptNonce"]">
+		document.addEventListener("DOMContentLoaded", () => {
+			const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+			tooltipTriggerList.map(el => new bootstrap.Tooltip(el));
+		});
+	</script>
+
+	<script asp-append-version="true" nonce="@Context.Items["ScriptNonce"]">
+
+		/* -------------------------------
+		   کنترل سال شروع و پایان تحصیل
+		--------------------------------*/
+		function validateYears() {
+			const start = document.getElementById("StartYearPersian");
+			const end = document.getElementById("EndYearPersian");
+
+			if (!start || !end) return;
+
+			const startVal = parseInt(start.value);
+			const endVal = parseInt(end.value);
+
+			// اگر هردو پر نبودن، ولش کن
+			if (!startVal || !endVal) return;
+
+			if (endVal <= startVal) {
+
+				// نمایش tooltip
+				end.setAttribute("data-bs-toggle", "tooltip");
+				end.setAttribute("data-bs-placement", "top");
+				end.setAttribute("title", "سال پایان باید بزرگ‌تر از سال شروع باشد");
+
+				new bootstrap.Tooltip(end).show();
+
+				// نشون دادن خطا
+				end.classList.add("is-invalid");
+
+				// پاک کردن مقدار نامعتبر
+				end.value = "";
+			}
+			else {
+				end.classList.remove("is-invalid");
+			}
+		}
+
+		document.addEventListener("DOMContentLoaded", function () {
+			const start = document.getElementById("StartYearPersian");
+			const end = document.getElementById("EndYearPersian");
+
+			if (start) start.addEventListener("change", validateYears);
+			if (end) end.addEventListener("change", validateYears);
+		});
+
+	</script>
+
+	<script asp-append-version="true" nonce="@Context.Items["ScriptNonce"]">
+		let trainingIndex = @Model.Trainings.Count;
+
+		function addTrainingRow() {
+			 hideNoTrainingDiv();
+			const container = document.getElementById("trainingContainer");
+			const html = `
+			<div class="training-block border rounded p-4 mb-4 bg-light">
+				<input type="hidden" name="Trainings[${trainingIndex}].Id" value="" />
+				<div class="row g-4">
+					<div class="col-md-6">
+						<label class="required">نام دوره</label>
+						<input required name="Trainings[${trainingIndex}].CourseName" class="form-control" required />
+					</div>
+					<div class="col-md-6">
+						<label class="required">موسسه برگزارکننده</label>
+						<input required name="Trainings[${trainingIndex}].Institute" class="form-control" required />
+					</div>
+					<div class="col-md-3">
+						<label>تعداد ساعت</label>
+						<input name="Trainings[${trainingIndex}].Hours" class="form-control text-center" />
+					</div>
+					<div class="col-md-6">
+						<label class="required">شماره و تاریخ گواهی</label>
+						<input required name="Trainings[${trainingIndex}].CertificateNumberAndDate" class="form-control" />
+					</div>
+					<div class="col-md-3 text-end">
+						<label class="opacity-0">حذف</label><br />
+						<button type="button" class="btn btn-danger btn-sm" onclick="deleteTrainingRow(this)">حذف</button>
+					</div>
+					<div class="col-md-12">
+						<label>توضیحات</label>
+						<textarea name="Trainings[${trainingIndex}].Notes" class="form-control" rows="2"></textarea>
+					</div>
+				</div>
+			</div>`;
+			container.insertAdjacentHTML('beforeend', html);
+			trainingIndex++;
+		}
+
+			function deleteTrainingRow(btn) {
+			btn.closest('.training-block').remove();
+			checkNoTrainingDiv();
+		}
+
+		function hideNoTrainingDiv() {
+			const div = document.getElementById("no-training-info-div");
+			if (div) div.style.display = "none";
+		}
+
+		function showNoTrainingDiv() {
+			const div = document.getElementById("no-training-info-div");
+			if (div) div.style.display = "block";
+		}
+
+		function checkNoTrainingDiv() {
+			const count = document.querySelectorAll('.training-block').length;
+			if (count === 0) showNoTrainingDiv();
+		}
+	</script>
+}
+
+@section customStyles
+{
+	<link href="~/css/firststepstyles.css" rel="stylesheet" asp-append-version="true" nonce="@Context.Items["ScriptNonce"]" />
+}

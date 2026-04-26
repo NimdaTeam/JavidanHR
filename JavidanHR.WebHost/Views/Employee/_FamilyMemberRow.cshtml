@@ -1,0 +1,104 @@
+﻿@model HrSystem.Application.DTO.FamilyMemberVM
+@{
+	var index = (int)ViewData["index"];
+}
+
+<div class="family-block mb-4">
+	<div class="table-responsive">
+		<input type="hidden" name="FamilyMembers[@index].Id" value="@Model.Id" />
+		<table class="table table-bordered align-middle">
+			<tbody>
+
+			<tr>
+				<td>نام و نام خانوادگی</td>
+					<td><input name="FamilyMembers[@index].FullName" class="form-control text-center" value="@Model.FullName" /></td>
+			</tr>
+
+			<tr>
+				<td>نام پدر</td>
+					<td><input name="FamilyMembers[@index].FathersName" value="@Model.FathersName" class="form-control text-center" /></td>
+			</tr>
+
+			<tr>
+				<td>تاریخ تولد</td>
+					<td><input name="FamilyMembers[@index].PersianBirthDate" value="@Model.PersianBirthDate" class="form-control text-center persian-date-input" placeholder="1370/01/01" maxlength="10" data-jdp /></td>
+			</tr>
+
+			<tr>
+				<td>نسبت</td>
+				<td>
+						<select name="FamilyMembers[@index].Relation" class="form-select form-select-solid text-center relation-select">
+							<option value="">انتخاب کنید</option>
+							@if (Model.Relation == "همسر")
+							{
+								<option selected="" value="همسر">همسر</option>
+							}
+							else
+							{
+								<option value="همسر">همسر</option>
+							}
+							
+							@if (Model.Relation == "فرزند")
+							{
+								<option selected="" value="فرزند">فرزند</option>
+							}
+							else
+							{
+								<option value="فرزند">فرزند</option>
+							}
+						
+							@if (Model.Relation == "پدر")
+							{
+								<option selected="" value="پدر">پدر</option>
+							}
+							else
+							{
+								<option value="پدر">پدر</option>
+							}
+							
+							@if (Model.Relation == "مادر")
+							{
+								<option selected="" value="مادر">مادر</option>
+							}
+							else
+							{
+								<option value="مادر">مادر</option>
+							}
+						
+							
+							@if (Model.Relation == "برادر")
+							{
+								<option selected="" value="برادر">برادر</option>
+							}
+							else
+							{
+								<option value="برادر">برادر</option>
+							}
+
+							@if (Model.Relation == "خواهر")
+							{
+								<option selected="" value="خواهر">خواهر</option>
+							}
+							else
+							{
+								<option value="خواهر">خواهر</option>
+							}
+						
+					</select>
+				</td>
+			</tr>
+
+			<tr>
+				<td>آدرس/محل اشتغال</td>
+					<td><input value="@Model.AddressOrWorkplace" name="FamilyMembers[@index].AddressOrWorkplace" class="form-control text-center" /></td>
+			</tr>
+
+			<tr>
+				<td>عملیات</td>
+				<td><button type="button" class="btn btn-sm btn-danger" onclick="removeFamilyRow(this)">حذف</button></td>
+			</tr>
+
+			</tbody>
+		</table>
+	</div>
+</div>

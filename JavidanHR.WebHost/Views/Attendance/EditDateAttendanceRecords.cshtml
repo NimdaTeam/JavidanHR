@@ -1,0 +1,237 @@
+﻿@using _0_Framework.Utilities.Helpers
+@using AuthenticationSystem.Domain.User
+@model AttendanceSystem.Infrastructure.Dto.EditAttendanceRecordsVM
+@{
+	var user = ViewBag.user as Users;
+	var currentUser = ViewBag.currentUser as Users;
+	var date = ViewBag.date as DateTime?;
+	var index = 1;
+}
+<h1 class="text-center">
+	ترددهای ثبت شده برای کارمند «@user?.FullName» در تاریخ «@date?.ToShamsi()»
+</h1>
+<hr />
+<form id="attendanceForm" asp-action="EditDateAttendanceRecords" method="post">
+	@Html.AntiForgeryToken()
+	<input type="hidden" asp-for="UserId" value="@Model.UserId" />
+	<input type="hidden" asp-for="WorkDate" value="@date" />
+	<input type="hidden" asp-for="IsRecordsDeleted" id="IsRecordsDeleted" value="False" />
+
+	<div class="table-responsive">
+		<table class="table table-bordered table-striped text-center">
+			<thead>
+			<th>ردیف</th>
+			<th>ساعت ورود</th>
+			<th>ساعت خروج</th>
+			<th>عملیات</th>
+			</thead>
+			<tbody>
+				@if (!Model.LogItems.Any())
+				{
+					<tr>
+						<td colspan="4">
+							هیچ ترددی در این تاریخ ثبت نشده است.
+						</td>
+					</tr>
+				}
+				else
+				{
+					foreach (var item in Model.LogItems)
+					{
+						var inTime = item.InDateTime?.TimeOfDay.ToString("hh\\:mm\\:ss") ?? "00:00:00";
+						var outTime = item.OutDateTime?.TimeOfDay.ToString("hh\\:mm\\:ss") ?? "00:00:00";
+						<tr id="row-@index">
+							<td>@index</td>
+							<td>
+								<input type="text" id="input-@index-in" asp-for="LogItems[index - 1].InDateTime" value="@inTime" class="form-control form-control-solid text-center persian-date-input" style="width: 250px; height:41px" placeholder="08:00:00" data-jdp-with-time />
+							</td>
+							<td>
+								<input type="text" id="input-@index-out" asp-for="LogItems[index - 1].OutDateTime" value="@outTime" class="form-control form-control-solid text-center persian-date-input" style="width: 250px; height:41px" placeholder="17:00:00" data-jdp-with-time />
+							</td>
+							<td>
+								<button type="button" class="btn btn-danger btn-sm" onclick="removeRow(this)">حذف</button>
+							</td>
+						</tr>
+						index++;
+					}
+				}
+			</tbody>
+		</table>
+	</div>
+
+	<div class="text-center mt-3">
+		<button type="button" class="btn btn-primary" onclick="addNewRow()">افزودن تردد جدید</button>
+	</div>
+
+	<hr />
+
+	<label class="required fw-bold fs-6">توضیحات</label>
+	<textarea asp-for="Reason" class="form-control form-control-solid text-right"></textarea>
+
+
+	<!-- پیام خطای تداخل -->
+	<div id="overlapWarning" class="alert alert-danger mt-3 d-none">
+		<strong>هشدار:</strong> تردد‌های زیر با هم تداخل دارند:
+		<ul id="overlapList"></ul>
+	</div>
+
+	<hr />
+	<Modal-Buttons></Modal-Buttons>
+</form>
+
+@section scripts
+{
+
+	<script asp-append-version="true" nonce="@Context.Items["ScriptNonce"]">
+		function validateAttendance() {
+			// پاک کردن هشدارهای قبلی
+			document.getElementById('overlapWarning').classList.add('d-none');
+			document.getElementById('overlapList').innerHTML = '';
+
+			// حذف کلاس تداخل از تمام ردیف‌ها
+			document.querySelectorAll('tbody tr').forEach(row => {
+				row.classList.remove('overlap');
+			});
+
+			// فقط ردیف‌هایی که input دارند را انتخاب کنیم
+			const rows = document.querySelectorAll('tbody tr');
+			const times = [];
+			const overlapPairs = [];
+
+			// جمع‌آوری زمان‌ها - فقط از ردیف‌هایی که input دارند
+			for (let i = 0; i < rows.length; i++) {
+				const inInput = rows[i].querySelector('input[id*="-in"]');
+				const outInput = rows[i].querySelector('input[id*="-out"]');
+
+				// اگر input وجود ندارد (مثل ردیف پیام "هیچ ترددی")، ردیف را رد کن
+				if (!inInput || !outInput) {
+					continue;
+				}
+
+				if (!inInput.value || !outInput.value) {
+					alert('لطفاً تمام زمان‌های ورود و خروج را پر کنید.');
+					return false;
+				}
+
+				const inTime = parseTime(inInput.value);
+				const outTime = parseTime(outInput.value);
+				times.push({ in: inTime, out: outTime, row: rows[i] });
+			}
+
+			// اگر هیچ زمانی وارد نشده، اجازه submit بده
+			if (times.length === 0) {
+				return true;
+			}
+
+			// بررسی تداخل
+			for (let i = 0; i < times.length; i++) {
+				for (let j = i + 1; j < times.length; j++) {
+					if (times[i].out > times[j].in && times[i].in < times[j].out) {
+						overlapPairs.push([i, j]);
+						times[i].row.classList.add('overlap');
+						times[j].row.classList.add('overlap');
+					}
+				}
+			}
+
+			// نمایش تردد‌های تداخلی
+			if (overlapPairs.length > 0) {
+				const overlapList = document.getElementById('overlapList');
+				overlapPairs.forEach(([i, j]) => {
+					const rowI = times[i].row;
+					const rowJ = times[j].row;
+					const timeI = rowI.querySelector('input[id*="-in"]').value + " - " + rowI.querySelector('input[id*="-out"]').value;
+					const timeJ = rowJ.querySelector('input[id*="-in"]').value + " - " + rowJ.querySelector('input[id*="-out"]').value;
+
+					const li = document.createElement('li');
+					li.textContent = `ردیف ${i + 1} (${timeI}) و ردیف ${j + 1} (${timeJ})`;
+					overlapList.appendChild(li);
+				});
+				document.getElementById('overlapWarning').classList.remove('d-none');
+				return false;
+			}
+
+			return true;
+		}
+
+		function parseTime(timeStr) {
+			const [h, m, s] = timeStr.split(':').map(Number);
+			return h * 60 + m + s / 60;
+		}
+
+		function removeRow(button) {
+			button.closest('tr').remove();
+			$("#IsRecordsDeleted").val("True");
+			updateRowIndices(); // بروزرسانی ایندکس‌ها بعد از حذف
+		}
+
+		function addNewRow() {
+			const tbody = document.querySelector('tbody');
+			const rowCount = tbody.querySelectorAll('tr').length;
+
+			// پیدا کردن تعداد واقعی ردیف‌های دارای input
+			const inputRows = Array.from(tbody.querySelectorAll('tr')).filter(row =>
+				row.querySelector('input[id*="-in"]') !== null
+			);
+			const newIndex = inputRows.length;
+
+			const newRow = document.createElement('tr');
+			newRow.id = `row-${newIndex + 1}`;
+			newRow.innerHTML = `
+				<td>${newIndex + 1}</td>
+				<td>
+					<input type="text" id="input-${newIndex}-in" name="LogItems[${newIndex}].InDateTime" class="form-control form-control-solid text-center persian-date-input" style="width: 250px; height:41px" placeholder="08:00:00" data-jdp-with-time />
+				</td>
+				<td>
+					<input type="text" id="input-${newIndex}-out" name="LogItems[${newIndex}].OutDateTime" class="form-control form-control-solid text-center persian-date-input" style="width: 250px; height:41px" placeholder="17:00:00" data-jdp-with-time />
+				</td>
+				<td>
+					<button type="button" class="btn btn-danger btn-sm" onclick="removeRow(this)">حذف</button>
+				</td>
+			`;
+
+			// حذف ردیف "هیچ ترددی" اگر وجود دارد
+			const noDataRow = tbody.querySelector('tr td[colspan="4"]');
+			if (noDataRow) {
+				noDataRow.closest('tr').remove();
+			}
+
+			tbody.appendChild(newRow);
+
+			jalaliDatepicker.startWatch({
+				autoReadOnlyInput: true,
+				date: false,
+				time: true,
+				hasSecond: true,
+				selector: "input[data-jdp-with-time]"
+			});
+		}
+
+		// تابع کمکی برای بروزرسانی ایندکس‌ها بعد از حذف ردیف
+		function updateRowIndices() {
+			const tbody = document.querySelector('tbody');
+			const rows = Array.from(tbody.querySelectorAll('tr')).filter(row =>
+				row.querySelector('input[id*="-in"]') !== null
+			);
+
+			rows.forEach((row, idx) => {
+				row.id = `row-${idx + 1}`;
+				row.querySelector('td:first-child').textContent = idx + 1;
+
+				const inInput = row.querySelector('input[id*="-in"]');
+				const outInput = row.querySelector('input[id*="-out"]');
+
+				inInput.id = `input-${idx}-in`;
+				inInput.name = `LogItems[${idx}].InDateTime`;
+				outInput.id = `input-${idx}-out`;
+				outInput.name = `LogItems[${idx}].OutDateTime`;
+			});
+		}
+
+		document.getElementById('attendanceForm').addEventListener('submit', function(e) {
+			if (!validateAttendance()) {
+				e.preventDefault();
+			}
+		});
+	</script>
+}

@@ -79,5 +79,21 @@ namespace HrSystem.Application.common.Extensions
             PaymentMethod.CardToCard => "کارت به کارت",
             _ => method.ToString()
         };
+
+        public static string ToPersian(this HousingStatus method) => method switch
+        {
+            HousingStatus.Personal => "ملکی",
+            HousingStatus.Rental => "استیجاری",
+            _ => method.ToString()
+        }; 
+
+
+        public static string ToPersian(this MilitaryStatus method) => method switch
+        {
+            MilitaryStatus.Ended => "پایان یافته",
+            MilitaryStatus.Exempt => "معاف از خدمت",
+            MilitaryStatus.None => "-",
+            _ => method.ToString()
+        };
     }
 }

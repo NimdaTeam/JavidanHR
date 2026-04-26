@@ -1,18 +1,18 @@
-﻿using HrSystem.Application.DTO;
-using HrSystem.Application.Interfaces;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Abstractions;
-using System.Runtime.CompilerServices;
-using _0_Framework.FileUploader;
+﻿using _0_Framework.FileUploader;
 using _0_Framework.Utilities.Helpers;
 using _0_Framework.Utilities.NotificationSystem;
 using _0_Framework.Utilities.Pagination;
 using _0_Framework.Utilities.Security;
+using AuthenticationSystem.Domain.User;
+using AuthenticationSystem.Services.Repositories;
 using AuthenticationSystem.SystemPermissions;
 using DNTPersianUtils.Core;
-using HrSystem.Application.common.Extensions;
+using HrSystem.Application.DTO;
+using HrSystem.Application.Interfaces;
 using HrSystem.Domain.Entities;
+using JavidanHR.WebHost.Utilities;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using WebHost.Helpers.GlobalHelpers;
 using WebHost.PageSecurity;
 using WebHost.Utilities;
@@ -25,21 +25,27 @@ namespace JavidanHR.WebHost.Controllers
     {
         private readonly IEmployeeService _employeeService;
         private readonly IFileUploadService _fileUploadService;
+        private readonly IUserRepository _userService;
+        private readonly IRoleRepository _roleService;
+        private readonly ILogger<EmployeeController> _logger;
 
-        public EmployeeController(IEmployeeService employeeService, IFileUploadService fileUploadService)
+        public EmployeeController(IEmployeeService employeeService, IFileUploadService fileUploadService, IUserRepository userService, IRoleRepository roleService, ILogger<EmployeeController> logger)
         {
             _employeeService = employeeService;
             _fileUploadService = fileUploadService;
+            _userService = userService;
+            _roleService = roleService;
+            _logger = logger;
         }
 
+        #region All Employees
         [Route("All")]
-        [Permission(SystemPermissions.EmployeesList)]
+        [Permission(SystemPermissions.PermissionList.EmployeesList)]
         public async Task<IActionResult> AllEmployees(string searchQuery = "", int page = 1, string department = "", string position = "", MaritalStatus? maritalStatus = null, CooperationType? cooperationType = null)
         {
             var model = await _employeeService.GetAllEmployeesList();
 
             ViewBag.TotalCount = model.Count;
-
 
             model = SearchHelper.Search(model,
                 searchQuery.SanitizeString(),
@@ -70,496 +76,912 @@ namespace JavidanHR.WebHost.Controllers
             return View(paginatedModel);
         }
 
-        [Route("AddEmployee")]
-        [Permission(SystemPermissions.CreateEmployee)]
-        public async Task<IActionResult> AddEmployee(bool isUpdating = false, long? employeeId = null)
-        {
-            Step1PersonalVM model;
+        #endregion
 
-            if (isUpdating && employeeId > 0)
+        #region Delete Employe
+        [Route("Delete/{empId}")]
+        [Permission(SystemPermissions.PermissionList.DeleteEmployee)]
+        public async Task<IActionResult> Delete(long empId)
+        {
+            var employee = await _employeeService.GetById(empId);
+            if (employee is null)
             {
-                var emp = await _employeeService.GetById(employeeId.Value);
-                if (emp is null)
+                NotificationSystem.ShowNotification(TempData, ApplicationMessages.NotFound, "", ApplicationMessagesIcon.ErrorIcon);
+                return RedirectToAction("AllEmployees");
+            }
+
+            var status = await _employeeService.Delete(employee);
+
+            if (status)
+            {
+                NotificationSystem.ShowNotification(TempData, ApplicationMessages.OperationSuccessful, "",
+                    ApplicationMessagesIcon.SuccessIcon);
+            }
+            else
+            {
+                NotificationSystem.ShowNotification(TempData, ApplicationMessages.OperationFailed, "",
+                    ApplicationMessagesIcon.ErrorIcon);
+            }
+            return RedirectToAction("AllEmployees");
+        }
+        #endregion
+
+        #region Step 1 - Employee Personal and Family Information
+        [Route("AddEmployee")]
+        public async Task<IActionResult> AddEmployee(bool isUpdating = false, long? employeeId = null, bool isAdminCreatingNewEmployee = false)
+        {
+            Step1PersonalVM model = new();
+
+            var currentUser = await _userService.GetUserByPhoneNumber(User);
+            if (currentUser == null)
+            {
+                NotificationSystem.ShowNotification(TempData, ApplicationMessages.SessionExpired, "", ApplicationMessagesIcon.ErrorIcon);
+                return RedirectToAction("Login", "Account");
+            }
+
+            var userPermissions = await _roleService.GetLoggedInUserPermissions();
+
+            if (isUpdating && employeeId is > 0)
+            {
+                var emp = await _employeeService.GetEmployeeForEdit(employeeId.Value);
+                if (emp == null)
                 {
-                    NotificationSystem.ShowNotification(TempData, ApplicationMessages.NotFound, "", ApplicationMessagesIcon.ErrorIcon);
+                    NotificationSystem.ShowNotification(TempData, "کارمند یافت نشد.", "", ApplicationMessagesIcon.ErrorIcon);
                     return this.RedirectToReferrer();
                 }
 
-                ViewData["EmployeeTitle"] = $"{emp.FullName} ({emp.EmployeeCode})";
-
-                model = new Step1PersonalVM()
+                // چک دسترسی برای ویرایش (بعد از تأیید نهایی فقط با پرمیشن Override)
+                if (emp.IsProfileCompletedByEmployee)
                 {
-                    NationalCode = emp.NationalCode ?? "",
-                    CurrentImage = emp.ProfileImageUrl ?? "",
-                    BirthDate = emp.BirthDate,
-                    ChildrenCount = emp.ChildrenCount,
-                    EmployeeCode = emp.EmployeeCode,
-                    FirstName = emp.FirstName,
-                    Gender = emp.Gender,
-                    LastName = emp.LastName,
-                    MaritalStatus = emp.MaritalStatus,
-                    Id = emp.Id,
-                    IsUpdating = true,
-                    PersianBirthDateStringify = emp.BirthDate.ToShamsi()
-                };
+                    if (emp.UserId == currentUser.Id)
+                    {
+                        NotificationSystem.ShowNotification(TempData, "اطلاعات کارمندی شما پیش از این تأیید شده و قابل ویرایش نیست.", "", ApplicationMessagesIcon.ErrorIcon);
+                        return this.RedirectToReferrer();
+                    }
 
-                return View(model);
+                    if (!userPermissions.Contains((long)SystemPermissions.PermissionList.EditEmployeeAfterUserConfirmation))
+                    {
+                        NotificationSystem.ShowNotification(TempData, "پروفایل کارمند تأیید نهایی شده و قابل ویرایش نیست.", "", ApplicationMessagesIcon.ErrorIcon);
+                        return this.RedirectToReferrer();
+                    }
+                }
+                else
+                {
+                    if (emp.UserId != currentUser.Id &&
+                        userPermissions.All(x => x != (long)SystemPermissions.PermissionList.EditEmployeePersonalInfo))
+                    {
+                        NotificationSystem.ShowNotification(TempData, ApplicationMessages.AccessDenied, "", ApplicationMessagesIcon.ErrorIcon);
+                        return this.RedirectToReferrer();
+                    }
+                }
+
+                ViewData["EmployeeTitle"] = $"{emp.FirstName} {emp.LastName} - ({emp.EmployeeCode})";
+                model = _employeeService.GetEmployeeData_Step1(emp);
+
+                ViewBag.IsFirstTime = true;
+                return View("AddEmployee", model);
             }
 
-            model = new Step1PersonalVM();
-            return View(model);
+            // حالت ایجاد کارمند جدید (توسط خود کارمند یا ادمین)
+            if (!isAdminCreatingNewEmployee)
+            {
+                var existingEmployee = await _employeeService.SingleOrDefaultByCondition(x => x.UserId == currentUser.Id);
+                if (existingEmployee != null)
+                {
+                    return RedirectToAction("EmployeeDetails", new { empId = existingEmployee.Id });
+                }
+            }
+            model = new Step1PersonalVM
+            {
+                Id = null,
+                IsUpdating = false,
+                NationalCode = "",
+                MobilePhone = currentUser.PhoneNumber ?? ""
+            };
 
+            ViewData["Title"] = "تکمیل اطلاعات اولیه (مرحله ۱ از ۵)";
+            return View("AddEmployee", model);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Route("AddEmployee")]
-        [Permission(SystemPermissions.CreateEmployee)]
         public async Task<IActionResult> AddEmployee([FromForm] Step1PersonalVM emp)
         {
+            var birthGregorian = emp.PersianBirthDateStringify.ToGregorianDateTime();
+            if (!birthGregorian.HasValue)
+            {
+               NotificationSystem.ShowNotification(TempData,"تاریخ تولد وارد شده معتبر نیست","",ApplicationMessagesIcon.ErrorIcon);
+               return View(emp);
+            }
+
             if (!emp.NationalCode.IsValidNationalCode())
             {
                 NotificationSystem.ShowNotification(TempData, "کد ملی وارد شده معتبر نمی باشد", "", ApplicationMessagesIcon.ErrorIcon);
                 return View(emp);
             }
 
+            var currentUser = await _userService.GetUserByPhoneNumber(User);
+            if (currentUser is null)
+            {
+                NotificationSystem.ShowNotification(TempData, ApplicationMessages.SessionExpired, "", ApplicationMessagesIcon.ErrorIcon);
+                return RedirectToAction("Login", "Account");
+            }
+
+            var currentUserPermissions = await _roleService.GetLoggedInUserPermissions();
+            var isAdminCreatingEmployee = currentUserPermissions.Contains((long)SystemPermissions.PermissionList.CreateNewEmployee);
+
             if (!emp.IsUpdating)
             {
-                if (await _employeeService.IsExist(emp.EmployeeCode.SanitizeString(),
-                        emp.NationalCode.SanitizeString()))
+                // === حالت ایجاد کارمند جدید ===
+                if (!isAdminCreatingEmployee)
+                {
+                    var existing = await _employeeService.SingleOrDefaultByCondition(x => x.UserId == currentUser.Id);
+                    if (existing != null)
+                    {
+                        emp.IsUpdating = true;
+                        return View(emp);
+                    }
+                }
+
+                if (await _employeeService.IsExist(emp.EmployeeCode.SanitizeString(), emp.NationalCode.SanitizeString()))
                 {
                     NotificationSystem.ShowNotification(TempData, ApplicationMessages.DuplicateValueTitle, "", ApplicationMessagesIcon.ErrorIcon);
                     return View(emp);
                 }
 
-                var uploadedImageName = "";
-                if (emp.ProfileImage is not null)
+                long? newUserId = currentUser.Id;
+
+                // اگر ادمین داره ایجاد میکنه → کاربر جدید بساز
+                if (isAdminCreatingEmployee && emp.MobilePhone != currentUser.PhoneNumber)
                 {
-                    uploadedImageName = await _fileUploadService.UploadFileAsync(emp.ProfileImage, "Employees", 2,
-                        [".jpg", ".png", ".jpeg", ".webp"]);
+                    var existingUser =
+                        await _userService.SingleOrDefaultByConditionAsync(x =>
+                            x.PhoneNumber == emp.MobilePhone.SanitizeString());
+
+                    if (existingUser is not null)
+                    {
+                        newUserId = existingUser.Id;
+                    }
+                    else
+                    {
+                        var newUser = new Users
+                        {
+                            PhoneNumber = emp.MobilePhone.SanitizeString(),
+                            FullName = $"{emp.FirstName.SanitizeString()} {emp.LastName.SanitizeString()}".Trim(),
+                            FatherName = emp.FathersName.SanitizeString(),
+                            NationalCode = emp.NationalCode.SanitizeString(),
+                            IsActive = true
+                        };
+
+                        newUserId = await _userService.CreateNewUser(newUser);
+                        if (newUserId <= 0)
+                        {
+                            NotificationSystem.ShowNotification(TempData, "خطا در ایجاد حساب کاربری کارمند جدید", "", ApplicationMessagesIcon.ErrorIcon);
+                            return View(emp);
+                        }
+                    }
                 }
 
-                var birthDate = emp.PersianBirthDateStringify.ToGregorianDateTime().Value;
+                emp.UserId = newUserId.Value;
+                var result = await _employeeService.AddNewEmployee_Step1(emp);
 
-                var status = await _employeeService.Add(new Employee()
+                var employeeLinkedUser = await _userService.GetAsync((long)emp.UserId);
+                if (employeeLinkedUser is not null && (string.IsNullOrWhiteSpace(employeeLinkedUser.FullName) ||
+                                                       string.IsNullOrWhiteSpace(employeeLinkedUser.FatherName) ||
+                                                       string.IsNullOrWhiteSpace(employeeLinkedUser.NationalCode)))
                 {
-                    EmployeeCode = emp.EmployeeCode.SanitizeString(),
-                    FirstName = emp.FirstName.SanitizeString(),
-                    LastName = emp.LastName.SanitizeString(),
-                    NationalCode = emp.NationalCode.SanitizeString(),
-                    BirthDate = birthDate,
-                    Gender = emp.Gender,
-                    MaritalStatus = emp.MaritalStatus,
-                    ChildrenCount = emp.ChildrenCount,
-                    ProfileImageUrl = uploadedImageName ?? ""
-                });
-
-                if (status)
-                {
-                    NotificationSystem.ShowNotification(TempData, ApplicationMessages.OperationSuccessful, "",
-                        ApplicationMessagesIcon.SuccessIcon);
+                    employeeLinkedUser.FullName = $"{emp.FirstName.SanitizeString()} {emp.LastName.SanitizeString()}";
+                    employeeLinkedUser.FatherName = emp.FathersName.SanitizeString();
+                    employeeLinkedUser.NationalCode = emp.NationalCode.SanitizeString();
+                    await _userService.UpdateAsync(employeeLinkedUser);
+                    await _userService.SaveChangesAsync();
                 }
+
+                if (result)
+                    NotificationSystem.ShowNotification(TempData, ApplicationMessages.OperationSuccessful, "", ApplicationMessagesIcon.SuccessIcon);
                 else
-                {
-                    NotificationSystem.ShowNotification(TempData, ApplicationMessages.OperationFailed, "",
-                        ApplicationMessagesIcon.ErrorIcon);
-                }
-
-                return RedirectToAction("AllEmployees");
+                    NotificationSystem.ShowNotification(TempData, ApplicationMessages.OperationFailed, "", ApplicationMessagesIcon.ErrorIcon);
             }
             else
             {
-                var employee = await _employeeService.GetById(emp.Id.Value);
-
-                if (employee is null)
+                // === حالت ویرایش ===
+                if (!emp.Id.HasValue)
                 {
-                    NotificationSystem.ShowNotification(TempData,ApplicationMessages.NotFound,"",ApplicationMessagesIcon.ErrorIcon);
-                    return RedirectToAction("AllEmployees");
+                    NotificationSystem.ShowNotification(TempData, ApplicationMessages.NotFound, "", ApplicationMessagesIcon.ErrorIcon);
+                    return this.RedirectToReferrer();
                 }
 
-                if (await _employeeService.IsExistForUpdate(emp.EmployeeCode.SanitizeString(),
-                        emp.NationalCode.SanitizeString(),employee.Id))
+                var employee = await _employeeService.GetEmployeeForEdit(emp.Id.Value);
+                if (employee == null)
+                {
+                    NotificationSystem.ShowNotification(TempData, ApplicationMessages.NotFound, "", ApplicationMessagesIcon.ErrorIcon);
+                    return this.RedirectToReferrer();
+                }
+
+                if (employee.IsProfileCompletedByEmployee)
+                {
+                    if (!currentUserPermissions.Contains((long)SystemPermissions.PermissionList.EditEmployeeAfterUserConfirmation))
+                    {
+                        NotificationSystem.ShowNotification(TempData, "پروفایل کارمند تأیید نهایی شده و قابل ویرایش نیست.", "", ApplicationMessagesIcon.ErrorIcon);
+                        return this.RedirectToReferrer();
+                    }
+                }
+                else
+                {
+                    if (employee.UserId != currentUser.Id &&
+                        currentUserPermissions.All(x => x != (long)SystemPermissions.PermissionList.EditEmployeePersonalInfo))
+                    {
+                        NotificationSystem.ShowNotification(TempData, ApplicationMessages.AccessDenied, "", ApplicationMessagesIcon.ErrorIcon);
+                        return this.RedirectToReferrer();
+                    }
+                }
+
+                if (await _employeeService.IsExistForUpdate(emp.EmployeeCode.SanitizeString(), emp.NationalCode.SanitizeString(), emp.Id.Value))
                 {
                     NotificationSystem.ShowNotification(TempData, ApplicationMessages.DuplicateValueTitle, "", ApplicationMessagesIcon.ErrorIcon);
                     return View(emp);
                 }
 
-                var uploadedImageName = "";
-                if (emp.ProfileImage is not null)
-                {
-                    uploadedImageName = await _fileUploadService.UploadFileAsync(emp.ProfileImage, "Employees", 2,
-                        [".jpg", ".png", ".jpeg", ".webp"]);
-
-                    employee.ProfileImageUrl =uploadedImageName;
-                }
-
-                var deleteOldPhotoStatus =  _fileUploadService.DeleteFile(emp.CurrentImage, "Employees");
-                if (deleteOldPhotoStatus)
-                {
-                    Console.WriteLine($"Error in deleting file: {emp.CurrentImage}");
-                }
-
-                var birthDate = emp.PersianBirthDateStringify.ToGregorianDateTime().Value;
-
-                employee.EmployeeCode = emp.EmployeeCode.SanitizeString();
-                employee.FirstName = emp.FirstName.SanitizeString();
-                employee.LastName = emp.LastName.SanitizeString();
-                employee.NationalCode = emp.NationalCode.SanitizeString();
-                employee.BirthDate = birthDate;
-                employee.Gender = emp.Gender;
-                employee.MaritalStatus = emp.MaritalStatus;
-                employee.ChildrenCount = emp.ChildrenCount;
-                
-
-                var status = await _employeeService.Update(employee);
-
-                if (status)
-                {
-                    NotificationSystem.ShowNotification(TempData, ApplicationMessages.OperationSuccessful, "",
-                        ApplicationMessagesIcon.SuccessIcon);
-                }
+                var result = await _employeeService.UpdateEmployee_Step1(employee, emp);
+                if (result)
+                    NotificationSystem.ShowNotification(TempData, ApplicationMessages.OperationSuccessful, "", ApplicationMessagesIcon.SuccessIcon);
                 else
+                    NotificationSystem.ShowNotification(TempData, ApplicationMessages.OperationFailed, "", ApplicationMessagesIcon.ErrorIcon);
+            }
+
+            if (currentUserPermissions.Any(x => x == (long)SystemPermissions.PermissionList.EditEmployeePersonalInfo) ||
+                currentUserPermissions.Any(x => x == (long)SystemPermissions.PermissionList.CreateNewEmployee))
+            {
+                return RedirectToAction("AllEmployees");
+            }
+
+            return RedirectToAction("EmployeeDetails");
+        }
+        #endregion //done
+
+        #region Step 2 - Education Information
+        [HttpGet]
+        [Route("EducationAndTrainings/{employeeId}")]
+        public async Task<IActionResult> EducationAndTrainings(long employeeId)
+        {
+            var employee = await _employeeService.GetEmployeeForEdit(employeeId);
+            if (employee == null)
+            {
+                NotificationSystem.ShowNotification(TempData, ApplicationMessages.NotFound, "", ApplicationMessagesIcon.ErrorIcon);
+                return this.RedirectToReferrer();
+            }
+
+            var currentUser = await _userService.GetUserByPhoneNumber(User);
+            if (currentUser is null)
+            {
+                NotificationSystem.ShowNotification(TempData, ApplicationMessages.SessionExpired, "", ApplicationMessagesIcon.ErrorIcon);
+                return RedirectToAction("Login", "Account");
+            }
+
+            var userPermissions = await _roleService.GetLoggedInUserPermissions();
+
+            // اگر پروفایل تأیید شده باشد
+            if (employee.IsProfileCompletedByEmployee)
+            {
+                // خود کارمند اصلاً نباید بتونه بیاد تو صفحه
+                if (employee.UserId == currentUser.Id)
                 {
-                    NotificationSystem.ShowNotification(TempData, ApplicationMessages.OperationFailed, "",
-                        ApplicationMessagesIcon.ErrorIcon);
+                    NotificationSystem.ShowNotification(TempData, "اطلاعات کارمندی شما پیش از این تأیید شده و قابل ویرایش نیست.", "", ApplicationMessagesIcon.ErrorIcon);
+                    return this.RedirectToReferrer();
                 }
 
-                return RedirectToAction("AllEmployees");
+                // فقط کسی که پرمیشن Override داره می‌تونه ببینه و ویرایش کنه
+                if (!userPermissions.Contains((long)SystemPermissions.PermissionList.EditEmployeeAfterUserConfirmation))
+                {
+                    NotificationSystem.ShowNotification(TempData, "پروفایل کارمند تأیید نهایی شده و قابل ویرایش نیست.", "", ApplicationMessagesIcon.ErrorIcon);
+                    return this.RedirectToReferrer();
+                }
             }
-        }
-
-
-        [Route("ContactInformation/{employeeId}")]
-        [Permission(SystemPermissions.EditEmployeeContactInfo)]
-        public async Task<IActionResult> AddContactInformationToEmployee(long employeeId)
-        {
-            var emp = await _employeeService.GetById(employeeId);
-            if (emp == null)
+            else
             {
-                NotificationSystem
-                    .ShowNotification(TempData, ApplicationMessages.NotFound, "", ApplicationMessagesIcon.ErrorIcon);
-
-                return this.RedirectToReferrer();
+                // قبل از تأیید: خود کارمند یا ادمین با پرمیشن عادی
+                if (employee.UserId != currentUser.Id &&
+                    userPermissions.All(x => x != (long)SystemPermissions.PermissionList.EditEmployeeEducationInfo))
+                {
+                    NotificationSystem.ShowNotification(TempData, ApplicationMessages.AccessDenied, "", ApplicationMessagesIcon.ErrorIcon);
+                    return this.RedirectToReferrer();
+                }
             }
 
-
-            var model = new Step2ContactVM
-            {
-                Id = emp.Id,
-                PhoneNumber = emp.PhoneNumber ?? "",
-                Email = emp.Email ?? "",
-                Address = emp.Address ?? "",
-                EmergencyContactName = emp.EmergencyContactName ?? "",
-                EmergencyContactPhone = emp.EmergencyContactPhone ?? ""
-            };
-
-            ViewData["EmployeeTitle"] = $"{emp.FullName} ({emp.EmployeeCode})";
-
+            var model = await _employeeService.GetStep2EducationData(employeeId);
+            ViewData["Title"] = "تحصیلات و دوره‌های آموزشی (مرحله ۲ از ۵)";
+            ViewData["EmployeeName"] = $"{employee.FirstName} {employee.LastName}";
             return View(model);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Route("ContactInformation/{employeeId}")]
-        [Permission(SystemPermissions.EditEmployeeContactInfo)]
-        public async Task<IActionResult> AddContactInformationToEmployee([FromForm] Step2ContactVM cv)
+        [Route("EducationAndTrainings/{employeeId}")]
+        public async Task<IActionResult> EducationAndTrainings(long employeeId, Step2EducationVM model)
         {
-            var emp = await _employeeService.GetById(cv.Id);
-            if (emp is null)
+            if (!ModelState.IsValid)
+            {
+                NotificationSystem.ShowNotification(TempData, "لطفاً فیلدهای ضروری را تکمیل کنید.", "", "error");
+                return View(model);
+            }
+
+            var employee = await _employeeService.GetEmployeeForEdit(employeeId);
+            if (employee == null)
             {
                 NotificationSystem.ShowNotification(TempData, ApplicationMessages.NotFound, "", ApplicationMessagesIcon.ErrorIcon);
                 return this.RedirectToReferrer();
             }
 
-            emp.PhoneNumber = cv.PhoneNumber.SanitizeString();
-            emp.Email = cv.Email.SanitizeString();
-            emp.Address = cv.Address.SanitizeString();
-            emp.EmergencyContactName = cv.EmergencyContactName.SanitizeString();
-            emp.EmergencyContactPhone = cv.EmergencyContactPhone.SanitizeString();
-
-            var status = await _employeeService.Update(emp);
-
-            if (status)
+            var currentUser = await _userService.GetUserByPhoneNumber(User);
+            if (currentUser is null)
             {
-                NotificationSystem.ShowNotification(TempData, ApplicationMessages.OperationSuccessful, "",
-                    ApplicationMessagesIcon.SuccessIcon);
+                NotificationSystem.ShowNotification(TempData, ApplicationMessages.SessionExpired, "", ApplicationMessagesIcon.ErrorIcon);
+                return RedirectToAction("Login", "Account");
+            }
+
+            var userPermissions = await _roleService.GetLoggedInUserPermissions();
+
+            // اگر پروفایل تأیید شده باشد
+            if (employee.IsProfileCompletedByEmployee)
+            {
+                // خود کارمند نباید بتونه ذخیره کنه
+                if (employee.UserId == currentUser.Id)
+                {
+                    NotificationSystem.ShowNotification(TempData, "اطلاعات کارمندی شما پیش از این تأیید شده و قابل ویرایش نیست.", "", ApplicationMessagesIcon.ErrorIcon);
+                    return this.RedirectToReferrer();
+                }
+
+                // فقط پرمیشن Override اجازه ذخیره می‌ده
+                if (!userPermissions.Contains((long)SystemPermissions.PermissionList.EditEmployeeAfterUserConfirmation))
+                {
+                    NotificationSystem.ShowNotification(TempData, "پروفایل کارمند تأیید نهایی شده و قابل ویرایش نیست.", "", ApplicationMessagesIcon.ErrorIcon);
+                    return this.RedirectToReferrer();
+                }
             }
             else
             {
-                NotificationSystem.ShowNotification(TempData, ApplicationMessages.OperationFailed, "",
-                    ApplicationMessagesIcon.ErrorIcon);
+                // قبل از تأیید: خود کارمند یا ادمین عادی
+                if (employee.UserId != currentUser.Id &&
+                    userPermissions.All(x => x != (long)SystemPermissions.PermissionList.EditEmployeeEducationInfo))
+                {
+                    NotificationSystem.ShowNotification(TempData, ApplicationMessages.AccessDenied, "", ApplicationMessagesIcon.ErrorIcon);
+                    return this.RedirectToReferrer();
+                }
             }
 
-            return RedirectToAction("AllEmployees");
+            var success = await _employeeService.UpdateEmployeeEducationInformation_Step2(employee, model);
+            if (success)
+            {
+                NotificationSystem.ShowNotification(TempData, "تحصیلات و دوره‌های آموزشی با موفقیت ذخیره شد", "", "success");
+                return RedirectToAction("EmployeeDetails", new { empId = employee.Id });
+            }
+
+            NotificationSystem.ShowNotification(TempData, "خطا در ذخیره اطلاعات", "", "error");
+            return View(model);
+        }
+        #endregion
+
+        #region Step 3 - Work Experiences
+        [HttpGet]
+        [Route("WorkExperiences/{employeeId}")]
+        public async Task<IActionResult> WorkExperiences(long employeeId)
+        {
+            var employee = await _employeeService.GetEmployeeForEdit(employeeId);
+            if (employee == null)
+            {
+                NotificationSystem.ShowNotification(TempData, ApplicationMessages.NotFound, "", ApplicationMessagesIcon.ErrorIcon);
+                return this.RedirectToReferrer();
+            }
+
+            var currentUser = await _userService.GetUserByPhoneNumber(User);
+            if (currentUser is null)
+            {
+                NotificationSystem.ShowNotification(TempData, ApplicationMessages.SessionExpired, "", ApplicationMessagesIcon.ErrorIcon);
+                return RedirectToAction("Login", "Account");
+            }
+
+            var userPermissions = await _roleService.GetLoggedInUserPermissions();
+
+            // اگر پروفایل تأیید نهایی شده باشد
+            if (employee.IsProfileCompletedByEmployee)
+            {
+                // خود کارمند دیگه نباید بتونه وارد صفحه بشه
+                if (employee.UserId == currentUser.Id)
+                {
+                    NotificationSystem.ShowNotification(TempData, "اطلاعات کارمندی شما پیش از این تأیید شده و قابل ویرایش نیست.", "", ApplicationMessagesIcon.ErrorIcon);
+                    return this.RedirectToReferrer();
+                }
+
+                // فقط کسی که پرمیشن Override داره اجازه ورود داره
+                if (!userPermissions.Contains((long)SystemPermissions.PermissionList.EditEmployeeAfterUserConfirmation))
+                {
+                    NotificationSystem.ShowNotification(TempData, "پروفایل کارمند تأیید نهایی شده و قابل ویرایش نیست.", "", ApplicationMessagesIcon.ErrorIcon);
+                    return this.RedirectToReferrer();
+                }
+            }
+            else
+            {
+                // قبل از تأیید نهایی: خود کارمند یا ادمین با پرمیشن عادی
+                if (employee.UserId != currentUser.Id &&
+                    userPermissions.All(x => x != (long)SystemPermissions.PermissionList.EditEmployeeWorkExperienceInfo))
+                {
+                    NotificationSystem.ShowNotification(TempData, ApplicationMessages.AccessDenied, "", ApplicationMessagesIcon.ErrorIcon);
+                    return this.RedirectToReferrer();
+                }
+            }
+
+            var model = _employeeService.GetStep3WorkExperienceData(employee);
+            ViewData["Title"] = "تجربیات کاری (مرحله ۳ از ۵)";
+            ViewData["EmployeeName"] = $"{employee.FirstName} {employee.LastName}";
+            return View(model);
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Route("WorkExperiences/{employeeId}")]
+        public async Task<IActionResult> WorkExperiences([FromForm] Step3WorkExperienceVM model)
+        {
+            if (!ModelState.IsValid)
+            {
+                NotificationSystem.ShowNotification(TempData, "لطفاً تمامی فیلدهای الزامی را تکمیل کنید.", "", "error");
+                return View(model);
+            }
 
+            var isStartDatesValid = model.WorkExperiences.Select(item => item.StartDatePersian.ToGregorianDateTime()).Select(startGregorian => startGregorian.HasValue).ToList();
+            if (isStartDatesValid.Any(x => x == false))
+            {
+                NotificationSystem.ShowNotification(TempData,"تاریخ شروع یک یا چند مورد از تجارب کاری وارد شده معتبر نیست","",ApplicationMessagesIcon.ErrorIcon);
+            }
 
+            var employee = await _employeeService.GetEmployeeForEdit(model.EmployeeId);
+            if (employee == null)
+            {
+                NotificationSystem.ShowNotification(TempData, ApplicationMessages.NotFound, "", ApplicationMessagesIcon.ErrorIcon);
+                return this.RedirectToReferrer();
+            }
+
+            var currentUser = await _userService.GetUserByPhoneNumber(User);
+            if (currentUser is null)
+            {
+                NotificationSystem.ShowNotification(TempData, ApplicationMessages.SessionExpired, "", ApplicationMessagesIcon.ErrorIcon);
+                return RedirectToAction("Login", "Account");
+            }
+
+            var userPermissions = await _roleService.GetLoggedInUserPermissions();
+
+            // اگر پروفایل تأیید نهایی شده باشد
+            if (employee.IsProfileCompletedByEmployee)
+            {
+                // خود کارمند نباید بتونه ذخیره کنه
+                if (employee.UserId == currentUser.Id)
+                {
+                    NotificationSystem.ShowNotification(TempData, "اطلاعات کارمندی شما پیش از این تأیید شده و قابل ویرایش نیست.", "", ApplicationMessagesIcon.ErrorIcon);
+                    return this.RedirectToReferrer();
+                }
+
+                // فقط با پرمیشن Override اجازه ذخیره داره
+                if (!userPermissions.Contains((long)SystemPermissions.PermissionList.EditEmployeeAfterUserConfirmation))
+                {
+                    NotificationSystem.ShowNotification(TempData, "پروفایل کارمند تأیید نهایی شده و قابل ویرایش نیست.", "", ApplicationMessagesIcon.ErrorIcon);
+                    return this.RedirectToReferrer();
+                }
+            }
+            else
+            {
+                // قبل از تأیید نهایی: خود کارمند یا ادمین عادی
+                if (employee.UserId != currentUser.Id &&
+                    userPermissions.All(x => x != (long)SystemPermissions.PermissionList.EditEmployeeWorkExperienceInfo))
+                {
+                    NotificationSystem.ShowNotification(TempData, ApplicationMessages.AccessDenied, "", ApplicationMessagesIcon.ErrorIcon);
+                    return this.RedirectToReferrer();
+                }
+            }
+
+            // تبدیل تاریخ‌ها (همون کد قبلی بدون تغییر)
+            foreach (var item in model.WorkExperiences)
+            {
+                if (!item.StartDatePersian.IsValidPersianDate())
+                    ModelState.AddModelError("", $"تاریخ شروع در تجربه \"{item.Organization}\" نامعتبر است.");
+                if (!string.IsNullOrEmpty(item.EndDatePersian) && !item.EndDatePersian.IsValidPersianDate())
+                    ModelState.AddModelError("", $"تاریخ پایان در تجربه \"{item.Organization}\" نامعتبر است.");
+            }
+
+            var success = await _employeeService.UpdateEmployeeWorkExperience_Step3(employee, model);
+
+            if (success)
+            {
+                NotificationSystem.ShowNotification(TempData, "تجربیات کاری با موفقیت ذخیره شد", "", "success");
+                return RedirectToAction("EmployeeDetails", new { empId = employee.Id });
+            }
+
+            NotificationSystem.ShowNotification(TempData, "خطا در ذخیره اطلاعات", "", "error");
+            return View(model);
+        }
+        #endregion
+
+        #region Step 4 - Organizational Information
+        [HttpGet]
         [Route("OrganizationalInformation/{employeeId}")]
-        [Permission(SystemPermissions.EditEmployeeOrganizationalInfo)]
-        public async Task<IActionResult> AddOrganizationalInformationToEmployee(long employeeId)
+        public async Task<IActionResult> OrganizationalInformation(long employeeId)
         {
-            var emp = await _employeeService.GetById(employeeId);
-            if (emp == null)
+            var employee = await _employeeService.GetEmployeeForEdit(employeeId);
+            if (employee == null)
             {
-                NotificationSystem
-                    .ShowNotification(TempData, ApplicationMessages.NotFound, "", ApplicationMessagesIcon.ErrorIcon);
-
+                NotificationSystem.ShowNotification(TempData, ApplicationMessages.NotFound, "", ApplicationMessagesIcon.ErrorIcon);
                 return this.RedirectToReferrer();
             }
 
-
-            var model = new Step3OrganizationalVM()
+            var currentUser = await _userService.GetUserByPhoneNumber(User);
+            if (currentUser is null)
             {
-                Id = emp.Id,
-                EducationLevel = emp.EducationLevel ?? new EducationLevel(),
-                ContractType = emp.ContractType ?? new ContractType(),
-                CooperationType = emp.CooperationType ?? new CooperationType(),
-                Department = emp.Department ?? "",
-                FieldOfStudy = emp.FieldOfStudy ?? "",
-                HireDate = emp.HireDate ?? DateTime.MinValue,
-                Position = emp.Position ?? "",
-                HireDatePersianStringify = emp.HireDate is not null ? emp.HireDate.ToShamsi() : ""
-            };
+                NotificationSystem.ShowNotification(TempData, ApplicationMessages.SessionExpired, "", ApplicationMessagesIcon.ErrorIcon);
+                return RedirectToAction("Login", "Account");
+            }
 
-            ViewData["EmployeeTitle"] = $"{emp.FullName} ({emp.EmployeeCode})";
+            var userPermissions = await _roleService.GetLoggedInUserPermissions();
 
+            // اگر پروفایل تأیید نهایی شده باشد
+            if (employee.IsProfileCompletedByEmployee)
+            {
+                // خود کارمند نباید بتونه وارد صفحه بشه
+                if (employee.UserId == currentUser.Id)
+                {
+                    NotificationSystem.ShowNotification(TempData, "اطلاعات کارمندی شما پیش از این تأیید شده و قابل ویرایش نیست.", "", ApplicationMessagesIcon.ErrorIcon);
+                    return this.RedirectToReferrer();
+                }
+
+                // فقط با پرمیشن Override اجازه داره
+                if (!userPermissions.Contains((long)SystemPermissions.PermissionList.EditEmployeeAfterUserConfirmation))
+                {
+                    NotificationSystem.ShowNotification(TempData, "پروفایل کارمند تأیید نهایی شده و قابل ویرایش نیست.", "", ApplicationMessagesIcon.ErrorIcon);
+                    return this.RedirectToReferrer();
+                }
+            }
+            else
+            {
+                // قبل از تأیید نهایی: خود کارمند یا ادمین با پرمیشن عادی
+                if (employee.UserId != currentUser.Id &&
+                    userPermissions.All(x => x != (long)SystemPermissions.PermissionList.EditEmployeeOrganizationalInfo))
+                {
+                    NotificationSystem.ShowNotification(TempData, ApplicationMessages.AccessDenied, "", ApplicationMessagesIcon.ErrorIcon);
+                    return this.RedirectToReferrer();
+                }
+            }
+
+            var model = _employeeService.GetStep4EmploymentData_Step4(employee);
+            ViewData["EmployeeName"] = $"{employee.FirstName} {employee.LastName}";
             return View(model);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Route("OrganizationalInformation/{employeeId}")]
-        [Permission(SystemPermissions.EditEmployeeOrganizationalInfo)]
-        public async Task<IActionResult> AddOrganizationalInformationToEmployee([FromForm] Step3OrganizationalVM ov)
+        public async Task<IActionResult> OrganizationalInformation([FromForm] Step4EmploymentVM model)
         {
-            var emp = await _employeeService.GetById(ov.Id);
-            if (emp is null)
+            if (!ModelState.IsValid)
+            {
+                NotificationSystem.ShowNotification(TempData, "لطفاً فیلدهای الزامی را تکمیل کنید.", "", "error");
+                ViewData["EmployeeName"] = "نامشخص";
+                return View(model);
+            }
+
+            var employee = await _employeeService.GetEmployeeForEdit(model.EmployeeId);
+            if (employee == null)
             {
                 NotificationSystem.ShowNotification(TempData, ApplicationMessages.NotFound, "", ApplicationMessagesIcon.ErrorIcon);
                 return this.RedirectToReferrer();
             }
 
-            var hireDate = ov.HireDatePersianStringify.ToGregorianDateTime().Value;
-
-            emp.Department = ov.Department.SanitizeString();
-            emp.Position = ov.Position.SanitizeString();
-            emp.EducationLevel = ov.EducationLevel;
-            emp.FieldOfStudy = ov.FieldOfStudy.SanitizeString();
-            emp.ContractType = ov.ContractType;
-            emp.CooperationType = ov.CooperationType;
-            emp.HireDate = hireDate;
-
-            var status = await _employeeService.Update(emp);
-
-            if (status)
+            var currentUser = await _userService.GetUserByPhoneNumber(User);
+            if (currentUser is null)
             {
-                NotificationSystem.ShowNotification(TempData, ApplicationMessages.OperationSuccessful, "",
-                    ApplicationMessagesIcon.SuccessIcon);
+                NotificationSystem.ShowNotification(TempData, ApplicationMessages.SessionExpired, "", ApplicationMessagesIcon.ErrorIcon);
+                return RedirectToAction("Login", "Account");
+            }
+
+            var userPermissions = await _roleService.GetLoggedInUserPermissions();
+
+            // اگر پروفایل تأیید نهایی شده باشد
+            if (employee.IsProfileCompletedByEmployee)
+            {
+                // خود کارمند نباید بتونه ذخیره کنه
+                if (employee.UserId == currentUser.Id)
+                {
+                    NotificationSystem.ShowNotification(TempData, "اطلاعات کارمندی شما پیش از این تأیید شده و قابل ویرایش نیست.", "", ApplicationMessagesIcon.ErrorIcon);
+                    return this.RedirectToReferrer();
+                }
+
+                // فقط با پرمیشن Override اجازه ذخیره داره
+                if (!userPermissions.Contains((long)SystemPermissions.PermissionList.EditEmployeeAfterUserConfirmation))
+                {
+                    NotificationSystem.ShowNotification(TempData, "پروفایل کارمند تأیید نهایی شده و قابل ویرایش نیست.", "", ApplicationMessagesIcon.ErrorIcon);
+                    return this.RedirectToReferrer();
+                }
             }
             else
             {
-                NotificationSystem.ShowNotification(TempData, ApplicationMessages.OperationFailed, "",
-                    ApplicationMessagesIcon.ErrorIcon);
+                // قبل از تأیید نهایی: خود کارمند یا ادمین عادی
+                if (employee.UserId != currentUser.Id &&
+                    userPermissions.All(x => x != (long)SystemPermissions.PermissionList.EditEmployeeOrganizationalInfo))
+                {
+                    NotificationSystem.ShowNotification(TempData, ApplicationMessages.AccessDenied, "", ApplicationMessagesIcon.ErrorIcon);
+                    return this.RedirectToReferrer();
+                }
             }
 
-            return RedirectToAction("AllEmployees");
-        }
+            var success = await _employeeService.UpdateEmployeeEmploymentData_Step4(employee, model);
 
-
-
-        [Route("FinancialInformation/{employeeId}")]
-        [Permission(SystemPermissions.EditEmployeeFinancialInfo)]
-        public async Task<IActionResult> AddFinancialInformationToEmployee(long employeeId)
-        {
-            var emp = await _employeeService.GetById(employeeId);
-            if (emp == null)
+            if (success)
             {
-                NotificationSystem
-                    .ShowNotification(TempData, ApplicationMessages.NotFound, "", ApplicationMessagesIcon.ErrorIcon);
+                NotificationSystem.ShowNotification(TempData, "اطلاعات استخدامی با موفقیت ذخیره شد", "", "success");
+                return RedirectToAction("EmployeeDetails", new { empId = employee.Id });
+            }
 
+            NotificationSystem.ShowNotification(TempData, "خطا در ذخیره اطلاعات", "", "error");
+            return View(model);
+        }
+        #endregion
+
+        #region Step 5 - Financial Information
+        [HttpGet]
+        [Route("FinancialInformation/{employeeId}")]
+        public async Task<IActionResult> FinancialInformation(long employeeId)
+        {
+            var employee = await _employeeService.GetEmployeeForEdit(employeeId);
+            if (employee == null)
+            {
+                NotificationSystem.ShowNotification(TempData, ApplicationMessages.NotFound, "", ApplicationMessagesIcon.ErrorIcon);
                 return this.RedirectToReferrer();
             }
 
-            var model = new Step4FinancialVM()
+            var currentUser = await _userService.GetUserByPhoneNumber(User);
+            if (currentUser is null)
             {
-                Id = emp.Id,
-                CardNumber = emp.CardNumber ?? "",
-                AccountNumber = emp.AccountNumber ?? "",
-                BankName = emp.BankName ?? "",
-                BaseSalary = emp.BaseSalary ?? 0,
-                Benefits = emp.Benefits ?? 0,
-                PaymentMethod = emp.PaymentMethod ?? new PaymentMethod()
-            };
+                NotificationSystem.ShowNotification(TempData, ApplicationMessages.SessionExpired, "", ApplicationMessagesIcon.ErrorIcon);
+                return RedirectToAction("Login", "Account");
+            }
 
-            ViewData["EmployeeTitle"] = $"{emp.FullName} ({emp.EmployeeCode})";
+            var userPermissions = await _roleService.GetLoggedInUserPermissions();
 
+            // اگر پروفایل قبلاً تأیید نهایی شده باشد
+            if (employee.IsProfileCompletedByEmployee)
+            {
+                // خود کارمند اصلاً نباید وارد صفحه بشه
+                if (employee.UserId == currentUser.Id)
+                {
+                    NotificationSystem.ShowNotification(TempData, "اطلاعات کارمندی شما پیش از این تأیید شده و قابل ویرایش نیست.", "", ApplicationMessagesIcon.ErrorIcon);
+                    return this.RedirectToReferrer();
+                }
+
+                // فقط کسی که پرمیشن Override داره اجازه ورود داره
+                if (!userPermissions.Contains((long)SystemPermissions.PermissionList.EditEmployeeAfterUserConfirmation))
+                {
+                    NotificationSystem.ShowNotification(TempData, "پروفایل کارمند تأیید نهایی شده و قابل ویرایش نیست.", "", ApplicationMessagesIcon.ErrorIcon);
+                    return this.RedirectToReferrer();
+                }
+            }
+            else
+            {
+                // قبل از تأیید نهایی: خود کارمند یا ادمین با پرمیشن عادی
+                if (employee.UserId != currentUser.Id &&
+                    userPermissions.All(x => x != (long)SystemPermissions.PermissionList.EditEmployeeFinancialInfo))
+                {
+                    NotificationSystem.ShowNotification(TempData, ApplicationMessages.AccessDenied, "", ApplicationMessagesIcon.ErrorIcon);
+                    return this.RedirectToReferrer();
+                }
+            }
+
+            var model = _employeeService.GetFinancialData_Step5(employee);
+            ViewData["EmployeeName"] = $"{employee.FirstName} {employee.LastName}";
             return View(model);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Route("FinancialInformation/{employeeId}")]
-        [Permission(SystemPermissions.EditEmployeeFinancialInfo)]
-        public async Task<IActionResult> AddFinancialInformationToEmployee([FromForm] Step4FinancialVM fv)
+        public async Task<IActionResult> FinancialInformation([FromForm] Step5FinancialVM model)
         {
-            var emp = await _employeeService.GetById(fv.Id);
-            if (emp is null)
+            if (!ModelState.IsValid)
+            {
+                NotificationSystem.ShowNotification(TempData, "لطفاً فیلدهای الزامی را تکمیل کنید.", "", "error");
+                ViewData["EmployeeName"] = "نامشخص";
+                return View(model);
+            }
+
+            var employee = await _employeeService.GetEmployeeForEdit(model.EmployeeId);
+            if (employee == null)
             {
                 NotificationSystem.ShowNotification(TempData, ApplicationMessages.NotFound, "", ApplicationMessagesIcon.ErrorIcon);
                 return this.RedirectToReferrer();
             }
 
-            emp.BaseSalary = fv.BaseSalary;
-            emp.Benefits = fv.Benefits;
-            emp.BankName = fv.BankName.SanitizeString();
-            emp.AccountNumber = fv.AccountNumber.SanitizeString();
-            emp.CardNumber = fv.CardNumber.SanitizeString();
-            emp.PaymentMethod = fv.PaymentMethod;
-
-            var status = await _employeeService.Update(emp);
-
-            if (status)
+            var currentUser = await _userService.GetUserByPhoneNumber(User);
+            if (currentUser is null)
             {
-                NotificationSystem.ShowNotification(TempData, ApplicationMessages.OperationSuccessful, "",
-                    ApplicationMessagesIcon.SuccessIcon);
+                NotificationSystem.ShowNotification(TempData, ApplicationMessages.SessionExpired, "", ApplicationMessagesIcon.ErrorIcon);
+                return RedirectToAction("Login", "Account");
+            }
+
+            var userPermissions = await _roleService.GetLoggedInUserPermissions();
+
+            // اگر پروفایل قبلاً تأیید نهایی شده باشد
+            if (employee.IsProfileCompletedByEmployee)
+            {
+                // خود کارمند نباید بتونه ذخیره کنه
+                if (employee.UserId == currentUser.Id)
+                {
+                    NotificationSystem.ShowNotification(TempData, "اطلاعات کارمندی شما پیش از این تأیید شده و قابل ویرایش نیست.", "", ApplicationMessagesIcon.ErrorIcon);
+                    return this.RedirectToReferrer();
+                }
+
+                // فقط با پرمیشن Override اجازه ذخیره داره
+                if (!userPermissions.Contains((long)SystemPermissions.PermissionList.EditEmployeeAfterUserConfirmation))
+                {
+                    NotificationSystem.ShowNotification(TempData, "پروفایل کارمند تأیید نهایی شده و قابل ویرایش نیست.", "", ApplicationMessagesIcon.ErrorIcon);
+                    return this.RedirectToReferrer();
+                }
             }
             else
             {
-                NotificationSystem.ShowNotification(TempData, ApplicationMessages.OperationFailed, "",
-                    ApplicationMessagesIcon.ErrorIcon);
+                // قبل از تأیید نهایی: خود کارمند یا ادمین عادی
+                if (employee.UserId != currentUser.Id &&
+                    userPermissions.All(x => x != (long)SystemPermissions.PermissionList.EditEmployeeFinancialInfo))
+                {
+                    NotificationSystem.ShowNotification(TempData, ApplicationMessages.AccessDenied, "", ApplicationMessagesIcon.ErrorIcon);
+                    return this.RedirectToReferrer();
+                }
             }
 
-            return RedirectToAction("AllEmployees");
-        }
+            var success = await _employeeService.UpdateEmployeeFinancialData_Step5(employee, model);
 
-
-        [Route("AdditionalInformation/{employeeId}")]
-        [Permission(SystemPermissions.EditEmployeeAdditionalInfo)]
-        public async Task<IActionResult> AddAdditionalInformationToEmployee(long employeeId)
-        {
-            var emp = await _employeeService.GetById(employeeId);
-            if (emp == null)
+            if (success)
             {
-                NotificationSystem
-                    .ShowNotification(TempData, ApplicationMessages.NotFound, "", ApplicationMessagesIcon.ErrorIcon);
-
-                return this.RedirectToReferrer();
+                NotificationSystem.ShowNotification(TempData, "اطلاعات مالی با موفقیت ذخیره شد!", "", "success");
+                return RedirectToAction("EmployeeDetails", new { empId = employee.Id });
             }
 
-            var model = new Step5AdditionalVM()
-            {
-                Id = emp.Id,
-                AssignedProjects = emp.AssignedProjects ?? "",
-                Certificates = emp.Certificates ?? "",
-                CompletedTrainings = emp.CompletedTrainings ?? "",
-                HealthStatus = emp.HealthStatus ?? new HealthStatus(),
-                InsuranceNumber = emp.InsuranceNumber ?? "",
-                Notes = emp.Notes ?? "",
-                SkillLevel = emp.SkillLevel ?? ""
-            };
-
-            ViewData["EmployeeTitle"] = $"{emp.FullName} ({emp.EmployeeCode})";
-
+            NotificationSystem.ShowNotification(TempData, "خطا در ذخیره اطلاعات", "", "error");
             return View(model);
         }
+        #endregion
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [Route("AdditionalInformation/{employeeId}")]
-        [Permission(SystemPermissions.EditEmployeeAdditionalInfo)]
-        public async Task<IActionResult> AddAdditionalInformationToEmployee([FromForm] Step5AdditionalVM av)
+        #region Employee Details
+        [HttpGet]
+        [Route("Details")]
+        public async Task<IActionResult> EmployeeDetails(long? empId = null)
         {
-            var emp = await _employeeService.GetById(av.Id);
-            if (emp is null)
+            var currentUser = await _userService.GetUserByPhoneNumber(User);
+            if (currentUser is null)
+            {
+                NotificationSystem.ShowNotification(TempData, ApplicationMessages.SessionExpired, "", ApplicationMessagesIcon.ErrorIcon);
+                return RedirectToAction("Login", "Account");
+            }
+            var userPermissions = await _roleService.GetLoggedInUserPermissions();
+
+            if (empId is null)
+            {
+                var employee = await _employeeService.SingleOrDefaultByCondition(x => x.UserId == currentUser.Id);
+                if (employee == null)
+                {
+                    NotificationSystem.ShowNotification(TempData, "اطلاعات شما در سامانه یافت نشد، لطفا نسبت به تکمیل اطلاعات کارمندی خود اقدام فرمایید.", "", ApplicationMessagesIcon.ErrorIcon);
+                    return RedirectToAction("AddEmployee");
+                }
+
+                empId = employee.Id;
+            }
+
+
+            var employeeDetails = await _employeeService.GetEmployeeDetails((long)empId);
+            if (employeeDetails.Id <= 0)
             {
                 NotificationSystem.ShowNotification(TempData, ApplicationMessages.NotFound, "", ApplicationMessagesIcon.ErrorIcon);
                 return this.RedirectToReferrer();
             }
 
-            emp.InsuranceNumber = av.InsuranceNumber.SanitizeString();
-            emp.HealthStatus = av.HealthStatus;
-            emp.SkillLevel = av.SkillLevel.SanitizeString();
-            emp.CompletedTrainings = av.CompletedTrainings.SanitizeString();
-            emp.Certificates = av.Certificates.SanitizeString();
-            emp.AssignedProjects = av.AssignedProjects.SanitizeString();
-            emp.Notes = av.Notes.SanitizeString();
+            if (employeeDetails.UserId == currentUser.Id || userPermissions.Any(x => x == (long)SystemPermissions.PermissionList.ViewEmployeeDetails))
+                return View(employeeDetails);
 
-            var status = await _employeeService.Update(emp);
-
-            if (status)
-            {
-                NotificationSystem.ShowNotification(TempData, ApplicationMessages.OperationSuccessful, "",
-                    ApplicationMessagesIcon.SuccessIcon);
-            }
-            else
-            {
-                NotificationSystem.ShowNotification(TempData, ApplicationMessages.OperationFailed, "",
-                    ApplicationMessagesIcon.ErrorIcon);
-            }
-
-            return RedirectToAction("AllEmployees");
+            NotificationSystem.ShowNotification(TempData, ApplicationMessages.AccessDenied, "", ApplicationMessagesIcon.ErrorIcon);
+            return this.RedirectToReferrer();
         }
+        #endregion
 
-        [Route("Delete/{id}")]
-        [Permission(SystemPermissions.DeleteEmployee)]
-        public async Task<IActionResult> Delete(long id)
-        {
-            var emp = await _employeeService.GetById(id);
-            if (emp == null)
-            {
-                NotificationSystem.ShowNotification(TempData,ApplicationMessages.NotFound,"",ApplicationMessagesIcon.ErrorIcon);
-                return RedirectToAction("AllEmployees");
-            }
-
-            var status = await _employeeService.Delete(emp);
-
-            if (status)
-            {
-                NotificationSystem.ShowNotification(TempData, ApplicationMessages.OperationSuccessful, "",
-                    ApplicationMessagesIcon.SuccessIcon);
-            }
-            else
-            {
-                NotificationSystem.ShowNotification(TempData, ApplicationMessages.OperationFailed, "",
-                    ApplicationMessagesIcon.ErrorIcon);
-            }
-
-            return RedirectToAction("AllEmployees");
-
-        }
-
-
-        [Route("EmployeeDetails/{empId}")]
-        [Permission(SystemPermissions.ViewEmployeeDetails)]
-        public async Task<IActionResult> EmployeeDetails(long empId)
-        {
-            var emp = await _employeeService.GetById(empId);
-            if (emp is null)
-            {
-                NotificationSystem.ShowNotification(TempData,ApplicationMessages.NotFound,"",ApplicationMessagesIcon.ErrorIcon);
-                return this.RedirectToReferrer();
-            }
-
-            var details = await _employeeService.GetEmployeeDetails(empId);
-
-            return View(details);
-        }
-
+        #region Print Profile
         [Route("PrintProfile/{empId}")]
-        [Permission(SystemPermissions.PrintEmployeeProfile)]
         public async Task<IActionResult> PrintProfile(long empId)
         {
-            var emp = await _employeeService.GetById(empId);
-            if (emp is null)
+            var model = await _employeeService.GetEmployeeDetails(empId);
+            if (model.Id <= 0)
             {
                 NotificationSystem.ShowNotification(TempData, ApplicationMessages.NotFound, "", ApplicationMessagesIcon.ErrorIcon);
                 return this.RedirectToReferrer();
             }
 
-            var details = await _employeeService.GetEmployeeDetails(empId);
-
-            return View(details);
+            return View(model);
         }
+        #endregion
+
+        #region Confirm Employee Data (by Employee)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Route("ConfirmProfileFinal/{employeeId}")]
+        public async Task<IActionResult> ConfirmProfileFinal(long employeeId)
+        {
+            var currentUser = await _userService.GetUserByPhoneNumber(User);
+            if (currentUser == null)
+                return Json(new { success = false, message = "جلسه شما منقضی شده است." });
+
+            var employee = await _employeeService.GetEmployeeForEdit(employeeId);
+            if (employee == null)
+                return Json(new { success = false, message = "کارمند یافت نشد." });
+
+            // فقط خود کارمند می‌تونه تأیید نهایی کنه
+            if (employee.UserId != currentUser.Id)
+                return Json(new { success = false, message = "شما اجازه تأیید نهایی این پروفایل را ندارید." });
+
+            // اگر قبلاً تأیید کرده باشه
+            if (employee.IsProfileCompletedByEmployee)
+                return Json(new { success = false, message = "پروفایل قبلاً تأیید نهایی شده است." });
+
+            // چک حداقل درصد تکمیل (اختیاری — می‌تونی حذف کنی)
+            var details = await _employeeService.GetEmployeeDetails(employeeId);
+            if (details.ProfileCompletionPercentage < 95)
+                return Json(new { success = false, message = "پروفایل شما هنوز کامل نیست. لطفاً تمام مراحل را تکمیل کنید." });
+
+            // تأیید نهایی + ثبت لاگ
+            employee.IsProfileCompletedByEmployee = true;
+
+            var success = await _employeeService.Update(employee);
+
+            if (success)
+            {
+                // اختیاری: لاگ فعالیت
+                  _logger.LogInformation($"کارمند {employee.FirstName} {employee.LastName} پروفایل خود را تأیید نهایی کرد.");
+
+                return Json(new { success = true, message = "پروفایل شما با موفقیت تأیید نهایی شد و دیگر قابل ویرایش توسط شما نیست." });
+            }
+
+            return Json(new { success = false, message = "خطا در تأیید نهایی پروفایل. لطفاً مجدد تلاش کنید." });
+        }
+
+        #endregion
+
+        #region Unlock User Confirm Lock to Re Edit By  Employee
+        [Route("UnlockProfile/{employeeId}")]
+        [Permission(SystemPermissions.PermissionList.UnlockEmployeeDataForReEditByEmployee)]
+        public async Task<IActionResult> UnlockProfile(long employeeId)
+        {
+            var currentUser = await _userService.GetUserByPhoneNumber(User);
+            if (currentUser == null)
+            {
+                NotificationSystem.ShowNotification(TempData,ApplicationMessages.SessionExpired,"",ApplicationMessagesIcon.ErrorIcon);
+                return RedirectToAction("Login", "Account");
+            }
+                
+
+            var employee = await _employeeService.GetEmployeeForEdit(employeeId);
+            if (employee == null)
+            {
+                NotificationSystem.ShowNotification(TempData, ApplicationMessages.NotFound, "", ApplicationMessagesIcon.ErrorIcon);
+                return this.RedirectToReferrer();
+            }
+
+
+            employee.IsProfileCompletedByEmployee = false;
+            var success = await _employeeService.Update(employee);
+
+            if (success)
+            {
+                _logger.LogInformation($"قفل تایید اطلاعات کارمند {employee.FirstName} {employee.LastName} توسط {currentUser.FullName} {currentUser.Id} ریست شد. ");
+                NotificationSystem.ShowNotification(TempData, ApplicationMessages.OperationSuccessful, "", ApplicationMessagesIcon.SuccessIcon);
+                return this.RedirectToReferrer();
+            }
+
+            NotificationSystem.ShowNotification(TempData, ApplicationMessages.OperationFailed, "", ApplicationMessagesIcon.ErrorIcon);
+            return this.RedirectToReferrer();
+        }
+
+        #endregion
     }
 }

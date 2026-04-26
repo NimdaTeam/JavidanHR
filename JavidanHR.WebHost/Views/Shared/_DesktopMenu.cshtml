@@ -1,4 +1,9 @@
-﻿@using AuthenticationSystem.SystemPermissions
+﻿@using AuthenticationSystem.Services.Repositories
+@using AuthenticationSystem.SystemPermissions
+@inject IUserRepository UserService
+@{
+	var currentUser = await UserService.GetUserByPhoneNumber(User.Identity.Name);
+}
 <div id="kt_app_sidebar" class="app-sidebar flex-column" data-kt-drawer="true" data-kt-drawer-name="app-sidebar" data-kt-drawer-activate="{default: true, lg: false}" data-kt-drawer-overlay="true" data-kt-drawer-width="225px" data-kt-drawer-direction="start" data-kt-drawer-toggle="#kt_app_sidebar_mobile_toggle">
 	<!--begin::Logo-->
 	<div style="justify-content:center !important;" class="app-sidebar-logo px-6" id="kt_app_sidebar_logo">
@@ -47,7 +52,7 @@
 
 
 					<!--begin:Menu item-->
-					<div permissions="[SystemPermissions.UsersList,SystemPermissions.RolesList]" data-kt-menu-trigger="click" class="menu-item menu-accordion">
+					<div permissions="[(long)SystemPermissions.PermissionList.UsersList,(long)SystemPermissions.PermissionList.RolesList]" data-kt-menu-trigger="click" class="menu-item menu-accordion">
 						<!--begin:Menu link-->
 						<span class="menu-link">
 							<span class="menu-icon">
@@ -60,7 +65,7 @@
 						<!--begin:Menu sub-->
 						<div class="menu-sub menu-sub-accordion">
 							<!--begin:Menu item-->
-							<div permissions="[SystemPermissions.UsersList]" class="menu-item">
+							<div permissions="[(long)SystemPermissions.PermissionList.UsersList]" class="menu-item">
 								<!--begin:Menu link-->
 								<a class="menu-link" href="/AllUsers">
 									<span class="menu-bullet">
@@ -72,7 +77,7 @@
 							</div>
 							<!--end:Menu item-->
 							<!--begin:Menu item-->
-							<div permissions="[SystemPermissions.RolesList]" class="menu-item">
+							<div permissions="[(long)SystemPermissions.PermissionList.RolesList]" class="menu-item">
 								<!--begin:Menu link-->
 								<a class="menu-link" href="/AllRoles">
 									<span class="menu-bullet">
@@ -88,7 +93,7 @@
 					</div>
 					<!--end:Menu item-->
 					<!--begin:Menu item-->
-					<div permissions="[SystemPermissions.EmployeesList,SystemPermissions.CreateEmployee]" data-kt-menu-trigger="click" class="menu-item menu-accordion">
+					<div permissions="[(long)SystemPermissions.PermissionList.EmployeesList,(long)SystemPermissions.PermissionList.CreateNewEmployee]" data-kt-menu-trigger="click" class="menu-item menu-accordion">
 						<!--begin:Menu link-->
 						<span class="menu-link">
 							<span class="menu-icon">
@@ -101,9 +106,9 @@
 						<!--begin:Menu sub-->
 						<div class="menu-sub menu-sub-accordion">
 							<!--begin:Menu item-->
-							<div permissions="[SystemPermissions.CreateEmployee]" class="menu-item">
+							<div permissions="[(long)SystemPermissions.PermissionList.CreateNewEmployee]" class="menu-item">
 								<!--begin:Menu link-->
-								<a class="menu-link" href="/Employee/AddEmployee">
+								<a class="menu-link" href="/Employee/AddEmployee?isAdminCreatingNewEmployee=True">
 									<span class="menu-bullet">
 										<span class="bullet bullet-dot"></span>
 									</span>
@@ -113,7 +118,7 @@
 							</div>
 							<!--end:Menu item-->
 							<!--begin:Menu item-->
-							<div permissions="[SystemPermissions.EmployeesList]" class="menu-item">
+							<div permissions="[(long)SystemPermissions.PermissionList.EmployeesList]" class="menu-item">
 								<!--begin:Menu link-->
 								<a class="menu-link" href="/Employee/All">
 									<span class="menu-bullet">
@@ -128,8 +133,152 @@
 						<!--end:Menu sub-->
 					</div>
 					<!--end:Menu item-->
-					
+					<!--begin:Menu item-->
+					<div permissions="[(long)SystemPermissions.PermissionList.AttendanceLiveStatus,(long)SystemPermissions.PermissionList.AttendanceAllEmployeesMonthlyReport,(long)SystemPermissions.PermissionList.AttendanceAllManualRequestList]" data-kt-menu-trigger="click" class="menu-item menu-accordion">
+						<!--begin:Menu link-->
+						<span class="menu-link">
+							<span class="menu-icon">
+								<i class="fas fa-calendar-check fs-2"></i>
+							</span>
+							<span class="menu-title">مدیریت حضور و غیاب</span>
+							<span class="menu-arrow"></span>
+						</span>
+						<!--end:Menu link-->
+						<!--begin:Menu sub-->
+						<div class="menu-sub menu-sub-accordion">
+							
+							<!--begin:Menu item-->
+							<div permissions="[(long)SystemPermissions.PermissionList.AttendanceLiveStatus]" class="menu-item">
+								<!--begin:Menu link-->
+								<a class="menu-link" href="/Attendance/AttendanceLiveStatus">
+									<span class="menu-bullet">
+										<span class="bullet bullet-dot"></span>
+									</span>
+									<span class="menu-title">وضعیت فعلی حضور و غیاب کارمندان</span>
+								</a>
+								<!--end:Menu link-->
+							</div>
+							<!--end:Menu item-->
+							<!--begin:Menu item-->
+							<div permissions="[(long)SystemPermissions.PermissionList.AttendanceAllEmployeesMonthlyReport]" class="menu-item">
+								<!--begin:Menu link-->
+								<a class="menu-link" href="/Attendance/AllEmployeesMonthlyReport">
+									<span class="menu-bullet">
+										<span class="bullet bullet-dot"></span>
+									</span>
+									<span class="menu-title">گزارش ماهانه حضور و غیاب کارمندان</span>
+								</a>
+								<!--end:Menu link-->
+							</div>
+							<!--end:Menu item-->
+							<!--begin:Menu item-->
+							<div permissions="[(long)SystemPermissions.PermissionList.AttendanceAllRecordsList]" class="menu-item">
+								<!--begin:Menu link-->
+								<a class="menu-link" href="/Attendance/All">
+									<span class="menu-bullet">
+										<span class="bullet bullet-dot"></span>
+									</span>
+									<span class="menu-title">لیست کل تردد ها</span>
+								</a>
+								<!--end:Menu link-->
+							</div>
+							<!--end:Menu item-->
+							<!--begin:Menu item-->
+							<div permissions="[(long)SystemPermissions.PermissionList.AttendanceAllManualRequestList]" class="menu-item">
+								<!--begin:Menu link-->
+								<a class="menu-link" href="/Attendance/ManualRequests/All">
+									<span class="menu-bullet">
+										<span class="bullet bullet-dot"></span>
+									</span>
+									<span class="menu-title">درخواست های تردد دستی</span>
+								</a>
+								<!--end:Menu link-->
+							</div>
+							<!--end:Menu item-->
+						</div>
+						<!--end:Menu sub-->
+					</div>
+					<!--end:Menu item-->
+					<!--begin:Menu item-->
+					<div class="menu-item">
+						<!--begin:Menu link-->
+						<a class="menu-link" href="/Employee/Details">
+							<span class="menu-icon">
+								<i class="fas fa-address-card fs-2"></i>
+							</span>
+							<span class="menu-title">مشاهده پرونده پرسنلی</span>
+						</a>
+						<!--end:Menu link-->
+					</div>
+					<!--end:Menu item-->
+					<!--begin:Menu item-->
+					<div data-kt-menu-trigger="click" class="menu-item menu-accordion">
+						<!--begin:Menu link-->
+						<span class="menu-link">
+							<span class="menu-icon">
+								<i class="fas fa-calendar-days fs-2"></i>
+							</span>
+							<span class="menu-title">حضور و غیاب من</span>
+							<span class="menu-arrow"></span>
+						</span>
+						<!--end:Menu link-->
+						<!--begin:Menu sub-->
+						<div class="menu-sub menu-sub-accordion">
 
+							<!--begin:Menu item-->
+							<div class="menu-item">
+								<!--begin:Menu link-->
+								<a class="menu-link" href="/Attendance/UserTodayAttendance">
+									<span class="menu-bullet">
+										<span class="bullet bullet-dot"></span>
+									</span>
+									<span class="menu-title">وضعیت تردد های امروز</span>
+								</a>
+								<!--end:Menu link-->
+							</div>
+							<!--end:Menu item-->
+							<!--begin:Menu item-->
+							<div class="menu-item">
+								<!--begin:Menu link-->
+								@if (currentUser is not null)
+								{
+									<a class="menu-link" href="/Attendance/EmployeeMonthlyReport?userId=@currentUser.Id">
+										<span class="menu-bullet">
+											<span class="bullet bullet-dot"></span>
+										</span>
+										<span class="menu-title">گزارش ماهانه حضور و غیاب</span>
+									</a>
+								}
+								else
+								{
+									<a class="menu-link" href="#">
+										<span class="menu-bullet">
+											<span class="bullet bullet-dot"></span>
+										</span>
+										<span class="menu-title">گزارش ماهانه حضور و غیاب</span>
+									</a>
+								}
+								<!--end:Menu link-->
+								
+								<!--begin:Menu item-->
+								<div class="menu-item">
+									<!--begin:Menu link-->
+									<a class="menu-link" href="/Attendance/ManualRequests/MyRequests">
+										<span class="menu-bullet">
+											<span class="bullet bullet-dot"></span>
+										</span>
+										<span class="menu-title">درخواست های تردد دستی من</span>
+									</a>
+									<!--end:Menu link-->
+								</div>
+								<!--end:Menu item-->
+							</div>
+							<!--end:Menu item-->
+						</div>
+						<!--end:Menu sub-->
+					</div>
+					<!--end:Menu item-->
+					
 					<!--begin:Menu item-->
 					<div class="menu-item">
 						<!--begin:Menu link-->
