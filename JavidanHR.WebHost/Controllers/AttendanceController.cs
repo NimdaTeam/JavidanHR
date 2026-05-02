@@ -177,7 +177,7 @@ namespace JavidanHR.WebHost.Controllers
 
                 var result = await _attendanceSystemApiHelper.GetFullAttendanceReport(apiRequest);
 
-                if (result.ApiResult.Result != "success" || result.Data is null)
+                if (result is null || result.Status != "success")
                 {
                     return new MonthlyAttendanceReportItem()
                     {
@@ -196,10 +196,10 @@ namespace JavidanHR.WebHost.Controllers
                     UserId = e.UserId,
                     UserFullName = $"{e.FirstName} {e.LastName}",
                     UserAvatar = e.ProfileImageUrl,
-                    TotalWorkDays = result.Data.Items.Count(x => x.TotalPresentMins > 0),
-                    DurationMinutes = result.Data.Items.Sum(x => x.TotalPresentMins),
-                    TotalDeficitMinutes = result.Data.Items.Sum(x => x.TotalDeficitMins),
-                    TotalOverTimeMinutes = result.Data.Items.Sum(x => x.ApprovedOTMins) + result.Data.Items.Sum(x => x.PendingOTMins)
+                    TotalWorkDays = result.Data.Count(x => x.TotalPresentMins > 0),
+                    DurationMinutes = result.Data.Sum(x => x.TotalPresentMins),
+                    TotalDeficitMinutes = result.Data.Sum(x => x.DeficitMins),
+                    TotalOverTimeMinutes = result.Data.Sum(x => x.ApprovedOtMins)
                 };
             });
 
@@ -316,13 +316,13 @@ namespace JavidanHR.WebHost.Controllers
 
             var result = await _attendanceSystemApiHelper.GetFullAttendanceReport(apiRequest);
 
-            if (result.ApiResult.Result != "success")
+            if (result is null || result.Status != "success")
             {
                 ShowNotification(ApplicationMessages.OperationFailed, "", ApplicationMessagesIcon.ErrorIcon);
                 return SmartRedirect(_ctx.Context.ReturnUrl);
             }
 
-            var pageModel = new AttendanceFullReport();
+            var pageModel = new List<AttendanceRecord>();
 
             #region Pass information to view
             ViewBag.filteredUser = user;
@@ -342,7 +342,7 @@ namespace JavidanHR.WebHost.Controllers
             ViewBag.filteredMonth = selectedMonth;
             #endregion
 
-            if (result.Data is null || !result.Data.Items.Any())
+            if (!result.Data.Any())
                 return View(pageModel);
 
             pageModel = result.Data;
@@ -813,7 +813,7 @@ namespace JavidanHR.WebHost.Controllers
 
                 var apiResult = await _attendanceSystemApiHelper.GetFullAttendanceReport(apiRequest);
 
-                if (apiResult.ApiResult.Result != "success" || apiResult.Data?.Items == null)
+                if (apiResult is null || apiResult.Status != "success")
                 {
                     return new EmployeeReportData
                     {
@@ -825,7 +825,7 @@ namespace JavidanHR.WebHost.Controllers
                     };
                 }
 
-                var itemsDict = apiResult.Data.Items.ToDictionary(
+                var itemsDict = apiResult.Data.ToDictionary(
                     item => DateTime.Parse(item.WorkDate).Date,
                     item => item);
 
@@ -847,7 +847,7 @@ namespace JavidanHR.WebHost.Controllers
                     {
                         if (item != null && item.TotalPresentMins > 0)
                         {
-                            overtimeMinutes += item.TotalPresentMins + item.ApprovedOTMins;
+                            overtimeMinutes += item.TotalPresentMins + item.ApprovedOtMins;
                         }
                         continue; // تعطیل: بدون غیبت و بدون کارکرد عادی
                     }
@@ -869,13 +869,13 @@ namespace JavidanHR.WebHost.Controllers
                     if (isThursday)
                     {
 
-                        overtimeMinutes += item.TotalPresentMins - item.PendingOTMins;
+                        overtimeMinutes += item.TotalPresentMins - 0; //pending over time;
                     }
                     else
                     {
                         regularMinutes += item.TotalPresentMins;
-                        overtimeMinutes += item.ApprovedOTMins;
-                        deficitMinutes += item.TotalDeficitMins;
+                        overtimeMinutes += item.ApprovedOtMins;
+                        deficitMinutes += item.DeficitMins;
                     }
                 }
 

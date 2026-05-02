@@ -5,7 +5,7 @@
 @{
 	ViewData["Title"] = "داشبورد";
 	var isEmployeeCreated = (bool)ViewBag.IsEmployeeCreated;
-	var currentUser = await UserService.GetUserByPhoneNumber(User.Identity.Name);
+	var currentUser = await UserService.GetUserByPhoneNumber(User!.Identity!.Name);
 }
 
 <div style="border-radius:12px;box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;padding:20px;overflow-y:scroll">

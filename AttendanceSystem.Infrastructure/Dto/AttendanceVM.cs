@@ -54,7 +54,7 @@ namespace AttendanceSystem.Infrastructure.Dto
         public string? UserFullName { get; set; }
         public string? UserAvatar { get; set; }
 
-        
+
         public int? TotalWorkDays { get; set; }
 
         public int? DurationMinutes { get; set; }
@@ -215,6 +215,199 @@ namespace AttendanceSystem.Infrastructure.Dto
     }
 
 
+    #endregion
+
+    #region Attendance Report V2
+    public class AttendanceReport
+    {
+        [JsonPropertyName("status")]
+        public string Status { get; set; }
+
+        [JsonPropertyName("start_date")]
+        public string StartDate { get; set; }
+
+        [JsonPropertyName("end_date")]
+        public string EndDate { get; set; }
+
+        [JsonPropertyName("personal_code")]
+        public string? PersonalCode { get; set; }
+
+        [JsonPropertyName("total_days")]
+        public int TotalDays { get; set; }
+
+        [JsonPropertyName("data")]
+        public List<AttendanceRecord> Data { get; set; }
+    }
+
+    public class AttendanceRecord
+    {
+        [JsonPropertyName("personal_code")]
+        public string PersonalCode { get; set; }
+
+        [JsonPropertyName("work_date")]
+        public string WorkDate { get; set; }
+
+        [JsonPropertyName("full_name")]
+        public string FullName { get; set; }
+
+        [JsonPropertyName("group_name")]
+        public string GroupName { get; set; }
+
+        [JsonPropertyName("day_type")]
+        public string DayType { get; set; }
+
+        [JsonPropertyName("holiday_description")]
+        public string? HolidayDescription { get; set; }
+
+        [JsonPropertyName("status")]
+        public string Status { get; set; }
+
+        [JsonPropertyName("shift_start")]
+        public string ShiftStart { get; set; }
+
+        [JsonPropertyName("shift_end")]
+        public string ShiftEnd { get; set; }
+
+        [JsonPropertyName("first_enter")]
+        public string FirstEnter { get; set; }
+
+        [JsonPropertyName("last_exit")]
+        public string LastExit { get; set; }
+
+        [JsonPropertyName("total_present_mins")]
+        public int TotalPresentMins { get; set; }
+
+        [JsonPropertyName("delay_mins")]
+        public int DelayMins { get; set; }
+
+        [JsonPropertyName("early_exit_mins")]
+        public int EarlyExitMins { get; set; }
+
+        [JsonPropertyName("deficit_mins")]
+        public int DeficitMins { get; set; }
+
+        [JsonPropertyName("approved_ot_mins")]
+        public int ApprovedOtMins { get; set; }
+
+        [JsonPropertyName("physical_extra_mins")]
+        public int PhysicalExtraMins { get; set; }
+
+        [JsonPropertyName("in_shift_presence_mins")]
+        public int InShiftPresenceMins { get; set; }
+
+        [JsonPropertyName("shift_mins")]
+        public int ShiftMins { get; set; }
+
+        [JsonPropertyName("total_present_time")]
+        public string TotalPresentTime { get; set; }
+
+        [JsonPropertyName("delay_time")]
+        public string DelayTime { get; set; }
+
+        [JsonPropertyName("deficit_time")]
+        public string DeficitTime { get; set; }
+
+        [JsonPropertyName("approved_ot_time")]
+        public string ApprovedOtTime { get; set; }
+
+        [JsonPropertyName("total_present_hours")]
+        public double TotalPresentHours { get; set; }
+
+        [JsonPropertyName("approved_ot_hours")]
+        public double ApprovedOtHours { get; set; }
+
+        [JsonPropertyName("deficit_hours")]
+        public double DeficitHours { get; set; }
+
+        [JsonPropertyName("session_count")]
+        public int SessionCount { get; set; }
+
+        [JsonPropertyName("sessions")]
+        public List<Session> Sessions { get; set; }
+
+        // مرخصی
+        [JsonPropertyName("leave_type")]
+        public string? LeaveType { get; set; }
+
+        [JsonPropertyName("leave_reason")]
+        public string? LeaveReason { get; set; }
+
+        [JsonPropertyName("leave_start_time")]
+        public string? LeaveStartTime { get; set; }
+
+        [JsonPropertyName("leave_end_time")]
+        public string? LeaveEndTime { get; set; }
+
+        [JsonPropertyName("leave_minutes")]
+        public int? LeaveMinutes { get; set; }
+
+        [JsonPropertyName("leave_time")]
+        public string LeaveTime { get; set; }
+
+        [JsonPropertyName("leave_status")]
+        public string? LeaveStatus { get; set; }
+
+        // مأموریت
+        [JsonPropertyName("mission_type")]
+        public string? MissionType { get; set; }
+
+        [JsonPropertyName("mission_location")]
+        public string? MissionLocation { get; set; }
+
+        [JsonPropertyName("mission_purpose")]
+        public string? MissionPurpose { get; set; }
+
+        [JsonPropertyName("mission_start_time")]
+        public string? MissionStartTime { get; set; }
+
+        [JsonPropertyName("mission_end_time")]
+        public string? MissionEndTime { get; set; }
+
+        [JsonPropertyName("mission_minutes")]
+        public int? MissionMinutes { get; set; }
+
+        [JsonPropertyName("mission_time")]
+        public string MissionTime { get; set; }
+
+        [JsonPropertyName("mission_status")]
+        public string? MissionStatus { get; set; }
+    }
+
+    public class Session
+    {
+        [JsonPropertyName("in_time")]
+        public string? InTime { get; set; }
+
+        [JsonPropertyName("out_time")]
+        public string? OutTime { get; set; }
+
+        [JsonPropertyName("duration_minutes")]
+        public int DurationMinutes { get; set; }
+
+        [JsonPropertyName("duration_time")]
+        public string DurationTime { get; set; }
+
+        [JsonPropertyName("duration_hours")]
+        public double DurationHours { get; set; }
+
+        [JsonPropertyName("is_incomplete")]
+        public bool IsIncomplete { get; set; }
+
+        [JsonPropertyName("is_manual_in")]
+        public bool IsManualIn { get; set; }
+
+        [JsonPropertyName("is_manual_out")]
+        public bool IsManualOut { get; set; }
+
+        [JsonPropertyName("source")]
+        public string Source { get; set; }
+
+        [JsonPropertyName("punch_count")]
+        public int PunchCount { get; set; }
+
+        [JsonPropertyName("session_sequence")]
+        public int SessionSequence { get; set; }
+    }
     #endregion
 
     #region Api Helper Classes

@@ -33,7 +33,8 @@
                 <thead>
                     <tr class="fw-bold text-muted bg-light">
                         <th style="max-width:30px">#</th>
-                        <th class="text-start">نام عامل</th>
+                        <th>نام عامل</th>
+                        <th>نحوه تعریف</th>
                         <th>نوع</th>
                         <th>کد سیستمی</th>
                         <th>نوع داده</th>
@@ -50,18 +51,19 @@
                         <tr class="@(!item.IsActive ? "opacity-50" : "")">
                             <td class="fw-bold text-muted">@row</td>
 
-                            <td class="text-start fw-bold">
-                                @item.Name
-                                @if (!item.IsCustom)
-                                {
-                                    <span class="badge badge-light-primary ms-1 fs-9">سیستمی</span>
-                                }
-                                else
-                                {
-                                    <span class="badge badge-light-success ms-1 fs-9">سفارشی</span>
-                                }
+                            <td class="text-center fw-bold">
+	                            @item.Name
                             </td>
-
+                            <td class="text-center">
+	                            @if (!item.IsCustom)
+	                            {
+		                            <span class="badge badge-light-primary ms-1 fs-9">سیستمی</span>
+	                            }
+	                            else
+	                            {
+		                            <span class="badge badge-light-success ms-1 fs-9">سفارشی</span>
+	                            }
+                            </td>
                             <td>
                                 @{
                                     var typeCls = item.Type switch {
@@ -86,13 +88,13 @@
                                 <span class="badge @dtCls">@item.DataType.PayItemDataTypeToString()</span>
                             </td>
 
-                            <td class="text-start" style="max-width:200px;">
+                            <td class="text-center">
                                 @{
                                     var activeF = item.Formulas.FirstOrDefault(f => f.IsActive);
                                 }
                                 @if (activeF != null)
                                 {
-                                    <code class="fs-8 text-truncate d-block" style="max-width:180px;"
+                                    <code class="fs-8 text-truncate d-block text-center" style="max-width:250px;margin:auto;"
                                           title="@activeF.Formula">@activeF.Formula</code>
                                 }
                                 else if (item.DataType == PayItem.PayItemDataType.Formula)

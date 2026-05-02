@@ -27,6 +27,8 @@ using System.Security.Cryptography;
 using System.Threading.RateLimiting;
 using WebHost.Utilities;
 using ZiggyCreatures.Caching.Fusion;
+using ZiggyCreatures.Caching.Fusion.Backplane;
+using ZiggyCreatures.Caching.Fusion.Backplane.StackExchangeRedis;
 using SameSiteMode = Microsoft.AspNetCore.Http.SameSiteMode;
 
 ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
@@ -54,7 +56,7 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog();
 
-
+/*
 //configure redis cache
 var redisConnectionString = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
 // 1. FusionCache with Redis backplane – fully resilient, no crash on startup
@@ -81,6 +83,38 @@ builder.Services.AddStackExchangeRedisCache(opt =>
     opt.Configuration = redisConnectionString;
     opt.InstanceName = "SCIP_";
 }).AddDistributedMemoryCache();   // ← fallback when Redis is unavailable
+*/
+
+
+// بخش ۱: تنظیمات اولیه اتصال به Redis
+var redisConnectionString = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+if (!redisConnectionString.Contains("connectTimeout"))
+    redisConnectionString += ",connectTimeout=1000,abortConnect=false";
+
+// بخش ۲: ثبت FusionCache
+builder.Services.AddFusionCache()
+    .WithDefaultEntryOptions(new FusionCacheEntryOptions
+    {
+        Duration = TimeSpan.FromDays(14),
+        IsFailSafeEnabled = true,
+        FailSafeMaxDuration = TimeSpan.FromDays(30),
+        FailSafeThrottleDuration = TimeSpan.FromSeconds(30)
+    });
+
+// بخش ۳: تنظیم Backplane به صورت Lazy (اتصال فقط در صورت نیاز واقعی)
+builder.Services.AddSingleton<Lazy<IFusionCacheBackplane>>(sp =>
+{
+    return new Lazy<IFusionCacheBackplane>(() =>
+    {
+        // نکته: نام کلاس صحیح RedisBackplane است
+        var options = new RedisBackplaneOptions
+        {
+            Configuration = redisConnectionString
+        };
+        return new RedisBackplane(options);
+    });
+});
+
 
 // 3. RedisService – simple, safe wrapper using IDistributedCache (fallback works automatically)
 builder.Services.AddSingleton<RedisService>();
@@ -197,6 +231,16 @@ builder.Services.AddDataProtection()
 #pragma warning restore CA1416
 
 var app = builder.Build();
+
+// اتصال Backplane به FusionCache (غیراجباری، اما برای اطمینان)
+var cache = app.Services.GetRequiredService<IFusionCache>();
+var backplaneLazy = app.Services.GetRequiredService<Lazy<IFusionCacheBackplane>>();
+
+// تنظیم Backplane روی نمونه FusionCache
+if (cache is FusionCache fusionCache)
+{
+    fusionCache.SetupBackplane(backplaneLazy.Value);
+}
 
 
 //seed initial data and run migrations 

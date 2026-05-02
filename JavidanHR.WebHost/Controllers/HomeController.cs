@@ -1,4 +1,5 @@
 ﻿using _0_Framework.Utilities.NotificationSystem;
+using AuthenticationSystem.Domain.User;
 using AuthenticationSystem.Services.Repositories;
 using HrSystem.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;

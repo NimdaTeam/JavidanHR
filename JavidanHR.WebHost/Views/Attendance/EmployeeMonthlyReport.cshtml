@@ -4,492 +4,597 @@
 @using DNTPersianUtils.Core
 @using Microsoft.AspNetCore.Mvc.TagHelpers
 @using WebHost.Helpers.GlobalHelpers
-@model AttendanceSystem.Infrastructure.Dto.AttendanceFullReport
+@model List<AttendanceRecord>
 @{
 	var currentUser = ViewBag.currentUser as Users;
-
 	var filteredYear = !string.IsNullOrWhiteSpace(Context.Request.Query["year"].ToString()) ? Context.Request.Query["year"] : ViewBag.filteredYear;
 	var filteredMonth = !string.IsNullOrWhiteSpace(Context.Request.Query["month"].ToString()) ? Context.Request.Query["month"] : ViewBag.filteredMonth;
 	var filteredUser = ViewBag.filteredUser as Users;
 	ViewData["Title"] = $"وضعیت حضور و غیاب در ماه «{filteredYear}/{filteredMonth}»";
-
-	if (filteredUser is not null)
-	{
-		ViewData["Title"] += $" برای کارمند «{filteredUser.FullName}»";
-	}
+	if (filteredUser is not null) ViewData["Title"] += $" برای کارمند «{filteredUser.FullName}»";
 
 	var months = ViewBag.months as List<DateEntity>;
 	var years = ViewBag.years as List<DateEntity>;
-
 	var selectedYear = ViewBag.currentYear as int?;
 	var selectedMonth = ViewBag.currentMonth as int?;
-
 	var calendar = ViewBag.calendar as List<PersianDay?> ?? [];
+	var attendanceDict = Model?.ToDictionary(x => x.WorkDate ?? "") ?? new Dictionary<string, AttendanceRecord>();
 
-	var attendanceDict = Model?.Items?.ToDictionary(x => x.WorkDate ?? "") ?? new Dictionary<string, AttendanceItem>();
+	// محاسبه اولین روز ماه برای offset تقویم
+	var firstDay = calendar.FirstOrDefault(d => d != null);
+	int calendarOffset = 0;
+	if (firstDay != null)
+	{
+		var firstGregorian = $"{firstDay.Year}/{firstDay.Month}/{firstDay.Day}".ToGregorian();
+		if (firstGregorian.HasValue)
+		{
+			// تبدیل روز هفته به ایندکس ایرانی (شنبه=0 ... جمعه=6)
+			calendarOffset = (int)firstGregorian.Value.DayOfWeek switch
+			{
+				6 => 0, // شنبه
+				0 => 1, // یکشنبه
+				1 => 2, // دوشنبه
+				2 => 3, // سه‌شنبه
+				3 => 4, // چهارشنبه
+				4 => 5, // پنج‌شنبه
+				5 => 6, // جمعه
+				_ => 0
+			};
+		}
+	}
 
-	var index = 1;
+	var totalPresent = Model?.Sum(x => x.TotalPresentMins) ?? 0;
+	var totalOt = Model?.Sum(x => x.ApprovedOtMins) ?? 0;
+	var totalDeficit = Model?.Sum(x => x.DeficitMins) ?? 0;
+	var presentDays = Model?.Count(x => x.Status == "Present") ?? 0;
+	var absentDays = Model?.Count(x => x.Status == "Absent") ?? 0;
+	var lateDays = Model?.Count(x => x.Status == "Late") ?? 0;
+	var leaveDays = Model?.Count(x => x.Status == "OnLeave") ?? 0;
 }
+
+<style>
+	/* ═══════════════ تقویم حضور و غیاب ═══════════════ */
+	:root {
+		--att-present:   #16a34a;
+		--att-absent:    #dc2626;
+		--att-late:      #d97706;
+		--att-leave:     #0891b2;
+		--att-holiday:   #7c3aed;
+		--att-incomplete:#ea580c;
+		--att-empty:     #f1f5f9;
+		--att-radius:    14px;
+	}
+
+	.att-page-wrapper {
+		direction: rtl;
+		font-family: 'Vazirmatn', 'IRANSans', Tahoma, sans-serif;
+	}
+
+	/* ─── کارت‌های خلاصه ─── */
+	.att-summary-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+		gap: 14px;
+		margin-bottom: 28px;
+	}
+	.att-summary-card {
+		background: #fff;
+		border-radius: var(--att-radius);
+		padding: 18px 16px 14px;
+		border: 1px solid #e2e8f0;
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		transition: transform .18s, box-shadow .18s;
+	}
+	.att-summary-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.09); }
+	.att-summary-card .icon {
+		width: 36px; height: 36px; border-radius: 10px;
+		display: flex; align-items: center; justify-content: center;
+		font-size: 17px; margin-bottom: 2px;
+	}
+	.att-summary-card .label { font-size: 12px; color: #64748b; }
+	.att-summary-card .value { font-size: 21px; font-weight: 700; color: #1e293b; }
+	.att-summary-card .sub   { font-size: 11px; color: #94a3b8; }
+
+	.icon-present  { background: #dcfce7; color: #16a34a; }
+	.icon-absent   { background: #fee2e2; color: #dc2626; }
+	.icon-late     { background: #fef3c7; color: #d97706; }
+	.icon-leave    { background: #cffafe; color: #0891b2; }
+	.icon-hours    { background: #ede9fe; color: #7c3aed; }
+	.icon-ot       { background: #d1fae5; color: #059669; }
+	.icon-deficit  { background: #fee2e2; color: #dc2626; }
+
+	/* ─── فیلتر ─── */
+	.att-filter-bar {
+		background: #fff;
+		border: 1px solid #e2e8f0;
+		border-radius: var(--att-radius);
+		padding: 14px 20px;
+		display: flex;
+		align-items: center;
+		gap: 14px;
+		flex-wrap: wrap;
+		margin-bottom: 22px;
+	}
+	.att-filter-bar label { font-size: 13px; color: #475569; font-weight: 600; white-space: nowrap; }
+
+	/* ─── تقویم ─── */
+	.att-calendar-wrap {
+		background: #fff;
+		border-radius: var(--att-radius);
+		border: 1px solid #e2e8f0;
+		overflow: hidden;
+	}
+	.att-calendar-header {
+		background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+		padding: 18px 24px;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+	.att-calendar-header h2 {
+		color: #fff;
+		font-size: 17px;
+		font-weight: 700;
+		margin: 0;
+	}
+	.att-calendar-header .total-badge {
+		background: rgba(255,255,255,.15);
+		color: #fff;
+		border-radius: 20px;
+		padding: 5px 14px;
+		font-size: 13px;
+		font-weight: 600;
+	}
+
+	/* ─── سربرگ روزهای هفته ─── */
+	.att-weekdays {
+		display: grid;
+		grid-template-columns: repeat(7, 1fr);
+		border-bottom: 1px solid #f1f5f9;
+	}
+	.att-weekday {
+		text-align: center;
+		padding: 12px 4px;
+		font-size: 12px;
+		font-weight: 700;
+		color: #64748b;
+		letter-spacing: .02em;
+	}
+	.att-weekday.friday { color: #dc2626; }
+
+	/* ─── شبکه روزها ─── */
+	.att-grid {
+		display: grid;
+		grid-template-columns: repeat(7, 1fr);
+		gap: 1px;
+		background: #f1f5f9;
+		padding: 1px;
+	}
+
+	/* ─── سلول روز ─── */
+	.att-day {
+		background: #fff;
+		min-height: 110px;
+		padding: 10px 10px 8px;
+		display: flex;
+		flex-direction: column;
+		gap: 5px;
+		cursor: pointer;
+		transition: background .15s;
+		position: relative;
+	}
+	.att-day:hover { background: #f8fafc; }
+	.att-day.empty { background: #fafafa; cursor: default; min-height: 110px; }
+	.att-day.holiday { background: #fff5f5; }
+	.att-day.holiday:hover { background: #fee2e2; }
+
+	.att-day-num {
+		font-size: 18px;
+		font-weight: 700;
+		color: #1e293b;
+		line-height: 1;
+	}
+	.att-day.holiday .att-day-num { color: #dc2626; }
+	.att-day.friday-col .att-day-num { color: #dc2626; }
+
+	.att-day-name {
+		font-size: 10px;
+		color: #94a3b8;
+		margin-top: 1px;
+	}
+
+	/* ─── بادج وضعیت ─── */
+	.att-status-pill {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		padding: 3px 9px;
+		border-radius: 20px;
+		font-size: 10.5px;
+		font-weight: 600;
+		width: fit-content;
+		max-width: 100%;
+	}
+	.pill-present   { background:#dcfce7; color:#15803d; }
+	.pill-absent    { background:#fee2e2; color:#b91c1c; }
+	.pill-late      { background:#fef3c7; color:#b45309; }
+	.pill-leave     { background:#cffafe; color:#0e7490; }
+	.pill-holiday   { background:#f3e8ff; color:#7c3aed; }
+	.pill-incomplete{ background:#ffedd5; color:#c2410c; }
+	.pill-empty     { background:#f1f5f9; color:#94a3b8; }
+
+	/* ─── ساعات کار ─── */
+	.att-hours {
+		font-size: 12px;
+		font-weight: 600;
+		color: #475569;
+		margin-top: auto;
+	}
+	.att-hours span { color: #16a34a; }
+
+	/* ─── ضربدر ناقص ─── */
+	.att-incomplete-dot {
+		position: absolute;
+		top: 8px;
+		left: 8px;
+		width: 8px; height: 8px;
+		border-radius: 50%;
+		background: #ea580c;
+		animation: blink 1.4s ease-in-out infinite;
+	}
+	@@keyframes blink {
+		0%,100% { opacity:1; } 50% { opacity:.3; }
+	}
+
+	/* ─── نمای تعطیلی ─── */
+	.att-holiday-name {
+		font-size: 10px;
+		color: #dc2626;
+		line-height: 1.3;
+	}
+
+	/* ─── راهنمای رنگ ─── */
+	.att-legend {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 14px;
+		padding: 14px 20px;
+		border-top: 1px solid #f1f5f9;
+		background: #fafafa;
+	}
+	.att-legend-item {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		font-size: 12px;
+		color: #475569;
+	}
+	.att-legend-dot {
+		width: 12px; height: 12px;
+		border-radius: 3px;
+		flex-shrink: 0;
+	}
+
+	/* ─── ریسپانسیو ─── */
+	@@media (max-width: 768px) {
+		.att-day { min-height: 72px; padding: 7px 6px; }
+		.att-day-num { font-size: 14px; }
+		.att-summary-grid { grid-template-columns: repeat(2, 1fr); }
+	}
+	@@media (max-width: 480px) {
+		.att-day { min-height: 56px; padding: 5px 4px; }
+		.att-status-pill { display: none; }
+	}
+</style>
 
 <input type="hidden" id="userFilter" value="@filteredUser?.Id" />
 
-<div class="card mb-5 mb-xl-8">
-	<!--begin::Header-->
-	<div class="card-header border-0 pt-5">
-		<h3 class="card-title align-items-start flex-column">
-			<span class="text-muted fw-semibold fs-6">تعداد کل تردد ها: @Model?.TotalRecords</span>
-		</h3>
-		<div class="card-toolbar d-flex flex-wrap gap-3 text-center">
-			<label class="fw-semibold mb-0">فیلتر تاریخ</label>
-			<select id="monthFilter" class="text-center form-select form-select-solid" style="width:150px;height:41px !important">
-				<option value="">انتخاب ماه</option>
-				@foreach (var m in months!)
-				{
-					if (selectedMonth is not null && int.Parse(m.EntityValue) == selectedMonth.Value)
-					{
-						<option selected="" value="@m.EntityValue">@m.EntityTitle</option>
-					}
-					else
-					{
-						<option value="@m.EntityValue">@m.EntityTitle</option>
-					}
-				}
-			</select>
-			/
-			<select id="yearFilter" class="text-center form-select form-select-solid" style="width:150px;height:41px !important">
-				<option value="">انتخاب سال</option>
-				@foreach (var y in years!)
-				{
-					if (selectedYear is not null && int.Parse(y.EntityValue) == selectedYear.Value)
-					{
-						<option selected="" value="@y.EntityValue">@y.EntityTitle</option>
-					}
-					else
-					{
-						<option value="@y.EntityValue">@y.EntityTitle</option>
-					}
-				}
-			</select>
+<div class="att-page-wrapper">
 
-			<button id="applyFilters" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm"
-					title="اعمال فیلتر ها" data-bs-toggle="tooltip">
-				<i class="fas fa-check fs-2"></i>
-			</button>
-			<!-- دکمه ایجاد کارمند جدید -->
-			<div class="d-flex align-items-end">
-			</div>
+	<!-- ═══ فیلتر ═══ -->
+	<div class="att-filter-bar">
+		<label>فیلتر تاریخ</label>
+		<select id="monthFilter" class="form-select form-select-solid text-center" style="width:150px;height:41px !important">
+			<option value="">انتخاب ماه</option>
+			@foreach (var m in months!)
+			{
+				if (selectedMonth is not null && int.Parse(m.EntityValue) == selectedMonth.Value)
+				{
+					<option selected="" value="@m.EntityValue">@m.EntityTitle</option>
+				}
+				else
+				{
+					<option value="@m.EntityValue">@m.EntityTitle</option>
+				}
+			}
+		</select>
+		/
+		<select id="yearFilter" class="form-select form-select-solid text-center" style="width:150px;height:41px !important">
+			<option value="">انتخاب سال</option>
+			@foreach (var y in years!)
+			{
+				if (selectedYear is not null && int.Parse(y.EntityValue) == selectedYear.Value)
+				{
+					<option selected="" value="@y.EntityValue">@y.EntityTitle</option>
+				}
+				else
+				{
+					<option value="@y.EntityValue">@y.EntityTitle</option>
+				}
+			}
+		</select>
+		<button id="applyFilters" class="btn btn-dark btn-sm px-4" title="اعمال فیلترها">
+			<i class="fas fa-check me-1"></i> اعمال
+		</button>
+	</div>
+
+	<!-- ═══ کارت‌های خلاصه ═══ -->
+	<div class="att-summary-grid">
+		<div class="att-summary-card">
+			<div class="icon icon-hours"><i class="bi bi-clock"></i></div>
+			<span class="label">مجموع حضور</span>
+			<span class="value">@totalPresent.ToHourMinuteFormat()</span>
+			<span class="sub">کل ساعات کاری</span>
+		</div>
+		<div class="att-summary-card">
+			<div class="icon icon-present"><i class="bi bi-check-circle"></i></div>
+			<span class="label">روزهای حاضر</span>
+			<span class="value">@presentDays</span>
+			<span class="sub">روز حضور کامل</span>
+		</div>
+		<div class="att-summary-card">
+			<div class="icon icon-absent"><i class="bi bi-x-circle"></i></div>
+			<span class="label">روزهای غیبت</span>
+			<span class="value">@absentDays</span>
+			<span class="sub">روز غایب</span>
+		</div>
+		<div class="att-summary-card">
+			<div class="icon icon-late"><i class="bi bi-exclamation-circle"></i></div>
+			<span class="label">تأخیر</span>
+			<span class="value">@lateDays</span>
+			<span class="sub">روز با تأخیر</span>
+		</div>
+		<div class="att-summary-card">
+			<div class="icon icon-leave"><i class="bi bi-calendar3"></i></div>
+			<span class="label">مرخصی</span>
+			<span class="value">@leaveDays</span>
+			<span class="sub">روز مرخصی</span>
+		</div>
+		<div class="att-summary-card">
+			<div class="icon icon-ot"><i class="bi bi-hourglass-top"></i></div>
+			<span class="label">اضافه‌کاری</span>
+			<span class="value">@totalOt.ToHourMinuteFormat()</span>
+			<span class="sub">تأیید شده</span>
+		</div>
+		<div class="att-summary-card">
+			<div class="icon icon-deficit"><i class="bi bi-dash-circle"></i></div>
+			<span class="label">کسری کار</span>
+			<span class="value">@totalDeficit.ToHourMinuteFormat()</span>
+			<span class="sub">جمع کسری</span>
 		</div>
 	</div>
-	<!--end::Header-->
-	<!--begin::Body-->
-	<div class="card-body py-3">
-		<div class="table-responsive">
 
-			<table class="table table-bordered align-middle text-center table-hover">
-				<thead>
-					<tr class="fw-bold text-muted bg-light">
-						<th>تعداد کل تردد های ثبت شده</th>
-						<th>مجموع حضور</th>
-						<th>مجموع اضافه کار</th>
-						<th>مجموع کسری کار</th>
-					</tr>
-				</thead>
-				<tbody>
-				<td>
-					@Model?.TotalRecords
-				</td>
-				<td>
-					@Model?.Items?.Sum(x => x.TotalPresentMins).ToHourMinuteFormat()
-				</td>
-				<td>
-					@Model?.Items?.Sum(x => x.ApprovedOTMins).ToHourMinuteFormat()
-				</td>
-				<td>
-					@Model?.Items?.Sum(x => x.TotalDeficitMins).ToHourMinuteFormat()
-				</td>
-				</tbody>
-			</table>
+	<!-- ═══ تقویم ═══ -->
+	<div class="att-calendar-wrap">
+		<!-- سربرگ تقویم -->
+		<div class="att-calendar-header">
+			<h2><i class="bi bi-calendar3 me-2"></i>تقویم حضور و غیاب — @filteredYear/@filteredMonth</h2>
+			<span class="total-badge">@Model?.Count تردد ثبت شده</span>
 		</div>
 
-		<div class="table-responsive">
-			<table class="table table-bordered align-middle text-center table-hover">
-				<thead>
-					<tr class="fw-bold text-muted bg-light">
-						<th style="max-width:45px !important">ردیف</th>
-						<th>تاریخ</th>
-						<th>روز هفته</th>
-						<th>شیفت کاری</th>
-						<th>وضعیت</th>
-						<th>مجموع ساعات حضور</th>
-						<th>مجموع اضافه کار</th>
-						<th>مجموع کسری کار</th>
-						<th class="min-w-150px">عملیات</th>
-					</tr>
-				</thead>
-				<tbody>
-					@foreach (var at in calendar)
+		<!-- روزهای هفته -->
+		<div class="att-weekdays">
+			<div class="att-weekday">شنبه</div>
+			<div class="att-weekday">یکشنبه</div>
+			<div class="att-weekday">دوشنبه</div>
+			<div class="att-weekday">سه‌شنبه</div>
+			<div class="att-weekday">چهارشنبه</div>
+			<div class="att-weekday">پنج‌شنبه</div>
+			<div class="att-weekday friday">جمعه</div>
+		</div>
+
+		<!-- شبکه روزها -->
+		<div class="att-grid">
+
+			<!-- سلول‌های خالی برای offset -->
+			@for (int e = 0; e < calendarOffset; e++)
+			{
+				<div class="att-day empty"></div>
+			}
+
+			<!-- روزها -->
+			@foreach (var at in calendar)
+			{
+				if (at is null) continue;
+
+				var persianDate = $"{at.Year}/{at.Month}/{at.Day}";
+				var gregorianDate = persianDate.ToGregorian();
+				var gregStr = gregorianDate?.ToString("yyyy-MM-dd") ?? "";
+				var foundItem = attendanceDict.ContainsKey(gregStr) ? attendanceDict[gregStr] : null;
+
+				var hasEnter = foundItem != null && !string.IsNullOrWhiteSpace(foundItem.FirstEnter) && foundItem.FirstEnter != "-" && foundItem.FirstEnter != "---";
+				var hasExit = foundItem != null && !string.IsNullOrWhiteSpace(foundItem.LastExit) && foundItem.LastExit != "-" && foundItem.LastExit != "---";
+				var isIncomplete = foundItem != null && (hasEnter != hasExit);
+				var isHoliday = (at.Holidays != null && at.Holidays.Any()) || foundItem?.Status == "Holiday";
+
+				// محاسبه ستون جمعه (ستون 7ام = index 6)
+				var gregDow = gregorianDate?.DayOfWeek;
+				var isFriday = gregDow == DayOfWeek.Friday;
+
+				var dayClass = "att-day";
+				if (isHoliday) dayClass += " holiday";
+				if (isFriday) dayClass += " friday-col";
+
+				string pillClass, pillText = null;
+				if (isHoliday) { pillClass = "pill-holiday"; pillText = "تعطیل"; }
+				else if (isIncomplete) { pillClass = "pill-incomplete"; pillText = "ناقص"; }
+				else if (foundItem == null) { pillClass = "pill-empty"; pillText = "—"; }
+				else pillClass = foundItem.Status switch
+				{
+					"Present" => "pill-present",
+					"Absent" => "pill-absent",
+					"Late" => "pill-late",
+					"OnLeave" => "pill-leave",
+					_ => "pill-empty"
+				};
+				if (!isHoliday && !isIncomplete && foundItem != null)
+					pillText = foundItem.Status switch
 					{
-						if (at is null)
-							continue;
+						"Present" => "حاضر",
+						"Absent" => "غایب",
+						"Late" => "با تأخیر",
+						"OnLeave" => "مرخصی",
+						_ => "—"
+					};
 
-						var persianDate = $"{at.Year}/{at.Month}/{at.Day}";
-						var gregorianDate = persianDate.ToGregorian();
-						var foundItem = attendanceDict.ContainsKey(gregorianDate?.ToString("yyyy-MM-dd") ?? "")
-						? attendanceDict[gregorianDate?.ToString("yyyy-MM-dd") ?? ""]
-						: null;
+				var onclickAttr = "";
+				if (foundItem != null)
+				{
+					onclickAttr = $"showAttendanceDetail('{foundItem.PersonalCode}','{foundItem.WorkDate}','{gregorianDate.ToShamsi()}','{foundItem.FullName}','{foundItem.GroupName}','{foundItem.ShiftStart}','{foundItem.ShiftEnd}','{foundItem.FirstEnter}','{foundItem.LastExit}',{foundItem.TotalPresentMins},{foundItem.DelayMins},{foundItem.EarlyExitMins},{foundItem.DeficitMins},{foundItem.ApprovedOtMins},0,'{foundItem.Status}')";
+				}
+				else if (gregorianDate <= DateTime.Now && !isHoliday)
+				{
+					onclickAttr = $"window.location='/Attendance/EditDateAttendanceRecords/{currentUser?.Id}?workDate={gregStr}'";
+				}
 
-						// ═══════════════════════════════════════════════════════════════
-						// تشخیص تردد ناقص
-						// ═══════════════════════════════════════════════════════════════
-						var hasEnter = foundItem != null &&
-						!string.IsNullOrWhiteSpace(foundItem.FirstEnterTime) &&
-						foundItem.FirstEnterTime != "-" &&
-						foundItem.FirstEnterTime != "---";
+				<div class="@dayClass" @(onclickAttr != "" ? $"onclick=\"{onclickAttr}\"" : "") title="@persianDate">
 
-						var hasExit = foundItem != null &&
-						!string.IsNullOrWhiteSpace(foundItem.LastExitTime) &&
-						foundItem.LastExitTime != "-" &&
-						foundItem.LastExitTime != "---";
-
-						var isIncomplete = foundItem != null && (hasEnter != hasExit);
-						// ═══════════════════════════════════════════════════════════════
-
-						var statusBadge = foundItem != null
-						? foundItem.Status switch
-						{
-							"Present" => "badge-success",
-							"Absent" => "badge-danger",
-							"Late" => "badge-warning",
-							"OnLeave" => "badge-info",
-							_ => "badge-secondary"
-						}
-						: "-";
-
-						var statusText = foundItem != null
-						? foundItem.Status switch
-						{
-							"Present" => "حاضر",
-							"Absent" => "غایب",
-							"Late" => "حضور با تأخیر",
-							"OnLeave" => "مرخصی",
-							"Holiday" => "تعطیلی سازمانی",
-							_ => "-"
-						}
-						: "-";
-
-						var isHoliday = (at.Holidays != null && at.Holidays.Any()) || foundItem?.Status == "Holiday";
-
-						// ═══════════════════════════════════════════════════════════════
-						// اضافه کردن کلاس isIncomplete به شرط موجود
-						// ═══════════════════════════════════════════════════════════════
-						var rowClass = "bg-light";
-						if (isHoliday)
-							rowClass = "bg-light-danger";
-						else if (isIncomplete)
-							rowClass = "table-incomplete-row"; // کلاس جدید برای تردد ناقص
-
-						<tr class="@rowClass">
-							<td class="fw-bold">
-								@if (isIncomplete)
-								{
-									<span class="table-incomplete-row-icon"><i style="color:orangered;height:26px" class="fas fa-exclamation-circle"></i></span>
-									<br/>
-								}
-								@index
-							</td>
-							@if (isHoliday)
-							{
-								<td style="color:red">
-									@persianDate
-									<br />
-									<span style="color:gray;font-size:11;text-wrap:wrap">
-										@if (at.Holidays != null)
-										{
-											@foreach (var h in at.Holidays)
-											{
-												if (h == "روز جمعه")
-													continue;
-
-												@h
-												<br />
-											}
-										}
-										else if (foundItem?.Status == "Holiday")
-										{
-											<div>
-												تعطیلی سازمانی
-											</div>
-										}
-									</span>
-								</td>
-							}
-							else
-							{
-								<td>
-									@persianDate
-								</td>
-							}
-
-							<td class="fw-bold">@gregorianDate.GetPersianWeekDayName()</td>
-							@if (foundItem is null || isHoliday || foundItem.ShiftStartTime == "---" || foundItem.ShiftEndTime == "---" || foundItem.ShiftStartTime == "-" || foundItem.ShiftEndTime == "-")
-							{
-								<td class="fw-bold">-</td>
-							}
-							else
-							{
-								<td class="fw-bold">@((foundItem != null) ? $"{foundItem.ShiftStartTime}" : "---") <i class='fas fa-arrow-left'></i> @((foundItem != null) ? $"{foundItem.ShiftEndTime}" : "---")</td>
-							}
-
-							<td>
-								@if (isHoliday)
-								{
-									<span class="badge badge-light-danger">تعطیل رسمی</span>
-								}
-								else if (isIncomplete)
-								{
-									<div class="d-flex flex-column align-items-center gap-1">
-										<span class="badge badge-warning">تردد ناقص</span>
-										<span class="badge bg-orange bg-opacity-10 text-orange fs-8" style="color:white !important">
-											<i style="color:white !important" class="bi bi-exclamation-triangle-fill me-1"></i>نیاز به تکمیل
-										</span>
-									</div>
-								}
-								else if (foundItem != null)
-								{
-									<span class="badge @statusBadge">@statusText</span>
-								}
-								else
-								{
-									<span class="badge badge-secondary">-</span>
-								}
-							</td>
-							<td class="fw-bold">@((foundItem != null) ? foundItem.TotalPresentMins != 0 ? $"{foundItem.TotalPresentMins.ToHourMinuteFormat()}" : "-" : "-")</td>
-							<td class="fw-bold">@((foundItem != null) ? foundItem.ApprovedOTMins != 0 ? $"{foundItem.ApprovedOTMins.ToHourMinuteFormat()}" : "-" : "-")</td>
-							<td class="fw-bold">@((foundItem != null) ? foundItem.TotalDeficitMins != 0 ? $"{foundItem.TotalDeficitMins.ToHourMinuteFormat()}" : "-" : "-")</td>
-
-							<td>
-								@if (foundItem != null)
-								{
-									<button class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm"
-											data-bs-toggle="tooltip"
-											title="مشاهده جزئیات"
-											onclick="showAttendanceDetail('@foundItem.PersonalCode', '@foundItem.WorkDate','@gregorianDate.ToShamsi()', '@foundItem.FullName', '@foundItem.GroupName', '@foundItem.ShiftStartTime', '@foundItem.ShiftEndTime', '@foundItem.FirstEnterTime', '@foundItem.LastExitTime', @foundItem.TotalPresentMins, @foundItem.DelayMins, @foundItem.EarlyExitMins, @foundItem.TotalDeficitMins, @foundItem.ApprovedOTMins, @foundItem.PendingOTMins, '@foundItem.Status')">
-										<i class="bi bi-eye"></i>
-									</button>
-								}
-								@if (gregorianDate <= DateTime.Now)
-								{
-									<a style="margin:2.5px" class="btn btn-icon btn-bg-light btn-active-color-warning btn-sm" href="/Attendance/EditDateAttendanceRecords/@currentUser?.Id?workDate=@gregorianDate"
-									   title="ویرایش تردد" data-bs-toggle="tooltip">
-										<i class="fas fa-edit fs-2"></i>
-									</a>
-								}
-
-							</td>
-						</tr>
-						index++;
+					@if (isIncomplete)
+					{
+						<div class="att-incomplete-dot"></div>
 					}
 
-				</tbody>
-			</table>
+					<div class="att-day-num">@at.Day</div>
+					<div class="att-day-name">@gregorianDate.GetPersianWeekDayName()</div>
+
+					@if (isHoliday && at.Holidays != null)
+					{
+						<div class="att-holiday-name">
+							@foreach (var h in at.Holidays)
+							{
+								if (h != "روز جمعه")
+								{
+									@h
+									<br />
+			 }
+							}
+						</div>
+					}
+
+					<span class="att-status-pill @pillClass">@pillText</span>
+
+					@if (foundItem != null && foundItem.TotalPresentMins > 0)
+					{
+						<div class="att-hours">
+							<span>@foundItem.TotalPresentMins.ToHourMinuteFormat()</span>
+						</div>
+					}
+
+					@if (foundItem != null && gregorianDate <= DateTime.Now && !isHoliday)
+					{
+						<a href="/Attendance/EditDateAttendanceRecords/@currentUser?.Id?workDate=@gregStr"
+						   class="att-edit-link"
+						   onclick="event.stopPropagation()"
+						   title="ویرایش تردد"
+						   style="position:absolute;bottom:6px;left:6px;font-size:11px;color:#94a3b8;text-decoration:none;">
+							<i class="fas fa-edit"></i>
+						</a>
+					}
+				</div>
+			}
+		</div>
+
+		<!-- راهنمای رنگ -->
+		<div class="att-legend">
+			<div class="att-legend-item"><div class="att-legend-dot" style="background:#dcfce7;border:1px solid #16a34a"></div> حاضر</div>
+			<div class="att-legend-item"><div class="att-legend-dot" style="background:#fee2e2;border:1px solid #dc2626"></div> غایب</div>
+			<div class="att-legend-item"><div class="att-legend-dot" style="background:#fef3c7;border:1px solid #d97706"></div> با تأخیر</div>
+			<div class="att-legend-item"><div class="att-legend-dot" style="background:#cffafe;border:1px solid #0891b2"></div> مرخصی</div>
+			<div class="att-legend-item"><div class="att-legend-dot" style="background:#f3e8ff;border:1px solid #7c3aed"></div> تعطیل</div>
+			<div class="att-legend-item"><div class="att-legend-dot" style="background:#ffedd5;border:1px solid #ea580c"></div> تردد ناقص</div>
 		</div>
 	</div>
 </div>
 
-
-
-<!-- Details Modal-->
-@* مودال نمایش جزئیات *@
+<!-- ═══ مودال جزئیات (بدون تغییر) ═══ -->
 <div class="modal fade" id="attendanceDetailModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
 	<div class="modal-dialog modal-dialog-centered modal-xl">
 		<div class="modal-content">
 			<div class="modal-header">
 				<h5 class="modal-title">
-					<i class="bi bi-calendar-check me-2"></i>
-					جزئیات حضور و غیاب
+					<i class="bi bi-calendar-check me-2"></i>جزئیات حضور و غیاب
 				</h5>
 				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 			</div>
 			<div class="modal-body">
-				@* اسپینر *@
 				<div id="detailSpinner" class="text-center py-5 d-none">
 					<div class="spinner-border text-primary" role="status">
 						<span class="visually-hidden">در حال بارگذاری...</span>
 					</div>
 					<p class="mt-3 text-muted">در حال دریافت اطلاعات...</p>
 				</div>
-
-				@* محتوای مودال *@
 				<div id="detailContent">
 					<div class="row">
-						@* اطلاعات کارمند *@
 						<div class="col-md-6 mb-4">
 							<div class="card card-flush h-md-100 border">
 								<div class="card-header bg-light">
-									<h6 class="card-title mb-0">
-										<i class="bi bi-person me-2"></i>اطلاعات کارمند
-									</h6>
+									<h6 class="card-title mb-0"><i class="bi bi-person me-2"></i>اطلاعات کارمند</h6>
 								</div>
 								<div class="card-body pt-3">
 									<div class="d-flex flex-column gap-2">
-										<div class="d-flex justify-content-between">
-											<span class="text-muted">نام:</span>
-											<span class="fw-bold" id="modalFullName">-</span>
-										</div>
-										<div class="d-flex justify-content-between">
-											<span class="text-muted">گروه:</span>
-											<span class="fw-bold" id="modalGroupName">-</span>
-										</div>
-										<div class="d-flex justify-content-between">
-											<span class="text-muted">تاریخ:</span>
-											<span class="fw-bold" id="modalWorkDate">-</span>
-										</div>
-										<div class="d-flex justify-content-between">
-											<span class="text-muted">وضعیت:</span>
-											<span class="badge badge-success" id="modalStatus">-</span>
-										</div>
+										<div class="d-flex justify-content-between"><span class="text-muted">نام:</span><span class="fw-bold" id="modalFullName">-</span></div>
+										<div class="d-flex justify-content-between"><span class="text-muted">گروه:</span><span class="fw-bold" id="modalGroupName">-</span></div>
+										<div class="d-flex justify-content-between"><span class="text-muted">تاریخ:</span><span class="fw-bold" id="modalWorkDate">-</span></div>
+										<div class="d-flex justify-content-between"><span class="text-muted">وضعیت:</span><span class="badge badge-success" id="modalStatus">-</span></div>
 									</div>
 								</div>
 							</div>
 						</div>
-
-						@* زمان‌بندی شیفت *@
 						<div class="col-md-6 mb-4">
 							<div class="card card-flush h-md-100 border">
 								<div class="card-header bg-light">
-									<h6 class="card-title mb-0">
-										<i class="bi bi-clock me-2"></i>زمان‌بندی شیفت
-									</h6>
+									<h6 class="card-title mb-0"><i class="bi bi-clock me-2"></i>زمان‌بندی شیفت</h6>
 								</div>
 								<div class="card-body pt-3">
 									<div class="d-flex flex-column gap-2">
-										<div class="d-flex justify-content-between">
-											<span class="text-muted">شروع شیفت:</span>
-											<span class="fw-bold" id="modalShiftStart">-</span>
-										</div>
-										<div class="d-flex justify-content-between">
-											<span class="text-muted">پایان شیفت:</span>
-											<span class="fw-bold" id="modalShiftEnd">-</span>
-										</div>
+										<div class="d-flex justify-content-between"><span class="text-muted">شروع شیفت:</span><span class="fw-bold" id="modalShiftStart">-</span></div>
+										<div class="d-flex justify-content-between"><span class="text-muted">پایان شیفت:</span><span class="fw-bold" id="modalShiftEnd">-</span></div>
 										<hr class="my-2">
-										<div class="d-flex justify-content-between">
-											<span class="text-muted">اولین ورود:</span>
-											<span class="fw-bold text-primary" id="modalFirstEnter">-</span>
-										</div>
-										<div class="d-flex justify-content-between">
-											<span class="text-muted">آخرین خروج:</span>
-											<span class="fw-bold text-danger" id="modalLastExit">-</span>
-										</div>
+										<div class="d-flex justify-content-between"><span class="text-muted">اولین ورود:</span><span class="fw-bold text-primary" id="modalFirstEnter">-</span></div>
+										<div class="d-flex justify-content-between"><span class="text-muted">آخرین خروج:</span><span class="fw-bold text-danger" id="modalLastExit">-</span></div>
 									</div>
 								</div>
 							</div>
 						</div>
 					</div>
-
-					@* آمار و گزارش *@
 					<div class="row">
 						<div class="col-md-12">
 							<div class="card card-flush border">
 								<div class="card-header bg-light">
-									<h6 class="card-title mb-0">
-										<i class="bi bi-graph-up me-2"></i>آمار و گزارش
-									</h6>
+									<h6 class="card-title mb-0"><i class="bi bi-graph-up me-2"></i>آمار و گزارش</h6>
 								</div>
 								<div class="card-body pt-3">
 									<div class="row">
-										@* مجموع حضور *@
-										<div class="col-md-3 mb-3">
-											<div class="d-flex align-items-center bg-light-success rounded p-3">
-												<div class="me-3">
-													<i class="bi bi-check-circle fs-2 text-success"></i>
-												</div>
-												<div>
-													<div class="fs-7">مجموع حضور</div>
-													<div class="fs-5 fw-bold " id="modalTotalPresent">-</div>
-												</div>
-											</div>
-										</div>
-
-										@* تاخیر *@
-										<div class="col-md-3 mb-3">
-											<div class="d-flex align-items-center bg-light-warning rounded p-3">
-												<div class="me-3">
-													<i class="bi bi-exclamation-triangle fs-2 text-warning"></i>
-												</div>
-												<div>
-													<div class="fs-7">تأخیر در حضور</div>
-													<div class="fs-5 fw-bold" id="modalDelay">-</div>
-												</div>
-											</div>
-										</div>
-
-										@* زودتر رفتن *@
-										<div class="col-md-3 mb-3">
-											<div class="d-flex align-items-center bg-light-danger rounded p-3">
-												<div class="me-3">
-													<i class="bi bi-arrow-left-circle fs-2 text-danger"></i>
-												</div>
-												<div>
-													<div class="fs-7 ">خروج زودتر از موعد</div>
-													<div class="fs-5 fw-bold " id="modalEarlyExit">-</div>
-												</div>
-											</div>
-										</div>
-
-										@* مجموع کمبود *@
-										<div class="col-md-3 mb-3">
-											<div class="d-flex align-items-center bg-light-dark rounded p-3">
-												<div class="me-3">
-													<i class="bi bi-calculator fs-2 text-dark"></i>
-												</div>
-												<div>
-													<div class="fs-7 text-muted">مجموع کسری کار</div>
-													<div class="fs-5 fw-bold text-dark" id="modalTotalDeficit">-</div>
-												</div>
-											</div>
-										</div>
+										<div class="col-md-3 mb-3"><div class="d-flex align-items-center bg-light-success rounded p-3"><div class="me-3"><i class="bi bi-check-circle fs-2 text-success"></i></div><div><div class="fs-7">مجموع حضور</div><div class="fs-5 fw-bold" id="modalTotalPresent">-</div></div></div></div>
+										<div class="col-md-3 mb-3"><div class="d-flex align-items-center bg-light-warning rounded p-3"><div class="me-3"><i class="bi bi-exclamation-triangle fs-2 text-warning"></i></div><div><div class="fs-7">تأخیر در حضور</div><div class="fs-5 fw-bold" id="modalDelay">-</div></div></div></div>
+										<div class="col-md-3 mb-3"><div class="d-flex align-items-center bg-light-danger rounded p-3"><div class="me-3"><i class="bi bi-arrow-left-circle fs-2 text-danger"></i></div><div><div class="fs-7">خروج زودتر از موعد</div><div class="fs-5 fw-bold" id="modalEarlyExit">-</div></div></div></div>
+										<div class="col-md-3 mb-3"><div class="d-flex align-items-center bg-light-dark rounded p-3"><div class="me-3"><i class="bi bi-calculator fs-2 text-dark"></i></div><div><div class="fs-7 text-muted">مجموع کسری کار</div><div class="fs-5 fw-bold text-dark" id="modalTotalDeficit">-</div></div></div></div>
 									</div>
-
 									<div class="row mt-2">
-										@* اضافه‌کاری تایید شده *@
-										<div class="col-md-6 mb-3">
-											<div class="d-flex align-items-center bg-light-success rounded p-3">
-												<div class="me-3">
-													<i class="bi bi-hourglass-top fs-2 text-success"></i>
-												</div>
-												<div>
-													<div class="fs-7">اضافه‌کاری تأیید شده</div>
-													<div class="fs-5 fw-bold" id="modalApprovedOT">-</div>
-												</div>
-											</div>
-										</div>
-
-										@* اضافه‌کاری در انتظار *@
-										<div class="col-md-6 mb-3">
-											<div class="d-flex align-items-center bg-light-warning rounded p-3">
-												<div class="me-3">
-													<i class="bi bi-hourglass-split fs-2 text-warning"></i>
-												</div>
-												<div>
-													<div class="fs-7">اضافه‌کاری در انتظار تأیید</div>
-													<div class="fs-5 fw-bold" id="modalPendingOT">-</div>
-												</div>
-											</div>
-										</div>
+										<div class="col-md-6 mb-3"><div class="d-flex align-items-center bg-light-success rounded p-3"><div class="me-3"><i class="bi bi-hourglass-top fs-2 text-success"></i></div><div><div class="fs-7">اضافه‌کاری تأیید شده</div><div class="fs-5 fw-bold" id="modalApprovedOT">-</div></div></div></div>
+										<div class="col-md-6 mb-3"><div class="d-flex align-items-center bg-light-warning rounded p-3"><div class="me-3"><i class="bi bi-hourglass-split fs-2 text-warning"></i></div><div><div class="fs-7">اضافه‌کاری در انتظار تأیید</div><div class="fs-5 fw-bold" id="modalPendingOT">-</div></div></div></div>
 									</div>
 								</div>
 							</div>
 						</div>
 					</div>
-
-					@* جدول ترددها *@
 					<div class="row mt-3" id="trafficSection">
 						<div class="col-md-12">
 							<div class="card card-flush border">
 								<div class="card-header bg-light">
-									<h6 class="card-title mb-0">
-										<i class="bi bi-list-ul me-2"></i>لیست ترددها
-									</h6>
+									<h6 class="card-title mb-0"><i class="bi bi-list-ul me-2"></i>لیست ترددها</h6>
 								</div>
 								<div class="card-body pt-0">
 									<div class="table-responsive">
@@ -504,13 +609,11 @@
 													<th class="text-center">مدت حضور</th>
 												</tr>
 											</thead>
-											<tbody id="trafficTableBody">
-											</tbody>
+											<tbody id="trafficTableBody"></tbody>
 										</table>
 									</div>
 									<div id="noTrafficMessage" class="text-center text-muted py-3 d-none">
-										<i class="bi bi-info-circle me-1"></i>
-										ترددی یافت نشد
+										<i class="bi bi-info-circle me-1"></i>ترددی یافت نشد
 									</div>
 								</div>
 							</div>
@@ -524,207 +627,133 @@
 		</div>
 	</div>
 </div>
-<!-- Details Modal End-->
-@section SearchBox
-{
-}
 
-@section Scripts {
+@section SearchBox { }
 
-	<Simple-CU-Modal add-route=""
-					 update-route="">
-	</Simple-CU-Modal>
+	@section Scripts {
+		<Simple-CU-Modal add-route="" update-route=""></Simple-CU-Modal>
 
+		<script nonce="@Context.Items["ScriptNonce"]">
+			$(document).ready(function () {
+				const urlParams = new URLSearchParams(window.location.search);
+				const selectedUser  = document.getElementById('userFilter').value;
+				const selectedMonth = urlParams.get('month');
+				const selectedYear  = urlParams.get('year');
 
-	<script nonce="@Context.Items["ScriptNonce"]">
-		$(document).ready(function () {
-			// مقدار اولیه از query string
-			const urlParams = new URLSearchParams(window.location.search);
+				$('#monthFilter').select2({ placeholder: "انتخاب ماه", allowClear: true, width: 'resolve', dir: "rtl" });
+				$('#yearFilter').select2({ placeholder: "انتخاب سال", allowClear: true, width: 'resolve', dir: "rtl" });
 
-			const selectedUser = document.getElementById('userFilter').value;
-			const selectedMonth = urlParams.get('month');
-			const selectedYear = urlParams.get('year');
+				if (selectedYear)  $('#yearFilter').val(selectedYear).trigger('change');
+				if (selectedMonth) $('#monthFilter').val(selectedMonth).trigger('change');
 
-
-			$('#monthFilter').select2({
-				placeholder: "انتخاب ماه",
-				allowClear: true,
-				width: 'resolve',
-				dir: "rtl"
-			});
-
-			$('#yearFilter').select2({
-				placeholder: "انتخاب ماه",
-				allowClear: true,
-				width: 'resolve',
-				dir: "rtl"
-			});
-
-
-			if (selectedYear) {
-				$('#yearFilter').val(selectedYear).trigger('change');
-			}
-
-			if (selectedMonth) {
-				$('#monthFilter').val(selectedMonth).trigger('change');
-			}
-
-
-			// تابع برای بروزرسانی URL بر اساس هردو فیلتر
-			function updateUrl() {
-				const user = $('#userFilter').val();
-				const month = $('#monthFilter').val();
-				const year = $('#yearFilter').val();
-
-				let baseUrl = '/attendance/EmployeeMonthlyReport';
-				let queryParams = [];
-
-				 if (user) queryParams.push('userFilter=' + user);
-				 if (year) queryParams.push('year=' + year);
-				 if (month) queryParams.push('month=' + month);
-
-
-
-				if (queryParams.length > 0) {
-					baseUrl += '?' + queryParams.join('&');
+				function updateUrl() {
+					const user  = $('#userFilter').val();
+					const month = $('#monthFilter').val();
+					const year  = $('#yearFilter').val();
+					let baseUrl = '/attendance/EmployeeMonthlyReport';
+					let params  = [];
+					if (user)  params.push('userFilter=' + user);
+					if (year)  params.push('year=' + year);
+					if (month) params.push('month=' + month);
+					if (params.length) baseUrl += '?' + params.join('&');
+					window.location.href = baseUrl;
 				}
 
-				window.location.href = baseUrl;
-			}
+				$('#applyFilters').on('click', updateUrl);
+			});
+		</script>
 
+		<script nonce="@Context.Items["ScriptNonce"]">
+			function showAttendanceDetail(personalCode, workDate, jalaliDate, fullName, groupName, shiftStart, shiftEnd, firstEnter, lastExit, totalPresent, delay, earlyExit, totalDeficit, approvedOT, pendingOT, status) {
+				const modal = new bootstrap.Modal(document.getElementById('attendanceDetailModal'));
+				modal.show();
 
-			$('#applyFilters').on('click', updateUrl);
-		});
-	</script>
+				document.getElementById('detailSpinner').classList.remove('d-none');
+				document.getElementById('detailContent').classList.add('d-none');
 
-	<script nonce="@Context.Items["ScriptNonce"]">
-		function showAttendanceDetail(personalCode, workDate,jalaliDate, fullName, groupName, shiftStart, shiftEnd, firstEnter, lastExit, totalPresent, delay, earlyExit, totalDeficit, approvedOT, pendingOT, status) {
-			// نمایش مودال
-			const modal = new bootstrap.Modal(document.getElementById('attendanceDetailModal'));
-			modal.show();
+				document.getElementById('modalFullName').textContent  = fullName  || '-';
+				document.getElementById('modalGroupName').textContent = groupName || '-';
+				document.getElementById('modalWorkDate').textContent  = jalaliDate || '-';
 
-			// نمایش اسپینر و مخفی کردن محتوا
-			document.getElementById('detailSpinner').classList.remove('d-none');
-			document.getElementById('detailContent').classList.add('d-none');
+				const statusEl = document.getElementById('modalStatus');
+				const statusMap = {
+					'Present': { text: 'حاضر',         cls: 'badge-success' },
+					'Absent':  { text: 'غایب',          cls: 'badge-danger' },
+					'Late':    { text: 'حضور با تأخیر', cls: 'badge-warning' },
+					'OnLeave': { text: 'مرخصی',         cls: 'badge-info' },
+					'Holiday': { text: 'تعطیل رسمی',    cls: 'badge-danger' }
+				};
+				const si = statusMap[status] || { text: status || '-', cls: 'badge-secondary' };
+				statusEl.textContent = si.text;
+				statusEl.className = 'badge ' + si.cls;
 
-			// تنظیم اطلاعات پایه از پارامترهای ارسالی
-			document.getElementById('modalFullName').textContent = fullName || '-';
-			document.getElementById('modalGroupName').textContent = groupName || '-';
-			document.getElementById('modalWorkDate').textContent = jalaliDate || '-';
+				document.getElementById('modalShiftStart').textContent  = shiftStart  || '-';
+				document.getElementById('modalShiftEnd').textContent    = shiftEnd    || '-';
+				document.getElementById('modalFirstEnter').textContent  = firstEnter  || '-';
+				document.getElementById('modalLastExit').textContent    = lastExit    || '-';
+				document.getElementById('modalTotalPresent').textContent = toHourMinute(totalPresent);
+				document.getElementById('modalDelay').textContent        = toHourMinute(delay);
+				document.getElementById('modalEarlyExit').textContent    = toHourMinute(earlyExit);
+				document.getElementById('modalTotalDeficit').textContent = toHourMinute(totalDeficit);
+				document.getElementById('modalApprovedOT').textContent   = toHourMinute(approvedOT);
+				document.getElementById('modalPendingOT').textContent    = toHourMinute(pendingOT);
 
-			// وضعیت
-			const statusEl = document.getElementById('modalStatus');
-			const statusMap = {
-				'Present': { text: 'حاضر', class: 'badge-success' },
-				'Absent': { text: 'غایب', class: 'badge-danger' },
-				'Late': { text: 'حضور با تأخیر', class: 'badge-warning' },
-				'OnLeave': { text: 'مرخصی', class: 'badge-info' },
-				'Holiday': { text: 'تعطیل رسمی', class: 'badge-danger' }
-			};
-			const statusInfo = statusMap[status] || { text: status || '-', class: 'badge-secondary' };
-			statusEl.textContent = statusInfo.text;
-			statusEl.className = 'badge ' + statusInfo.class;
+				$.ajax({
+					url: '/Attendance/GetDailyAttendanceDetail',
+					type: 'GET',
+					data: { personalCode, workDate },
+					success: function(response) {
+						const trafficBody = document.getElementById('trafficTableBody');
+						const noTrafficMsg = document.getElementById('noTrafficMessage');
+						const trafficSection = document.getElementById('trafficSection');
 
-			// زمان‌بندی
-			document.getElementById('modalShiftStart').textContent = shiftStart || '-';
-			document.getElementById('modalShiftEnd').textContent = shiftEnd || '-';
-			document.getElementById('modalFirstEnter').textContent = firstEnter || '-';
-			document.getElementById('modalLastExit').textContent = lastExit || '-';
-
-			// آمار
-			document.getElementById('modalTotalPresent').textContent = toHourMinute(totalPresent);
-			document.getElementById('modalDelay').textContent = toHourMinute(delay);
-			document.getElementById('modalEarlyExit').textContent = toHourMinute(earlyExit);
-			document.getElementById('modalTotalDeficit').textContent = toHourMinute(totalDeficit);
-			document.getElementById('modalApprovedOT').textContent = toHourMinute(approvedOT);
-			document.getElementById('modalPendingOT').textContent = toHourMinute(pendingOT);
-
-			// ارسال درخواست AJAX برای دریافت ترددها
-			$.ajax({
-				url: '/Attendance/GetDailyAttendanceDetail',
-				type: 'GET',
-				data: {
-					personalCode: personalCode,
-					workDate: workDate
-				},
-				success: function(response) {
-					const trafficBody = document.getElementById('trafficTableBody');
-					const noTrafficMsg = document.getElementById('noTrafficMessage');
-					const trafficSection = document.getElementById('trafficSection');
-
-					if (response.success && response.data && response.data.length > 0) {
-						trafficBody.innerHTML = '';
-
-						response.data.forEach(function(item, index) {
-							// تبدیل تاریخ به فرمت زمان
-							const inTime = item.inDateTime ? formatTime(item.inDateTime) : '-';
-							const outTime = item.outDateTime ? formatTime(item.outDateTime) : '-';
-
-							// بررسی نوع ثبت (دستی یا دستگاه)
-							const inTypeText = item.isInManual === "True" || item.isInManual === "1" || item.isInManual === true
-								? '<span class="badge badge-info">ثبت دستی</span>'
-								: '<span class="badge badge-success">دستگاه</span>';
-
-							const outTypeText = item.outDateTime
-								? (item.isOutManual === "True" || item.isOutManual === "1" || item.isOutManual === true
-									? '<span class="badge badge-info">ثبت دستی</span>'
-									: '<span class="badge badge-success">دستگاه</span>')
-								: '-';
-
-							const row = `
-								<tr>
-									<td class="text-center">${index + 1}</td>
+						if (response.success && response.data && response.data.length > 0) {
+							trafficBody.innerHTML = '';
+							response.data.forEach(function(item, index) {
+								const inTime  = item.inDateTime  ? formatTime(item.inDateTime)  : '-';
+								const outTime = item.outDateTime ? formatTime(item.outDateTime) : '-';
+								const inType  = (item.isInManual  === "True" || item.isInManual  === true) ? '<span class="badge badge-info">ثبت دستی</span>' : '<span class="badge badge-success">دستگاه</span>';
+								const outType = item.outDateTime
+									? ((item.isOutManual === "True" || item.isOutManual === true) ? '<span class="badge badge-info">ثبت دستی</span>' : '<span class="badge badge-success">دستگاه</span>')
+									: '-';
+								trafficBody.innerHTML += `<tr>
+									<td class="text-center">${index+1}</td>
 									<td class="text-center fw-bold text-primary">${inTime}</td>
-									<td class="text-center">${inTypeText}</td>
+									<td class="text-center">${inType}</td>
 									<td class="text-center fw-bold text-danger">${outTime}</td>
-									<td class="text-center">${outTypeText}</td>
+									<td class="text-center">${outType}</td>
 									<td class="text-center fw-bold">${toHourMinute(item.durationMinutes)}</td>
-								</tr>
-							`;
-							trafficBody.innerHTML += row;
-						});
-
-						trafficSection.classList.remove('d-none');
-						noTrafficMsg.classList.add('d-none');
-					} else {
-						trafficSection.classList.add('d-none');
-						noTrafficMsg.classList.remove('d-none');
+								</tr>`;
+							});
+							trafficSection.classList.remove('d-none');
+							noTrafficMsg.classList.add('d-none');
+						} else {
+							trafficSection.classList.add('d-none');
+							noTrafficMsg.classList.remove('d-none');
+						}
+						document.getElementById('detailSpinner').classList.add('d-none');
+						document.getElementById('detailContent').classList.remove('d-none');
+					},
+					error: function() {
+						document.getElementById('trafficSection').classList.add('d-none');
+						document.getElementById('noTrafficMessage').classList.remove('d-none');
+						document.getElementById('noTrafficMessage').textContent = 'خطا در دریافت لیست ترددها';
+						document.getElementById('detailSpinner').classList.add('d-none');
+						document.getElementById('detailContent').classList.remove('d-none');
 					}
-
-					// نمایش محتوا و مخفی کردن اسپینر
-					document.getElementById('detailSpinner').classList.add('d-none');
-					document.getElementById('detailContent').classList.remove('d-none');
-				},
-				error: function(xhr, status, error) {
-					// در صورت خطا، فقط جدول ترددها را مخفی کن
-					document.getElementById('trafficSection').classList.add('d-none');
-					document.getElementById('noTrafficMessage').classList.remove('d-none');
-					document.getElementById('noTrafficMessage').textContent = 'خطا در دریافت لیست ترددها';
-
-					// نمایش محتوا
-					document.getElementById('detailSpinner').classList.add('d-none');
-					document.getElementById('detailContent').classList.remove('d-none');
-				}
-			});
-		}
-
-		// تابع کمکی برای تبدیل دقایق به فرمت ساعت:دقیقه
-		function toHourMinute(mins) {
-			if (!mins || mins === 0) return '0:00';
-			const hours = Math.floor(mins / 60);
-			const minutes = mins % 60;
-			return `${hours}:${minutes.toString().padStart(2, '0')}`;
-		}
-
-		// تابع کمکی برای استخراج زمان از تاریخ
-		function formatTime(dateTimeStr) {
-			if (!dateTimeStr) return '-';
-			try {
-				const date = new Date(dateTimeStr);
-				return date.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-			} catch {
-				return dateTimeStr;
+				});
 			}
-		}
-	</script>
-}
+
+			function toHourMinute(mins) {
+				if (!mins || mins === 0) return '0:00';
+				return `${Math.floor(mins/60)}:${(mins%60).toString().padStart(2,'0')}`;
+			}
+
+			function formatTime(dateTimeStr) {
+				if (!dateTimeStr) return '-';
+				try {
+					return new Date(dateTimeStr).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+				} catch { return dateTimeStr; }
+			}
+		</script>
+	}
