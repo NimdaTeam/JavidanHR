@@ -1,0 +1,1072 @@
+﻿@using HrSystem.Domain.Entities
+@using PayrollSystem.Domain.Entities.Workshop
+@model PayrollSystem.Application.DTOs.CreateContractDto
+@{
+    ViewData["Title"] = "افزودن قرارداد جدید";
+    var employees = ViewBag.Employees as List<Employee>;
+    var workshops = ViewBag.Workshops as List<Workshop>;
+
+    var jsonOptions = new System.Text.Json.JsonSerializerOptions
+    {
+        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
+    };
+
+    // ──────────────────────────────────────────────────────────────────
+    // ViewBag.AvailablePayItems باید در اکشن AddContract GET ست شود:
+    //   var items = await _payItemService.GetAllPayItemsAsync(ct);
+    //   ViewBag.AvailablePayItems = items.Where(p => p.IsActive).ToList();
+    // ──────────────────────────────────────────────────────────────────
+    var allPayItemsJson = System.Text.Json.JsonSerializer.Serialize(
+        ViewBag.AvailablePayItems ?? new List<object>(),
+        jsonOptions
+    );
+}
+
+<form asp-action="AddContract" asp-controller="Contract" method="post" id="contractForm">
+    <div class="card mb-5 mb-xl-8 pi-card-main">
+
+        <!-- ─── هدر ─────────────────────────────────── -->
+        <div class="card-header pi-card-header">
+            <div class="d-flex align-items-center gap-3">
+                <div class="pi-icon-wrap">
+                    <i class="fas fa-file-signature"></i>
+                </div>
+                <div>
+                    <h3 class="card-title mb-0 pi-title">@ViewData["Title"]</h3>
+                    <span class="pi-subtitle">تعریف قرارداد کاری برای کارمند</span>
+                </div>
+            </div>
+            <Form-buttons return-url="@ViewBag.ReturnUrl"></Form-buttons>
+        </div>
+
+        <div class="card-body py-8 px-8">
+            @Html.AntiForgeryToken()
+
+            @if (!ViewData.ModelState.IsValid && ViewData.ModelState.ContainsKey(string.Empty))
+            {
+                <div class="pi-alert-error mb-6">
+                    <i class="fas fa-exclamation-circle pi-alert-icon"></i>
+                    <div>
+                        @foreach (var error in ViewData.ModelState[string.Empty]!.Errors)
+                        {
+                            <div>@error.ErrorMessage</div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- ═══════════════ بخش اول: اطلاعات پایه ═══════════════ -->
+            <div class="pi-section-label">
+                <span class="pi-section-num">۱</span>
+                اطلاعات پایه
+            </div>
+
+            <div class="row g-5 mb-6">
+                <!-- کارمند -->
+                <div class="col-md-6">
+                    <div class="pi-field">
+                        <label class="pi-label required">کارمند</label>
+                        <select asp-for="EmployeeId" class="pi-select" id="employeeSelect" required>
+                            <option value="">— انتخاب کارمند —</option>
+                            @if (employees != null)
+                            {
+                                foreach (var emp in employees)
+                                {
+                                    <option value="@emp.Id">@emp.GetFullName() (@emp.EmployeeCode)</option>
+                                }
+                            }
+                        </select>
+                        <span asp-validation-for="EmployeeId" class="pi-error-msg"></span>
+                    </div>
+                </div>
+
+                <!-- کارگاه -->
+                <div class="col-md-6">
+                    <div class="pi-field">
+                        <label class="pi-label required">کارگاه</label>
+                        <select asp-for="WorkshopId" class="pi-select" id="workshopSelect" required>
+                            <option value="">— انتخاب کارگاه —</option>
+                            @if (workshops != null)
+                            {
+                                foreach (var ws in workshops)
+                                {
+                                    <option value="@ws.Id">@ws.Name</option>
+                                }
+                            }
+                        </select>
+                        <span asp-validation-for="WorkshopId" class="pi-error-msg"></span>
+                        <div id="workshopHint" class="pi-hint" style="display:none;">
+                            <i class="fas fa-magic me-1 text-success"></i>
+                            کارگاه به‌صورت خودکار از اطلاعات کارمند پر شد
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-5 mb-8">
+                <!-- تاریخ شروع -->
+                <div class="col-md-6">
+                    <div class="pi-field">
+                        <label class="pi-label required">تاریخ شروع</label>
+                        <input asp-for="ValidFromDate" type="date" class="pi-input text-center"
+                               value="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                        <span asp-validation-for="ValidFromDate" class="pi-error-msg"></span>
+                    </div>
+                </div>
+
+                <!-- تاریخ پایان -->
+                <div class="col-md-6">
+                    <div class="pi-field">
+                        <label class="pi-label">تاریخ پایان <span class="pi-optional">(اختیاری)</span></label>
+                        <input asp-for="ValidToDate" type="date" class="pi-input text-center" />
+                        <span asp-validation-for="ValidToDate" class="pi-error-msg"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══════════════ بخش دوم: عوامل حقوقی ═══════════════ -->
+            <div class="pi-section-label">
+                <span class="pi-section-num">۲</span>
+                عوامل حقوقی قرارداد
+            </div>
+
+            <!-- انتخاب‌گر عوامل (شبیه AddPayItem) -->
+            <div class="pi-picker mb-6">
+                <div class="pi-picker-header">
+                    <span class="pi-picker-title">
+                        <i class="fas fa-database me-2 text-muted"></i>
+                        انتخاب عامل برای افزودن به قرارداد
+                    </span>
+                    <div class="pi-search-wrap">
+                        <i class="fas fa-search pi-search-icon"></i>
+                        <input type="text" id="payItemSearch"
+                               class="pi-search-input"
+                               placeholder="جستجو..."
+                               oninput="filterPayItems(this.value)" />
+                    </div>
+                </div>
+
+                <!-- تب‌ها -->
+                <div class="pi-tabs" id="payItemGroupTabs">
+                    <button type="button" class="pi-tab active"
+                            onclick="filterByGroup('all', this)">
+                        همه
+                    </button>
+                    <button type="button" class="pi-tab pi-tab-success"
+                            onclick="filterByGroup('Earning', this)">
+                        <i class="fas fa-plus me-1"></i>مزایا
+                    </button>
+                    <button type="button" class="pi-tab pi-tab-danger"
+                            onclick="filterByGroup('Deduction', this)">
+                        <i class="fas fa-minus me-1"></i>کسورات
+                    </button>
+                    <button type="button" class="pi-tab pi-tab-primary"
+                            onclick="filterByGroup('Info', this)">
+                        <i class="fas fa-info me-1"></i>اطلاعاتی
+                    </button>
+                </div>
+
+                <!-- گرید عوامل -->
+                <div id="payItemGrid" class="pi-code-grid"></div>
+            </div>
+
+            <!-- ═══════════════ بخش سوم: اقلام انتخاب‌شده ═══════════════ -->
+            <div class="pi-section-label">
+                <span class="pi-section-num">۳</span>
+                اقلام انتخاب‌شده
+                <span id="selectedCount" class="pi-badge">۰ عامل</span>
+            </div>
+
+            <div id="selectedPayItemsContainer">
+                <!-- empty state -->
+                <div id="emptySelectionMsg" class="pi-empty-selection">
+                    <i class="fas fa-hand-pointer"></i>
+                    <span>روی عوامل بالا کلیک کنید تا به قرارداد اضافه شوند</span>
+                </div>
+                <!-- selected items will be rendered here -->
+                <div id="selectedPayItemsList" class="pi-selected-list" style="display:none;"></div>
+            </div>
+
+            <!-- Hidden inputs container (submitted with form) -->
+            <div id="hiddenInputsContainer"></div>
+
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        // ─────────────────────────────────────────────
+        // داده‌ها
+        // ─────────────────────────────────────────────
+        const ALL_PAY_ITEMS = @Html.Raw(allPayItemsJson);
+
+        const TYPE_META = {
+            'Earning':   { label: 'مزایا',    cls: 'grp-success', icon: 'fa-plus-circle'  },
+            'Deduction': { label: 'کسورات',   cls: 'grp-danger',  icon: 'fa-minus-circle' },
+            'Info':      { label: 'اطلاعاتی', cls: 'grp-primary', icon: 'fa-info-circle'  },
+        };
+
+        let activeGroup   = 'all';
+        let searchText    = '';
+        let selectedItems = [];  // { id, name, systemCode, type, dataType, value? }
+
+        // ─────────────────────────────────────────────
+        // رندر گرید عوامل
+        // ─────────────────────────────────────────────
+        function renderPayItemGrid() {
+            const grid = document.getElementById('payItemGrid');
+            grid.innerHTML = '';
+
+            const filtered = ALL_PAY_ITEMS.filter(item => {
+                const alreadySelected = selectedItems.some(s => s.id === item.id);
+                const matchGroup  = activeGroup === 'all' || item.type === activeGroup;
+                const matchSearch = !searchText ||
+                    item.name.toLowerCase().includes(searchText.toLowerCase()) ||
+                    item.systemCode.toLowerCase().includes(searchText.toLowerCase());
+                return !alreadySelected && matchGroup && matchSearch;
+            });
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div class="pi-empty">
+                        <i class="fas fa-search-minus"></i>
+                        <span>${ALL_PAY_ITEMS.length === 0 ? 'هیچ عامل حقوقی‌ای در سیستم تعریف نشده' : 'موردی یافت نشد'}</span>
+                    </div>`;
+                return;
+            }
+
+            filtered.forEach(item => {
+                const meta = TYPE_META[item.type] || { cls: 'grp-secondary', icon: 'fa-tag', label: item.type };
+                const chip = document.createElement('div');
+                chip.className = `pi-chip ${meta.cls}`;
+                chip.title     = 'کلیک برای افزودن به قرارداد';
+                chip.innerHTML = `
+                    <i class="fas ${meta.icon} pi-chip-icon"></i>
+                    <div class="pi-chip-body">
+                        <span class="pi-chip-name">${item.name}</span>
+                        <code  class="pi-chip-code">${item.systemCode}</code>
+                    </div>
+                    <span class="pi-chip-type-badge">${meta.label}</span>`;
+                chip.addEventListener('click', () => selectPayItem(item));
+                grid.appendChild(chip);
+            });
+        }
+
+        function filterByGroup(group, btn) {
+            activeGroup = group;
+            document.querySelectorAll('#payItemGroupTabs .pi-tab')
+                    .forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderPayItemGrid();
+        }
+
+        function filterPayItems(val) {
+            searchText = val;
+            renderPayItemGrid();
+        }
+
+        // ─────────────────────────────────────────────
+        // مدیریت انتخاب
+        // ─────────────────────────────────────────────
+        function selectPayItem(item) {
+            if (selectedItems.some(s => s.id === item.id)) return;
+            selectedItems.push({ ...item, value: '' });
+            renderPayItemGrid();
+            renderSelectedList();
+        }
+
+        function removePayItem(id) {
+            selectedItems = selectedItems.filter(s => s.id !== id);
+            renderPayItemGrid();
+            renderSelectedList();
+        }
+
+        function onValueChange(id, val) {
+            const item = selectedItems.find(s => s.id === id);
+            if (item) item.value = val;
+            rebuildHiddenInputs();
+        }
+
+        // ─────────────────────────────────────────────
+        // رندر اقلام انتخاب‌شده
+        // ─────────────────────────────────────────────
+        function renderSelectedList() {
+            const emptyMsg = document.getElementById('emptySelectionMsg');
+            const list     = document.getElementById('selectedPayItemsList');
+            const badge    = document.getElementById('selectedCount');
+
+            badge.textContent = `${selectedItems.length} عامل`;
+
+            if (selectedItems.length === 0) {
+                emptyMsg.style.display = '';
+                list.style.display     = 'none';
+                list.innerHTML         = '';
+                rebuildHiddenInputs();
+                return;
+            }
+
+            emptyMsg.style.display = 'none';
+            list.style.display     = '';
+            list.innerHTML         = '';
+
+            selectedItems.forEach((item, idx) => {
+                const meta          = TYPE_META[item.type] || { cls: 'grp-secondary', icon: 'fa-tag', label: item.type };
+                const requiresInput = item.dataType === 'UserInput';
+                const card          = document.createElement('div');
+                card.className      = 'pi-selected-card';
+                card.id             = `sel-card-${item.id}`;
+                card.innerHTML = `
+                    <div class="pi-selected-header">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="pi-selected-icon ${meta.cls}">
+                                <i class="fas ${meta.icon}"></i>
+                            </div>
+                            <div>
+                                <div class="pi-selected-name">${item.name}</div>
+                                <code class="pi-selected-code">${item.systemCode}</code>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="pi-chip-type-badge ${meta.cls}">${meta.label}</span>
+                            ${requiresInput
+                                ? '<span class="pi-input-required-badge"><i class="fas fa-keyboard me-1"></i>نیاز به مقدار</span>'
+                                : '<span class="pi-auto-badge"><i class="fas fa-calculator me-1"></i>محاسبه خودکار</span>'
+                            }
+                            <button type="button" class="pi-remove-btn"
+                                    onclick="removePayItem(${JSON.stringify(item.id)})"
+                                    title="حذف از قرارداد">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    ${requiresInput ? `
+                        <div class="pi-value-row">
+                            <label class="pi-value-label">
+                                <i class="fas fa-coins me-1"></i>
+                                مقدار (ریال)
+                            </label>
+                            <input type="number"
+                                   class="pi-value-input"
+                                   step="0.01"
+                                   min="0"
+                                   placeholder="مقدار را وارد کنید..."
+                                   value="${item.value || ''}"
+                                   oninput="onValueChange(${JSON.stringify(item.id)}, this.value)"
+                                   required />
+                        </div>
+                    ` : `
+                        <div class="pi-auto-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            مقدار این عامل توسط سیستم محاسبه می‌شود و نیازی به ورود دستی ندارد.
+                        </div>
+                    `}`;
+                list.appendChild(card);
+            });
+
+            rebuildHiddenInputs();
+        }
+
+        // ─────────────────────────────────────────────
+        // ساخت hidden inputs برای submit
+        // ─────────────────────────────────────────────
+        function rebuildHiddenInputs() {
+            const container = document.getElementById('hiddenInputsContainer');
+            container.innerHTML = '';
+            selectedItems.forEach((item, idx) => {
+                const idInput  = document.createElement('input');
+                idInput.type   = 'hidden';
+                idInput.name   = `PayItems[${idx}].PayItemId`;
+                idInput.value  = item.id;
+                container.appendChild(idInput);
+
+                if (item.dataType === 'UserInput' && item.value !== '') {
+                    const valInput  = document.createElement('input');
+                    valInput.type   = 'hidden';
+                    valInput.name   = `PayItems[${idx}].Value`;
+                    valInput.value  = item.value;
+                    container.appendChild(valInput);
+                }
+            });
+        }
+
+        // ─────────────────────────────────────────────
+        // Auto-fill کارگاه از روی کارمند
+        // ─────────────────────────────────────────────
+        document.getElementById('employeeSelect').addEventListener('change', async function () {
+            const employeeId = this.value;
+            const hint       = document.getElementById('workshopHint');
+            hint.style.display = 'none';
+            if (!employeeId) return;
+            try {
+                const res  = await fetch(`/Payroll/Contract/GetEmployeeWorkshop/${employeeId}`);
+                const data = await res.json();
+                if (data.success && data.workshopId) {
+                    document.getElementById('workshopSelect').value = data.workshopId;
+                    hint.style.display = '';
+                }
+            } catch (e) {
+                console.error('workshop fetch error', e);
+            }
+        });
+
+        // ─────────────────────────────────────────────
+        // ولیدیشن submit
+        // ─────────────────────────────────────────────
+        document.getElementById('contractForm').addEventListener('submit', function (e) {
+            // بررسی اینکه آیتم‌های UserInput حتماً مقدار داشته باشند
+            const missingValue = selectedItems.some(
+                item => item.dataType === 'UserInput' && (!item.value || item.value === '')
+            );
+            if (missingValue) {
+                e.preventDefault();
+                alert('لطفاً مقدار تمام عوامل نیازمند ورودی را وارد کنید.');
+                document.querySelector('.pi-value-input:placeholder-shown')
+                        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+
+        // ─────────────────────────────────────────────
+        // راه‌اندازی اولیه
+        // ─────────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', function () {
+            renderPayItemGrid();
+            renderSelectedList();
+        });
+    </script>
+}
+
+@section customStyles {
+    <link href="~/css/firststepstyles.css" rel="stylesheet" asp-append-version="true"
+          nonce="@Context.Items["ScriptNonce"]" />
+    <style>
+        /* ════════════════════════════════════════════
+                   متغیرها (یکسان با AddPayItem)
+                ════════════════════════════════════════════ */
+        :root {
+            --pi-radius: 10px;
+            --pi-radius-sm: 6px;
+            --pi-border: #e4e6ef;
+            --pi-bg: #f9fafb;
+            --pi-bg-hover: #f1f3f9;
+            --pi-text: #1e2a45;
+            --pi-muted: #8896ae;
+            --pi-accent: #3b5bdb;
+            --pi-accent-soft: #eef2ff;
+            --grp-info-bg: #e0f5ff;
+            --grp-info-text: #0077a8;
+            --grp-info-border: #a5d8f0;
+            --grp-success-bg: #e6faf0;
+            --grp-success-text: #1a7a45;
+            --grp-success-border: #a3dfc1;
+            --grp-danger-bg: #fff0f0;
+            --grp-danger-text: #c0392b;
+            --grp-danger-border: #f5b7b1;
+            --grp-primary-bg: #eef2ff;
+            --grp-primary-text: #3b5bdb;
+            --grp-primary-border: #c5cff7;
+            --grp-secondary-bg: #f0f0f0;
+            --grp-secondary-text: #555;
+            --grp-secondary-border: #ccc;
+        }
+
+        /* ════════════════════════════════════════════
+                   کارت اصلی
+                ════════════════════════════════════════════ */
+        .pi-card-main {
+            border: 1px solid var(--pi-border);
+            border-radius: 14px !important;
+            box-shadow: 0 2px 20px rgba(0,0,0,.06) !important;
+        }
+
+        .pi-card-header {
+            background: linear-gradient(135deg, #1e2a45 0%, #2d3f6e 100%) !important;
+            border-radius: 14px 14px 0 0 !important;
+            padding: 1.25rem 1.75rem !important;
+            border-bottom: none !important;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .pi-icon-wrap {
+            width: 44px;
+            height: 44px;
+            background: rgba(255,255,255,.12);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 1.1rem;
+        }
+
+        .pi-title {
+            color: #fff !important;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .pi-subtitle {
+            color: rgba(255,255,255,.55);
+            font-size: .75rem;
+            display: block;
+        }
+
+        /* ════════════════════════════════════════════
+                   برچسب بخش
+                ════════════════════════════════════════════ */
+        .pi-section-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            font-size: .8rem;
+            color: var(--pi-muted);
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            margin-bottom: 1rem;
+            padding-bottom: .5rem;
+            border-bottom: 1px solid var(--pi-border);
+        }
+
+        .pi-section-num {
+            width: 22px;
+            height: 22px;
+            background: var(--pi-accent);
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .7rem;
+            font-weight: 800;
+        }
+
+        .pi-badge {
+            margin-right: auto;
+            background: var(--pi-accent-soft);
+            color: var(--pi-accent);
+            font-size: .72rem;
+            font-weight: 700;
+            padding: 2px 10px;
+            border-radius: 99px;
+            border: 1px solid #c5cff7;
+        }
+
+        /* ════════════════════════════════════════════
+                   فیلدها
+                ════════════════════════════════════════════ */
+        .pi-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .pi-label {
+            font-weight: 600;
+            font-size: .82rem;
+            color: var(--pi-text);
+        }
+
+            .pi-label.required::after {
+                content: '*';
+                color: #e74c3c;
+                margin-right: 3px;
+            }
+
+        .pi-optional {
+            font-weight: 400;
+            color: var(--pi-muted);
+            font-size: .75rem;
+        }
+
+        .pi-input, .pi-select {
+            height: 42px;
+            border: 1.5px solid var(--pi-border);
+            border-radius: var(--pi-radius-sm);
+            background: var(--pi-bg);
+            padding: 0 .85rem;
+            font-size: .875rem;
+            color: var(--pi-text);
+            transition: border-color .2s, box-shadow .2s;
+            width: 100%;
+        }
+
+            .pi-input:focus, .pi-select:focus {
+                outline: none;
+                border-color: var(--pi-accent);
+                box-shadow: 0 0 0 3px rgba(59,91,219,.1);
+                background: #fff;
+            }
+
+        .pi-error-msg {
+            font-size: .78rem;
+            color: #e74c3c;
+        }
+
+        .pi-hint {
+            font-size: .75rem;
+            color: var(--pi-muted);
+            margin-top: 4px;
+        }
+
+        /* ════════════════════════════════════════════
+                   picker عوامل
+                ════════════════════════════════════════════ */
+        .pi-picker {
+            border: 1.5px solid var(--pi-border);
+            border-radius: var(--pi-radius);
+            background: #fff;
+            overflow: hidden;
+        }
+
+        .pi-picker-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: var(--pi-bg);
+            border-bottom: 1px solid var(--pi-border);
+            gap: 12px;
+        }
+
+        .pi-picker-title {
+            font-size: .8rem;
+            font-weight: 600;
+            color: var(--pi-text);
+            white-space: nowrap;
+        }
+
+        .pi-search-wrap {
+            position: relative;
+            flex: 1;
+            max-width: 220px;
+        }
+
+        .pi-search-icon {
+            position: absolute;
+            top: 50%;
+            right: 10px;
+            transform: translateY(-50%);
+            color: var(--pi-muted);
+            font-size: .75rem;
+        }
+
+        .pi-search-input {
+            width: 100%;
+            height: 32px;
+            padding: 0 10px 0 32px;
+            border: 1.5px solid var(--pi-border);
+            border-radius: 20px;
+            font-size: .8rem;
+            background: #fff;
+            color: var(--pi-text);
+            transition: border-color .2s;
+        }
+
+            .pi-search-input:focus {
+                outline: none;
+                border-color: var(--pi-accent);
+            }
+
+        /* تب‌ها */
+        .pi-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--pi-border);
+            background: var(--pi-bg);
+        }
+
+        .pi-tab {
+            height: 28px;
+            padding: 0 12px;
+            border-radius: 99px;
+            border: 1.5px solid var(--pi-border);
+            background: #fff;
+            font-size: .75rem;
+            font-weight: 600;
+            color: var(--pi-muted);
+            cursor: pointer;
+            transition: all .15s;
+            white-space: nowrap;
+        }
+
+            .pi-tab:hover {
+                background: var(--pi-bg-hover);
+                color: var(--pi-text);
+            }
+
+            .pi-tab.active {
+                background: var(--pi-accent);
+                color: #fff;
+                border-color: var(--pi-accent);
+            }
+
+        .pi-tab-success.active {
+            background: var(--grp-success-text);
+            border-color: var(--grp-success-text);
+        }
+
+        .pi-tab-danger.active {
+            background: var(--grp-danger-text);
+            border-color: var(--grp-danger-text);
+        }
+
+        .pi-tab-primary.active {
+            background: var(--grp-primary-text);
+            border-color: var(--grp-primary-text);
+        }
+
+        /* گرید عوامل */
+        .pi-code-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 12px;
+            max-height: 240px;
+            overflow-y: auto;
+        }
+
+            .pi-code-grid::-webkit-scrollbar {
+                width: 5px;
+            }
+
+            .pi-code-grid::-webkit-scrollbar-track {
+                background: var(--pi-bg);
+            }
+
+            .pi-code-grid::-webkit-scrollbar-thumb {
+                background: #c5cff7;
+                border-radius: 99px;
+            }
+
+        /* chip عوامل */
+        .pi-chip {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 6px 10px;
+            border-radius: var(--pi-radius-sm);
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: transform .12s, box-shadow .12s;
+            max-width: 220px;
+        }
+
+            .pi-chip:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 3px 8px rgba(0,0,0,.12);
+            }
+
+            .pi-chip:active {
+                transform: translateY(0);
+            }
+
+            .pi-chip.grp-success {
+                background: var(--grp-success-bg);
+                border-color: var(--grp-success-border);
+                color: var(--grp-success-text);
+            }
+
+            .pi-chip.grp-danger {
+                background: var(--grp-danger-bg);
+                border-color: var(--grp-danger-border);
+                color: var(--grp-danger-text);
+            }
+
+            .pi-chip.grp-primary {
+                background: var(--grp-primary-bg);
+                border-color: var(--grp-primary-border);
+                color: var(--grp-primary-text);
+            }
+
+            .pi-chip.grp-secondary {
+                background: var(--grp-secondary-bg);
+                border-color: var(--grp-secondary-border);
+                color: var(--grp-secondary-text);
+            }
+
+        .pi-chip-icon {
+            font-size: .7rem;
+            flex-shrink: 0;
+            opacity: .8;
+        }
+
+        .pi-chip-body {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .pi-chip-name {
+            font-size: .75rem;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pi-chip-code {
+            font-family: monospace;
+            font-size: .62rem;
+            opacity: .65;
+        }
+
+        .pi-chip-type-badge {
+            font-size: .6rem;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 99px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+            .grp-success .pi-chip-type-badge,
+            .pi-chip-type-badge.grp-success {
+                background: var(--grp-success-border);
+                color: var(--grp-success-text);
+            }
+
+            .grp-danger .pi-chip-type-badge,
+            .pi-chip-type-badge.grp-danger {
+                background: var(--grp-danger-border);
+                color: var(--grp-danger-text);
+            }
+
+            .grp-primary .pi-chip-type-badge,
+            .pi-chip-type-badge.grp-primary {
+                background: var(--grp-primary-border);
+                color: var(--grp-primary-text);
+            }
+
+        .pi-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            color: var(--pi-muted);
+            font-size: .82rem;
+            padding: 24px;
+            width: 100%;
+        }
+
+            .pi-empty i {
+                font-size: 1.4rem;
+                opacity: .4;
+            }
+
+        /* ════════════════════════════════════════════
+                   اقلام انتخاب‌شده
+                ════════════════════════════════════════════ */
+        .pi-empty-selection {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 20px 24px;
+            border: 2px dashed var(--pi-border);
+            border-radius: var(--pi-radius);
+            color: var(--pi-muted);
+            font-size: .85rem;
+            background: var(--pi-bg);
+        }
+
+            .pi-empty-selection i {
+                font-size: 1.3rem;
+                opacity: .4;
+            }
+
+        .pi-selected-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .pi-selected-card {
+            border: 1.5px solid var(--pi-border);
+            border-radius: var(--pi-radius);
+            background: #fff;
+            overflow: hidden;
+            transition: box-shadow .2s;
+        }
+
+            .pi-selected-card:hover {
+                box-shadow: 0 2px 12px rgba(0,0,0,.07);
+            }
+
+        .pi-selected-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: var(--pi-bg);
+            border-bottom: 1px solid var(--pi-border);
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .pi-selected-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .8rem;
+            flex-shrink: 0;
+        }
+
+            .pi-selected-icon.grp-success {
+                background: var(--grp-success-bg);
+                color: var(--grp-success-text);
+            }
+
+            .pi-selected-icon.grp-danger {
+                background: var(--grp-danger-bg);
+                color: var(--grp-danger-text);
+            }
+
+            .pi-selected-icon.grp-primary {
+                background: var(--grp-primary-bg);
+                color: var(--grp-primary-text);
+            }
+
+        .pi-selected-name {
+            font-weight: 600;
+            font-size: .85rem;
+            color: var(--pi-text);
+        }
+
+        .pi-selected-code {
+            font-family: monospace;
+            font-size: .72rem;
+            color: var(--pi-muted);
+            display: block;
+        }
+
+        .pi-input-required-badge {
+            font-size: .7rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 99px;
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffc107;
+        }
+
+        .pi-auto-badge {
+            font-size: .7rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 99px;
+            background: var(--grp-primary-bg);
+            color: var(--grp-primary-text);
+            border: 1px solid var(--grp-primary-border);
+        }
+
+        .pi-remove-btn {
+            width: 28px;
+            height: 28px;
+            border: none;
+            border-radius: 6px;
+            background: var(--grp-danger-bg);
+            color: var(--grp-danger-text);
+            cursor: pointer;
+            transition: background .15s, transform .1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .75rem;
+        }
+
+            .pi-remove-btn:hover {
+                background: var(--grp-danger-border);
+                transform: scale(1.1);
+            }
+
+        /* ردیف ورودی مقدار */
+        .pi-value-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+        }
+
+        .pi-value-label {
+            font-size: .82rem;
+            font-weight: 600;
+            color: var(--pi-text);
+            white-space: nowrap;
+            min-width: 100px;
+        }
+
+        .pi-value-input {
+            flex: 1;
+            height: 38px;
+            border: 1.5px solid var(--pi-border);
+            border-radius: var(--pi-radius-sm);
+            background: var(--pi-bg);
+            padding: 0 .85rem;
+            font-size: .875rem;
+            color: var(--pi-text);
+            transition: border-color .2s, box-shadow .2s;
+            text-align: left;
+            direction: ltr;
+        }
+
+            .pi-value-input:focus {
+                outline: none;
+                border-color: var(--pi-accent);
+                box-shadow: 0 0 0 3px rgba(59,91,219,.1);
+                background: #fff;
+            }
+
+        .pi-auto-info {
+            padding: 10px 16px;
+            font-size: .8rem;
+            color: var(--grp-primary-text);
+            background: var(--grp-primary-bg);
+            border-top: 1px solid var(--grp-primary-border);
+        }
+
+        /* ════════════════════════════════════════════
+                   خطا
+                ════════════════════════════════════════════ */
+        .pi-alert-error {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 16px;
+            border-radius: var(--pi-radius);
+            background: var(--grp-danger-bg);
+            border: 1px solid var(--grp-danger-border);
+            color: var(--grp-danger-text);
+            font-size: .85rem;
+        }
+
+        .pi-alert-icon {
+            font-size: 1.1rem;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        /* ════════════════════════════════════════════
+                   ریسپانسیو
+                ════════════════════════════════════════════ */
+        @@media (max-width: 576px) {
+            .pi-value-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .pi-value-input {
+                width: 100%;
+            }
+        }
+    </style>
+}

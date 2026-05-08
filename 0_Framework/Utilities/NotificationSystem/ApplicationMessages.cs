@@ -15,6 +15,14 @@
         public const string AccessDenied = "دسترسی شما به این قسمت محدود شده است";
 
         public const string SessionExpired = "نشست کاربری شما منقضی شده است. لطفا مجددا به سامانه وارد شوید.";
+
+        public const string RecordDeleted = "رکورد با موفقیت حذف شد.";
+
+        public const string RecordUpdated = "رکورد با موفقیت ویرایش شد.";
+
+        public const string RecordCreated = "رکورد با موفقیت ایجاد شد.";
+
+        public const string ErrorOccurred = "در انجام فرآیند خطایی رخ داد.";
     }
 
     public static class ApplicationMessagesIcon

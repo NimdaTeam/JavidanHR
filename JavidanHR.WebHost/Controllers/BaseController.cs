@@ -25,7 +25,7 @@ namespace JavidanHR.WebHost.Controllers
             return Redirect("/");
         }
 
-        public void ShowNotification(string title, string message = "", string type = ApplicationMessagesIcon.SuccessIcon)
+        public void ShowNotification(string title, string type = ApplicationMessagesIcon.SuccessIcon,string message = "")
         {
             NotificationSystem.ShowNotification(TempData, title, message, type);
         }
