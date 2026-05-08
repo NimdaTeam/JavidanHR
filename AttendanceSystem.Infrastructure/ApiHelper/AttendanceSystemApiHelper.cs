@@ -6,17 +6,16 @@ using System.Text;
 using System.Text.Json;
 using _0_Framework.Utilities.Security;
 using Microsoft.VisualBasic;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace AttendanceSystem.Infrastructure.ApiHelper
 {
-    public  class AttendanceSystemApiHelper
+    public class AttendanceSystemApiHelper
     {
         private protected readonly string AttendanceApiUrl = "https://att.hsu.ac.ir/";
         private protected readonly string AttendanceApiKey = "MyVEAPIhMdnhkmOssw431We";
         private readonly ILogger<AttendanceSystemApiHelper> _logger;
 
-        public AttendanceSystemApiHelper( ILogger<AttendanceSystemApiHelper> logger)
+        public AttendanceSystemApiHelper(ILogger<AttendanceSystemApiHelper> logger)
         {
             _logger = logger;
         }
@@ -60,7 +59,7 @@ namespace AttendanceSystem.Infrastructure.ApiHelper
 
                 var result = await client.GetFromJsonAsync<AttendanceLogVM>(client.BaseAddress);
 
-               
+
                 _logger.LogInformation($"Ended function GetRangeApiResult with result: SUCCESS at {DateTime.Now}");
                 _logger.LogInformation("-------------------------------------------------------------------------------");
 
@@ -101,11 +100,11 @@ namespace AttendanceSystem.Infrastructure.ApiHelper
 
                 if (!string.IsNullOrWhiteSpace(request.From))
                 {
-                    baseAddress += $"start_date={Strings.Left(request.From.SanitizeString(),10)}";
+                    baseAddress += $"start_date={Strings.Left(request.From.SanitizeString(), 10)}";
                 }
                 else
                 {
-                    baseAddress += $"start_date={Strings.Left(DateTime.Now.GetStartOfDate(),10)}";
+                    baseAddress += $"start_date={Strings.Left(DateTime.Now.GetStartOfDate(), 10)}";
                 }
 
                 if (!string.IsNullOrWhiteSpace(request.To))
@@ -181,7 +180,7 @@ namespace AttendanceSystem.Infrastructure.ApiHelper
             }
             catch (Exception e)
             {
-                _logger.LogInformation($"Ended function PostManualAttendanceRequest with status: Failed at {DateTime.Now}");
+                _logger.LogInformation($"Ended function PostManualAttendanceRequest with status: Failed at {DateTime.Now} - {e.ToString()}");
                 _logger.LogInformation("-------------------------------------------------------------------------------");
 
                 return new ApiResult()

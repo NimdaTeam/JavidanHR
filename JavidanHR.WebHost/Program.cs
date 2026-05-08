@@ -25,6 +25,9 @@ using StackExchange.Redis;
 using System.Net;
 using System.Security.Cryptography;
 using System.Threading.RateLimiting;
+using AttendanceSystem.Infrastructure.Context;
+using HrSystem.Infrastructure.Context;
+using PayrollSystem.Infrastructure.Persistence.Context;
 using WebHost.Utilities;
 using ZiggyCreatures.Caching.Fusion;
 using ZiggyCreatures.Caching.Fusion.Backplane;
@@ -139,9 +142,9 @@ builder.Services.AddSingleton<IPostConfigureOptions<CookieAuthenticationOptions>
 
 // Add services to the container.
 builder.Services.AddControllersWithViews(options =>
-    {
-        options.Filters.Add<ReturnUrlFilter>();
-    })
+{
+    options.Filters.Add<ReturnUrlFilter>();
+})
     .AddJsonOptions(opt =>
     {
         opt.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
@@ -246,12 +249,30 @@ if (cache is FusionCache fusionCache)
 //seed initial data and run migrations 
 using (var scope = app.Services.CreateScope())
 {
-    var context = scope.ServiceProvider.GetRequiredService<AuthenticationSystemContext>();
-    if (context.Database.GetPendingMigrations().Any())
+    var authContext = scope.ServiceProvider.GetRequiredService<AuthenticationSystemContext>();
+    if (authContext.Database.GetPendingMigrations().Any())
     {
-        context.Database.Migrate();
+        authContext.Database.Migrate();
     }
-    DbInitializer.Seed(context);
+    DbInitializer.Seed(authContext);
+
+    var attContext = scope.ServiceProvider.GetRequiredService<AttendanceSystemContext>();
+    if (attContext.Database.GetPendingMigrations().Any())
+    {
+        attContext.Database.Migrate();
+    }
+
+    var hrContext = scope.ServiceProvider.GetRequiredService<HrSystemContext>();
+    if (hrContext.Database.GetPendingMigrations().Any())
+    {
+        hrContext.Database.Migrate();
+    }
+
+    var payrollContext = scope.ServiceProvider.GetRequiredService<PayrollSystemContext>();
+    if (payrollContext.Database.GetPendingMigrations().Any())
+    {
+        payrollContext.Database.Migrate();
+    }
 }
 
 // Configure the HTTP request pipeline.

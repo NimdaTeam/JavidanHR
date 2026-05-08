@@ -28,6 +28,7 @@ using System.Globalization;
 using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.AspNetCore.Routing.Constraints;
 using WebHost.PageSecurity;
 using WebHost.Utilities;
 using static System.Net.WebRequestMethods;
@@ -354,15 +355,15 @@ namespace JavidanHR.WebHost.Controllers
         [Permission(SystemPermissions.PermissionList.AttendanceLiveStatus)]
         public async Task<IActionResult> AttendanceLiveStatus()
         {
-            var apiRequest = new AttendanceRecordsWithRangeRequest()
+            var apiRequest = new FullAttendanceReportRequest()
             {
                 From = DateTime.Now.GetStartOfDate(),
                 To = DateTime.Now.GetEndOfDate()
             };
 
-            var result = await _attendanceSystemApiHelper.GetRangeApiResult(apiRequest);
+            var result = await _attendanceSystemApiHelper.GetFullAttendanceReport(apiRequest);
 
-            if (result.ApiResult.Result != "success")
+            if (result is null || result.Status != "success")
             {
                 ShowNotification(ApplicationMessages.OperationFailed, "", ApplicationMessagesIcon.ErrorIcon);
                 return SmartRedirect(_ctx.Context.ReturnUrl);
@@ -370,10 +371,10 @@ namespace JavidanHR.WebHost.Controllers
 
             var pageModel = new List<LiveAttendanceStatusVM>();
 
-            if (result.Data is null || !result.Data.Items.Any())
+            if (!result.Data.Any())
                 return View(new List<LiveAttendanceStatusVM>());
 
-            foreach (var item in result.Data.Items)
+            foreach (var item in result.Data)
             {
                 long.TryParse(item.PersonalCode, out long userId);
                 var user = await _employeeService.SingleOrDefaultByCondition(x => x.UserId == userId);
@@ -383,44 +384,23 @@ namespace JavidanHR.WebHost.Controllers
                     continue;
                 }
 
-                if (pageModel.All(x => x.UserId != user.UserId))
+                var trafficItems = item.Sessions;
+                pageModel.Add(new LiveAttendanceStatusVM()
                 {
-                    pageModel.Add(new LiveAttendanceStatusVM()
+                    FullName = user.GetFullName(),
+                    UserAvatar = user.ProfileImageUrl ?? "",
+                    UserId = user.UserId,
+                    IsPresent = false,
+                    TrafficItems = trafficItems.Select(x => new EmployeeMonthlyAttendanceReportItemTrafficItem()
                     {
-                        FullName = user.GetFullName(),
-                        UserAvatar = user.ProfileImageUrl ?? "",
-                        UserId = user.UserId,
-                        IsPresent = false,
-                        TrafficItems =
-                        [
-                            new EmployeeMonthlyAttendanceReportItemTrafficItem()
-                            {
-                                InDateTime = item.InDateTime,
-                                IsInManual = bool.Parse(item.IsInManual),
+                        InDateTime = !string.IsNullOrWhiteSpace(x.InTime) ? DateTime.Parse(x.InTime) : null,
+                        IsInManual = x.IsManualIn,
 
-                                OutDateTime = item.OutDateTime,
-                                IsOutManual = bool.Parse(item.IsOutManual),
-                                TotalDuration = item.DurationMinutes
-                            }
-                        ]
-                    });
-                }
-                else
-                {
-                    var foundRecord = pageModel.FirstOrDefault(x => x.UserId == item.UserId);
-                    if (foundRecord is null)
-                        continue;
-
-                    foundRecord.TrafficItems.Add(new EmployeeMonthlyAttendanceReportItemTrafficItem()
-                    {
-                        InDateTime = item.InDateTime,
-                        IsInManual = bool.Parse(item.IsInManual),
-
-                        OutDateTime = item.OutDateTime,
-                        IsOutManual = bool.Parse(item.IsOutManual),
-                        TotalDuration = item.DurationMinutes
-                    });
-                }
+                        OutDateTime = !string.IsNullOrWhiteSpace(x.OutTime) ? DateTime.Parse(x.OutTime) : null,
+                        IsOutManual = x.IsManualOut,
+                        TotalDuration = x.DurationMinutes
+                    }).ToList()
+                });
             }
 
             foreach (var item in pageModel.Where(item => item.TrafficItems.Any() &&
@@ -537,7 +517,7 @@ namespace JavidanHR.WebHost.Controllers
 
             var request = new ManualAttendanceRequest()
             {
-                PersonalCode = item.UserId,
+                PersonalCode = item.UserId.ToString(),
                 WorkDate = item.WorkDate.ToString(),
                 TimesString = $"{item.EntranceTime},{item.ExitTime}",
                 ReasonId = 6,
@@ -561,7 +541,7 @@ namespace JavidanHR.WebHost.Controllers
         [Route("EditDateAttendanceRecords/{userId}")]
         public async Task<IActionResult> EditDateAttendanceRecords(long userId, DateTime workDate)
         {
-            var apiRequest = new AttendanceRecordsWithRangeRequest();
+            var apiRequest = new FullAttendanceReportRequest();
 
             var user = await _userService.GetAsNoTrackingAsync(userId);
             var currentUser = await _userService.GetUserByPhoneNumber(CurrentUsername());
@@ -593,9 +573,9 @@ namespace JavidanHR.WebHost.Controllers
             apiRequest.PersonalCode = user.Id.ToString();
 
 
-            var result = await _attendanceSystemApiHelper.GetRangeApiResult(apiRequest);
+            var result = await _attendanceSystemApiHelper.GetFullAttendanceReport(apiRequest);
 
-            if (result.ApiResult.Result != "success")
+            if (result == null || result.Status != "success")
             {
                 ShowNotification(ApplicationMessages.OperationFailed, "", ApplicationMessagesIcon.ErrorIcon);
                 return SmartRedirect(_ctx.Context.ReturnUrl);
@@ -607,17 +587,36 @@ namespace JavidanHR.WebHost.Controllers
             ViewBag.date = workDate;
             #endregion
 
-            if (result.Data is null || !result.Data.Items.Any())
+            if (!result.Data.Any())
                 return View(new EditAttendanceRecordsVM()
                 {
                     UserId = user.Id,
                     LogItems = []
                 });
 
+            var trafficItems = result.Data.FirstOrDefault()?.Sessions;
+
             return View(new EditAttendanceRecordsVM()
             {
                 UserId = user.Id,
-                LogItems = result.Data.Items.ToList()
+                LogItems = trafficItems.Select(x => new AttendanceLogItem()
+                {
+                    DurationMinutes = x.DurationMinutes,
+                    InDateTime = !string.IsNullOrWhiteSpace(x.InTime) ? DateTime.Parse(x.InTime) : null,
+                    BuiltAt = DateTime.Now,
+                    IsActive = "true",
+                    IsIncomplete = x.IsIncomplete.ToString(),
+                    IsOutManual = x.IsManualOut.ToString(),
+                    IsInManual = x.IsManualIn.ToString(),
+                    OutDateTime = !string.IsNullOrWhiteSpace(x.OutTime) ? DateTime.Parse(x.OutTime) : null,
+                    PersonalCode = result.Data.FirstOrDefault()?.PersonalCode ?? "-",
+                    SessionId = 0,
+                    Source = x.Source,
+                    UserId = user.Id,
+                    UserFullName = user.FullName,
+                    UserAvatar = "",
+                    WorkDate = workDate.GetStartOfDay()
+                }).ToList()
             });
         }
 
@@ -637,7 +636,7 @@ namespace JavidanHR.WebHost.Controllers
                 {
                     NotificationSystem.ShowNotification(TempData, ApplicationMessages.NotFound, "",
                         ApplicationMessagesIcon.ErrorIcon);
-                    return RedirectToAction("Login","Account");
+                    return RedirectToAction("Login", "Account");
                 }
 
                 var itemsToSendToAttendanceServerDateTimeList = new List<DateTime?>();
@@ -656,17 +655,17 @@ namespace JavidanHR.WebHost.Controllers
                 {
                     ShowNotification(ApplicationMessages.MalformedInput, "", ApplicationMessagesIcon.ErrorIcon);
 
-                    return RedirectToAction(currentUser.Id == user.Id ? "MyManualRequests" : "AllManualRequests");   
+                    return RedirectToAction(currentUser.Id == user.Id ? "MyManualRequests" : "AllManualRequests");
                 }
 
                 #region Submit Manual Attendance Request By Admin
+                var permissionGranted =
+                    await _roleService.CheckPermission(
+                        (long)SystemPermissions.PermissionList.AttendanceEditDateRecords,
+                        currentUser.Id);
 
-                if (user.Id != currentUser.Id)
+                if (user.Id != currentUser.Id || (user.Id == currentUser.Id && permissionGranted))
                 {
-                    var permissionGranted =
-                        await _roleService.CheckPermission(
-                            (long)SystemPermissions.PermissionList.AttendanceEditDateRecords,
-                            currentUser.Id);
 
                     if (!permissionGranted)
                     {
@@ -677,8 +676,8 @@ namespace JavidanHR.WebHost.Controllers
 
                     var request = new ManualAttendanceRequest()
                     {
-                        PersonalCode = user.Id,
-                        WorkDate = workDate.ToString(),
+                        PersonalCode = user.Id.ToString(),
+                        WorkDate = workDate.ToString("yyyy-MM-dd"),
                         TimesString = string.Join(",",
                             itemsToSendToAttendanceServerDateTimeList.Select(x =>
                                 new string($"{x.Value.Hour:00}:{x.Value.Minute:00}"))),
@@ -760,7 +759,7 @@ namespace JavidanHR.WebHost.Controllers
                     }
                 }
 
-                var apiRequest = new AttendanceRecordsWithRangeRequest();
+                var apiRequest = new FullAttendanceReportRequest();
 
                 var isDateValid = DateTime.TryParse(workDate, out var validDate);
 
@@ -773,14 +772,14 @@ namespace JavidanHR.WebHost.Controllers
                 apiRequest.To = validDate.GetEndOfDate();
                 apiRequest.PersonalCode = user.Id.ToString();
 
-                var result = await _attendanceSystemApiHelper.GetRangeApiResult(apiRequest);
+                var result = await _attendanceSystemApiHelper.GetFullAttendanceReport(apiRequest);
 
                 if (result.Data is null)
                 {
                     return Json(new { success = false, message = "خطا در دریافت اطلاعات" });
                 }
 
-                return Json(new { success = true, data = result.Data.Items });
+                return Json(new { success = true, data = result.Data.FirstOrDefault()?.Sessions });
             }
             catch (Exception e)
             {
@@ -869,7 +868,7 @@ namespace JavidanHR.WebHost.Controllers
                     if (isThursday)
                     {
 
-                        overtimeMinutes += item.TotalPresentMins - 0; //pending over time;
+                        overtimeMinutes += item.TotalPresentMins - item.PendingOtMins; //pending over time;
                     }
                     else
                     {
@@ -971,7 +970,7 @@ namespace JavidanHR.WebHost.Controllers
         [Permission(SystemPermissions.PermissionList.AttendanceApproveManualRequest)]
         public async Task<IActionResult> ApproveManualRequest(long reqId)
         {
-            var rangeApiRequest = new AttendanceRecordsWithRangeRequest();
+            var rangeApiRequest = new FullAttendanceReportRequest();
 
             var request = await _manualAttendanceRequestService.GetById(reqId);
             if (request == null)
@@ -996,22 +995,26 @@ namespace JavidanHR.WebHost.Controllers
             rangeApiRequest.To = workDate.GetEndOfDate();
             rangeApiRequest.PersonalCode = request.UserId.ToString();
 
-            var currentItems = await _attendanceSystemApiHelper.GetRangeApiResult(rangeApiRequest);
+            var currentItems = await _attendanceSystemApiHelper.GetFullAttendanceReport(rangeApiRequest);
 
-            if (currentItems.ApiResult.Result != "success")
+            if (currentItems is null || currentItems.Status != "success")
             {
                 ShowNotification(ApplicationMessages.OperationFailed, "", ApplicationMessagesIcon.ErrorIcon);
                 return RedirectToAction("AllManualRequests");
             }
 
-            if (currentItems.Data != null)
+            if (currentItems.Data.Any())
             {
-                foreach (var item in currentItems.Data.Items)
+                var dayInfo = currentItems.Data.First();
+                foreach (var item in dayInfo.Sessions)
                 {
-                    if (item.InDateTime == null || item.OutDateTime == null)
+                    if (item.InTime == null || item.OutTime == null)
                         continue;
 
-                    itemsToSendToAttendanceServerDateTimeList.AddRange([item.InDateTime, item.OutDateTime]);
+                    DateTime.TryParse(item.InTime, out var inTime);
+                    DateTime.TryParse(item.OutTime, out var outTime);
+
+                    itemsToSendToAttendanceServerDateTimeList.AddRange([inTime, outTime]);
                 }
             }
 
@@ -1032,8 +1035,8 @@ namespace JavidanHR.WebHost.Controllers
             #region Submit Manual Attendance Request By Admin
             var manualRequest = new ManualAttendanceRequest()
             {
-                PersonalCode = request.UserId,
-                WorkDate = workDate.ToString(),
+                PersonalCode = request.UserId.ToString(),
+                WorkDate = workDate.ToString("yyyy-MM-dd"),
                 TimesString = string.Join(",",
                     itemsToSendToAttendanceServerDateTimeList.Select(x =>
                         new string($"{x.Value.Hour:00}:{x.Value.Minute:00}"))),
@@ -1086,37 +1089,41 @@ namespace JavidanHR.WebHost.Controllers
                 var workDate = request.AttendanceDate.Date;
                 var itemsToSendToAttendanceServerDateTimeList = new List<DateTime?>();
 
-                var rangeApiRequest = new AttendanceRecordsWithRangeRequest
+                var rangeApiRequest = new FullAttendanceReportRequest()
                 {
                     From = workDate.GetStartOfDate(),
                     To = workDate.GetEndOfDate(),
                     PersonalCode = request.UserId.ToString()
                 };
 
-                var currentItems = await _attendanceSystemApiHelper.GetRangeApiResult(rangeApiRequest);
+                var currentItems = await _attendanceSystemApiHelper.GetFullAttendanceReport(rangeApiRequest);
 
-                if (currentItems.ApiResult.Result != "success")
+                if (currentItems is null || currentItems.Status != "success")
                 {
                     ShowNotification(ApplicationMessages.OperationFailed, "", ApplicationMessagesIcon.ErrorIcon);
                     return RedirectToAction("AllManualRequests");
                 }
 
-                if (currentItems.Data != null)
+                if (currentItems.Data.Any())
                 {
-                    foreach (var item in currentItems.Data.Items)
+                    var data = currentItems.Data.First();
+                    foreach (var item in data.Sessions)
                     {
-                        if (item.InDateTime == null || item.OutDateTime == null)
+                        if (item.InTime == null || item.OutTime == null)
                             continue;
 
-                        var inDateTime = $"{item.InDateTime.Value.Hour:00}:{item.InDateTime.Value.Minute:00}";
-                        var outDateTime = $"{item.OutDateTime.Value.Hour:00}:{item.OutDateTime.Value.Minute:00}";
+                        DateTime.TryParse(item.InTime, out var inTime);
+                        DateTime.TryParse(item.OutTime, out var outTime);
+
+                        var inDateTime = $"{inTime.Hour:00}:{inTime.Minute:00}";
+                        var outDateTime = $"{outTime.Hour:00}:{outTime.Minute:00}";
 
                         if (request.AttendanceTimes.Any(x => x == inDateTime) ||
                             request.AttendanceTimes.Any(x => x == outDateTime))
                         {
                             continue;
                         }
-                        itemsToSendToAttendanceServerDateTimeList.AddRange([item.InDateTime, item.OutDateTime]);
+                        itemsToSendToAttendanceServerDateTimeList.AddRange([inTime, outTime]);
                     }
                 }
 
@@ -1131,7 +1138,7 @@ namespace JavidanHR.WebHost.Controllers
                 #region Submit Manual Attendance Request By Admin
                 var manualRequest = new ManualAttendanceRequest()
                 {
-                    PersonalCode = request.UserId,
+                    PersonalCode = request.UserId.ToString(),
                     WorkDate = workDate.ToString(),
                     TimesString = string.Join(",",
                         itemsToSendToAttendanceServerDateTimeList.Select(x =>
@@ -1180,11 +1187,11 @@ namespace JavidanHR.WebHost.Controllers
             var currentUser = await _userService.GetUserByPhoneNumber(CurrentUsername());
             if (currentUser == null)
             {
-                ShowNotification(ApplicationMessages.SessionExpired,"",ApplicationMessagesIcon.ErrorIcon);
+                ShowNotification(ApplicationMessages.SessionExpired, "", ApplicationMessagesIcon.ErrorIcon);
                 return SmartRedirect(_ctx.Context.ReturnUrl);
             }
 
-            var allRequests = await _manualAttendanceRequestService.GetByCondition(x=>x.UserId == currentUser.Id);
+            var allRequests = await _manualAttendanceRequestService.GetByCondition(x => x.UserId == currentUser.Id);
 
             var filteredRequests = allRequests.AsEnumerable();
 
@@ -1216,7 +1223,7 @@ namespace JavidanHR.WebHost.Controllers
             var request = await _manualAttendanceRequestService.GetById(reqId);
             if (request is null)
             {
-                ShowNotification(ApplicationMessages.NotFound,"",ApplicationMessagesIcon.ErrorIcon);
+                ShowNotification(ApplicationMessages.NotFound, "", ApplicationMessagesIcon.ErrorIcon);
                 return SmartRedirect(_ctx.Context.ReturnUrl);
             }
 
@@ -1226,12 +1233,12 @@ namespace JavidanHR.WebHost.Controllers
             if (requestUser is null || currentUser is null)
             {
                 ShowNotification(ApplicationMessages.NotFound, "", ApplicationMessagesIcon.ErrorIcon);
-                return RedirectToAction("Login","Account");
+                return RedirectToAction("Login", "Account");
             }
 
             if (request.Status != RequestStatus.Pending)
             {
-                ShowNotification("امکان حذف درخواست تأیید/رد شده وجود ندارد","",ApplicationMessagesIcon.ErrorIcon);
+                ShowNotification("امکان حذف درخواست تأیید/رد شده وجود ندارد", "", ApplicationMessagesIcon.ErrorIcon);
                 return RedirectToAction(currentUser.Id == requestUser.Id ? "MyManualRequests" : "AllManualRequests");
             }
 
@@ -1244,7 +1251,7 @@ namespace JavidanHR.WebHost.Controllers
 
                 if (!permissionGranted)
                 {
-                    ShowNotification(ApplicationMessages.AccessDenied,"",ApplicationMessagesIcon.ErrorIcon);
+                    ShowNotification(ApplicationMessages.AccessDenied, "", ApplicationMessagesIcon.ErrorIcon);
                     return RedirectToAction(currentUser.Id == requestUser.Id ? "MyManualRequests" : "AllManualRequests");
                 }
             }

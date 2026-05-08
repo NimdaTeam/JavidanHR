@@ -112,7 +112,7 @@ namespace AttendanceSystem.Infrastructure.Dto
 
         public string Reason { get; set; }
 
-        public List<AttendanceLogItem> LogItems { get; set; } = [];
+        public List<AttendanceLogItem>? LogItems { get; set; } = [];
     }
 
     public class EditAttendanceRecordVM
@@ -289,6 +289,9 @@ namespace AttendanceSystem.Infrastructure.Dto
         [JsonPropertyName("approved_ot_mins")]
         public int ApprovedOtMins { get; set; }
 
+        [JsonPropertyName("pending_ot_mins")]
+        public int PendingOtMins { get; set; }
+
         [JsonPropertyName("physical_extra_mins")]
         public int PhysicalExtraMins { get; set; }
 
@@ -422,7 +425,7 @@ namespace AttendanceSystem.Infrastructure.Dto
     public class ManualAttendanceRequest
     {
         [JsonPropertyName("personal_code")]
-        public long PersonalCode { get; set; }
+        public string PersonalCode { get; set; }
 
         [JsonPropertyName("work_date")]
         public string WorkDate { get; set; }
@@ -433,7 +436,7 @@ namespace AttendanceSystem.Infrastructure.Dto
         [JsonPropertyName("reason_id")]
         public int ReasonId { get; set; }
 
-        [JsonPropertyName("description")]
+        [JsonPropertyName("description_base")]
         public string Description { get; set; }
 
         [JsonPropertyName("created_by_id")]
