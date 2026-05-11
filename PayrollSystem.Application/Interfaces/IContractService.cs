@@ -19,8 +19,10 @@ namespace PayrollSystem.Application.Interfaces
         Task<bool> TerminateContractAsync(long contractId, DateTime terminationDate, CancellationToken cancellationToken = default);
         Task<List<Contract>> GetAllContractsAsync(CancellationToken cancellationToken = default);
 
-        Task<bool> UpdateContractAsync(UpdateContractDto dto, CancellationToken cancellationToken = default);
-        Task<bool> ActivateContractAsync(long contractId, CancellationToken cancellationToken = default);
+        Task<ContractDto?> GetContractForEditAsync(int id, CancellationToken cancellationToken = default);
+        Task<bool> UpdateContractAsync(EditContractDto dto, CancellationToken cancellationToken = default);
+
+		Task<bool> ActivateContractAsync(long contractId, CancellationToken cancellationToken = default);
         Task<bool> DeactivateContractAsync(long contractId, CancellationToken cancellationToken = default);
         Task<bool> DeleteContractAsync(long contractId, CancellationToken cancellationToken = default);
     }

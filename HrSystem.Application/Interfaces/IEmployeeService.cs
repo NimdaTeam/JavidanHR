@@ -10,6 +10,9 @@ namespace HrSystem.Application.Interfaces
         Task<Employee?> GetById(long id);
         Task<List<Employee>> GetAll();
         Task<List<Employee>> GetByCondition(Expression<Func<Employee, bool>> expression);
+
+        Task<List<Employee>> GetEmployeesByWorkshopIdAsync(long workshopId,CancellationToken cancellationToken = default);
+
         Task<Employee?> SingleOrDefaultByCondition(Expression<Func<Employee, bool>> expression);
 
         Task<bool> IsExist(string employeeCode, string nationalCode);

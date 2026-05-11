@@ -81,7 +81,7 @@ namespace PayrollSystem.Application.Services
             var context = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
             foreach (var kv in employeeData.PayItems)
             {
-                var payItem = await _payItemRepository.GetAsNoTrackingAsync(kv.PayItemId, cancellationToken);
+                var payItem = await _payItemRepository.GetAsNoTrackingAsync((long)kv.PayItemId, cancellationToken); //todo check long or long ?
                 if (payItem is null)
                     continue;
 
@@ -272,7 +272,7 @@ namespace PayrollSystem.Application.Services
             var context = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
             foreach (var kv in employeeData.PayItems)
             {
-                var payItem = await _payItemRepository.GetAsNoTrackingAsync(kv.PayItemId, cancellationToken);
+                var payItem = await _payItemRepository.GetAsNoTrackingAsync((long)kv.PayItemId, cancellationToken); //todo check long or long ?
                 if (payItem is null)
                     continue;
 

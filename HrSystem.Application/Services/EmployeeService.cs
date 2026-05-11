@@ -48,6 +48,11 @@ namespace HrSystem.Application.Services
             return await _employeeRepository.GetAllByConditionAsync(expression);
         }
 
+        public async Task<List<Employee>> GetEmployeesByWorkshopIdAsync(long workshopId, CancellationToken cancellationToken = default)
+        {
+            return await GetByCondition(x => x.WorkShopId == workshopId);
+        }
+
         public async Task<Employee?> SingleOrDefaultByCondition(Expression<Func<Employee, bool>> expression)
         {
             return await _employeeRepository.SingleOrDefaultByConditionAsync(expression);
@@ -175,6 +180,7 @@ namespace HrSystem.Application.Services
                 var model = new Step1PersonalVM
                 {
                     Id = emp.Id,
+                    WorkshopId = emp.WorkShopId,
                     IsUpdating = true,
                     EmployeeCode = emp.EmployeeCode,
                     FirstName = emp.FirstName ?? "",
@@ -250,6 +256,7 @@ namespace HrSystem.Application.Services
                     MobilePhone = model.MobilePhone?.SanitizeString() ?? "",
                     IdIssuePlace = model.IdIssuePlace?.SanitizeString() ?? "",
                     HomePhone = model.HomePhone?.SanitizeString() ?? "",
+                    WorkShopId = model.WorkshopId
                 });
 
                 if (!status)
@@ -352,6 +359,8 @@ namespace HrSystem.Application.Services
                 employee.MobilePhone = emp.MobilePhone?.SanitizeString() ?? "";
                 employee.IdIssuePlace = emp.IdIssuePlace?.SanitizeString() ?? "";
                 employee.HomePhone = emp.HomePhone?.SanitizeString() ?? "";
+
+                employee.WorkShopId = emp.WorkshopId;
 
 
 

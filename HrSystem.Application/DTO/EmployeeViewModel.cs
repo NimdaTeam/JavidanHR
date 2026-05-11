@@ -13,13 +13,21 @@ using _0_Framework.Utilities.Helpers;
 
 namespace HrSystem.Application.DTO
 {
+    public class EmployeeWorkshopListItem
+    {
+        public long Id { get; set; }
+        public string Name { get; set; }
+        public bool IsSelected { get; set; }
+    }
+
     public class Step1PersonalVM
     {
         public long? UserId { get; set; }
         public long? Id { get; set; }
         public bool IsUpdating { get; set; } = false;
 
-
+        //workshop
+        [Required] public long? WorkshopId { get; set; }
 
         // هویتی
         [Required] public string EmployeeCode { get; set; } = null!;

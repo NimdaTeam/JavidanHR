@@ -1,7 +1,9 @@
-﻿using HrSystem.Application.Interfaces;
+﻿using DNTPersianUtils.Core;
+using HrSystem.Application.Interfaces;
 using Microsoft.Extensions.Logging;
 using PayrollSystem.Application.DTOs;
 using PayrollSystem.Application.Interfaces;
+using PayrollSystem.Domain.Common;
 using PayrollSystem.Domain.Entities.Contract;
 using PayrollSystem.Domain.Interfaces.Contract;
 using PayrollSystem.Domain.Interfaces.PayItem;
@@ -16,14 +18,16 @@ public class ContractService : IContractService
     private readonly IPayItemRepository _payItemRepo;
     private readonly ILogger<ContractService> _logger;
     private readonly IEmployeeService _employeeService;
+    private readonly IPayItemService _payItemService;
 
-    public ContractService(IContractRepository contractRepo, IWorkshopRepository workshopRepo, IPayItemRepository payItemRepo, ILogger<ContractService> logger, IEmployeeService employeeService)
+    public ContractService(IContractRepository contractRepo, IWorkshopRepository workshopRepo, IPayItemRepository payItemRepo, ILogger<ContractService> logger, IEmployeeService employeeService, IPayItemService payItemService)
     {
         _contractRepo = contractRepo;
         _workshopRepo = workshopRepo;
         _payItemRepo = payItemRepo;
         _logger = logger;
         _employeeService = employeeService;
+        _payItemService = payItemService;
     }
 
     public async Task<List<ContractDto>> GetAllContractsWithDtoAsync(CancellationToken cancellationToken = default)
@@ -48,31 +52,98 @@ public class ContractService : IContractService
         return list;
     }
 
-    public async Task<ContractDto?> CreateContractAsync(CreateContractDto dto, CancellationToken cancellationToken = default)
-    {
-        // Check workshop exists
-        var workshop = await _workshopRepo.GetAsync(dto.WorkshopId, cancellationToken);
-        if (workshop == null) throw new ArgumentException("Workshop not found");
 
-        // Check overlap
-        var overlap = await _contractRepo.HasOverlapAsync(dto.EmployeeId, dto.ValidFromDate, dto.ValidToDate, null, cancellationToken);
-        if (overlap) throw new InvalidOperationException("Contract dates overlap with existing contract.");
+	public async Task<ContractDto?> CreateContractAsync(CreateContractDto dto, CancellationToken cancellationToken = default)
+	{
+		// ─────────────────────────────────────────────────────────────────
+		// Validate workshop exists
+		// ─────────────────────────────────────────────────────────────────
+		var workshop = await _workshopRepo.GetAsync(dto.WorkshopId, cancellationToken);
+		if (workshop == null)
+			throw new ArgumentException("کارگاه پیدا نشد");
 
-        var contract = new Contract(dto.EmployeeId, dto.WorkshopId, dto.ValidFromDate, dto.ValidToDate);
+		// ─────────────────────────────────────────────────────────────────
+		// Convert Jalali dates to Gregorian
+		// ─────────────────────────────────────────────────────────────────
+		var validFromDate = dto.ValidFromDateJalali.ToGregorianDateTime();
+		var validToDate = dto.ValidToDateJalali.ToGregorianDateTime();
 
-        var result = await _contractRepo.ExecuteInTransactionAsync(async () =>
-        {
-            await _contractRepo.AddAsync(contract, cancellationToken);
-            return await _contractRepo.SaveChangesAsync(cancellationToken);
-        }, cancellationToken);
+		// ─────────────────────────────────────────────────────────────────
+		// Check for overlapping contracts
+		// ─────────────────────────────────────────────────────────────────
+		var overlap = await _contractRepo.HasOverlapAsync(
+			dto.EmployeeId,
+			(DateTime)validFromDate!,
+			validToDate,
+			null,
+			cancellationToken);
 
-        if (!result)
-            return null;
+		if (overlap)
+			throw new InvalidOperationException("تاریخ قرارداد با قرارداد های دیگر کارمند تداخل دارد.");
 
-        return await MapToDto(contract, cancellationToken);
-    }
+		// ─────────────────────────────────────────────────────────────────
+		// Create contract entity (outside transaction)
+		// ─────────────────────────────────────────────────────────────────
+		var contract = new Contract(
+			dto.EmployeeId,
+			dto.WorkshopId,
+			(DateTime)validFromDate,
+			validToDate);
 
-    public async Task<ContractDto?> GetContractByIdAsync(long id, CancellationToken cancellationToken = default)
+		// ─────────────────────────────────────────────────────────────────
+		// Execute in transaction (reuse the same contract object)
+		// ─────────────────────────────────────────────────────────────────
+		var result = await _contractRepo.ExecuteInTransactionAsync(async () =>
+		{
+			// Step 1: Add contract
+			await _contractRepo.AddAsync(contract, cancellationToken);
+
+			// Step 2: Save to get contract.Id
+			var saved = await _contractRepo.SaveChangesAsync(cancellationToken);
+			if (!saved)
+				return false;
+
+			// Step 3: Now add pay items (contract.Id is valid now)
+			foreach (var payItemDto in dto.PayItems)
+			{
+				if (payItemDto.IsSystemItem)
+				{
+					if (!PayItemConstants.IsCodeExist(payItemDto.SystemCode!))
+						throw new InvalidOperationException($"عامل سیستمی با کد {payItemDto.SystemCode} یافت نشد");
+
+					contract.AddSystemPayItem(payItemDto.SystemCode!, payItemDto.Value);
+				}
+				else
+				{
+					if (!payItemDto.PayItemId.HasValue)
+						throw new ArgumentException("شناسه عامل حقوقی الزامی است");
+
+					var payItem = await _payItemService.GetPayItemByIdAsync(
+						payItemDto.PayItemId.Value,
+						cancellationToken);
+
+					if (payItem == null)
+						throw new ArgumentException($"عامل حقوقی با شناسه {payItemDto.PayItemId} یافت نشد");
+
+					contract.AddPayItem(payItemDto.PayItemId.Value, payItemDto.Value);
+				}
+			}
+
+			// Step 4: Save pay items
+			var payItemsSaved = await _contractRepo.SaveChangesAsync(cancellationToken);
+			return true;
+
+		}, cancellationToken);
+
+		if (!result)
+			return null;
+
+		// Now contract has Id and pay items loaded
+		return await MapToDto(contract, cancellationToken);
+	}
+
+
+	public async Task<ContractDto?> GetContractByIdAsync(long id, CancellationToken cancellationToken = default)
     {
         var contract = await _contractRepo.GetWithPayItemsAsync(id, cancellationToken);
         if (contract == null) return null;
@@ -136,45 +207,181 @@ public class ContractService : IContractService
         return await _contractRepo.GetAllWithIncludesAsync(null, null, cancellationToken, x => x.PayItems);
     }
 
-    /// <summary>
-    /// Update contract basic information
-    /// </summary>
-    public async Task<bool> UpdateContractAsync(
-        UpdateContractDto dto,
-        CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            var contract = await _contractRepo.GetAsync(dto.Id, cancellationToken);
-            if (contract == null)
-            {
-                return false;
-            }
+	public async Task<ContractDto?> GetContractForEditAsync(int id, CancellationToken cancellationToken = default)
+	{
+		var contract = await _contractRepo.GetWithIncludesAsync(id, cancellationToken,x=>x.PayItems);
+		if (contract == null)
+			return null;
 
-            // Update dates
-            contract.UpdateValidFromDate(dto.ValidFromDate);
+		return await MapToDto(contract, cancellationToken);
+	}
 
-            if (dto.ValidToDate.HasValue)
-            {
-                contract.UpdateValidToDate(dto.ValidToDate);
-            }
+	public async Task<bool> UpdateContractAsync(EditContractDto dto, CancellationToken cancellationToken = default)
+	{
+		// ─────────────────────────────────────────────────────────────────
+		// Fetch existing contract with its pay items
+		// ─────────────────────────────────────────────────────────────────
+		var contract = await _contractRepo.GetWithIncludesAsync(dto.Id, cancellationToken, x => x.PayItems);
+		if (contract == null)
+			throw new ArgumentException("قرارداد یافت نشد");
 
-            await _contractRepo.UpdateAsync(contract, cancellationToken);
-            await _contractRepo.SaveChangesAsync(cancellationToken);
+		// ─────────────────────────────────────────────────────────────────
+		// Convert Jalali dates
+		// ─────────────────────────────────────────────────────────────────
+		var validFromDate = dto.ValidFromDateJalali.ToGregorianDateTime();
+		var validToDate = dto.ValidToDateJalali.ToGregorianDateTime();
 
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error updating contract {ContractId}", dto.Id);
-            return false;
-        }
-    }
+		// ─────────────────────────────────────────────────────────────────
+		// Check for overlap (excluding current contract)
+		// ─────────────────────────────────────────────────────────────────
+		var overlap = await _contractRepo.HasOverlapAsync(
+			contract.EmployeeId,
+			(DateTime)validFromDate!,
+			validToDate,
+			contract.Id, // exclude current contract
+			cancellationToken);
 
-    /// <summary>
-    /// Activate contract
-    /// </summary>
-    public async Task<bool> ActivateContractAsync(long contractId, CancellationToken cancellationToken = default)
+		if (overlap)
+			throw new InvalidOperationException("تاریخ قرارداد با قرارداد فعال دیگری تداخل دارد.");
+
+		// ─────────────────────────────────────────────────────────────────
+		// Update contract basic info
+		// ─────────────────────────────────────────────────────────────────
+		contract.UpdateValidFromDate((DateTime)validFromDate);
+		contract.UpdateValidToDate(validToDate);
+
+		// ─────────────────────────────────────────────────────────────────
+		// Update pay items in transaction
+		// ─────────────────────────────────────────────────────────────────
+		var result = await _contractRepo.ExecuteInTransactionAsync(async () =>
+		{
+			// ─────────────────────────────────────────────────────────────
+			// Step 1: Build lookup sets for comparison
+			// ─────────────────────────────────────────────────────────────
+
+			// Current items in database (both types)
+			var currentDbItemIds = contract.PayItems
+				.Where(pi => pi.PayItemId.HasValue)
+				.Select(pi => pi.Id)
+				.ToHashSet();
+
+			var currentSystemCodes = contract.PayItems
+				.Where(pi => !string.IsNullOrEmpty(pi.SystemCode))
+				.Select(pi => pi.SystemCode!)
+				.ToHashSet();
+
+			// Updated items from DTO (not deleted)
+			var updatedDbItemIds = dto.PayItems
+				.Where(pi => pi.Id.HasValue && !pi.IsDeleted && !pi.IsSystemItem)
+				.Select(pi => pi.Id!.Value)
+				.ToHashSet();
+
+			var updatedSystemCodes = dto.PayItems
+				.Where(pi => !pi.IsDeleted && pi.IsSystemItem)
+				.Select(pi => pi.SystemCode!)
+				.ToHashSet();
+
+			// ─────────────────────────────────────────────────────────────
+			// Step 2: Remove items that are deleted or not in updated list
+			// ─────────────────────────────────────────────────────────────
+
+			// Remove database pay items
+			var dbItemsToRemove = contract.PayItems
+				.Where(pi => pi.PayItemId.HasValue && !updatedDbItemIds.Contains(pi.Id))
+				.ToList();
+
+			foreach (var payItem in dbItemsToRemove)
+			{
+				contract.RemovePayItem(payItem.PayItemId!.Value);
+			}
+
+			// Remove system pay items
+			var systemItemsToRemove = contract.PayItems
+				.Where(pi => !string.IsNullOrEmpty(pi.SystemCode) && !updatedSystemCodes.Contains(pi.SystemCode!))
+				.ToList();
+
+			foreach (var payItem in systemItemsToRemove)
+			{
+				contract.RemoveSystemPayItem(payItem.SystemCode!);
+			}
+
+			// ─────────────────────────────────────────────────────────────
+			// Step 3: Add or update pay items
+			// ─────────────────────────────────────────────────────────────
+			foreach (var itemDto in dto.PayItems)
+			{
+				if (itemDto.IsDeleted)
+					continue;
+
+				if (itemDto.IsSystemItem)
+				{
+					// ─────────────────────────────────────────────────────
+					// Handle system pay item
+					// ─────────────────────────────────────────────────────
+					if (!PayItemConstants.IsCodeExist(itemDto.SystemCode!))
+						throw new InvalidOperationException($"عامل سیستمی با کد {itemDto.SystemCode} یافت نشد");
+
+					var existingSystemItem = contract.PayItems
+						.FirstOrDefault(pi => pi.SystemCode == itemDto.SystemCode);
+
+					if (existingSystemItem != null)
+					{
+						// Update existing system item
+						existingSystemItem.UpdateValue(itemDto.Value);
+					}
+					else
+					{
+						// Add new system item
+						contract.AddSystemPayItem(itemDto.SystemCode!, itemDto.Value);
+					}
+				}
+				else
+				{
+					// ─────────────────────────────────────────────────────
+					// Handle database pay item
+					// ─────────────────────────────────────────────────────
+					if (!itemDto.PayItemId.HasValue)
+						throw new ArgumentException("شناسه عامل حقوقی الزامی است");
+
+					if (itemDto.Id.HasValue)
+					{
+						// Update existing database pay item
+						var existing = contract.PayItems.FirstOrDefault(pi => pi.Id == itemDto.Id.Value);
+						if (existing != null)
+						{
+							existing.UpdateValue(itemDto.Value);
+						}
+					}
+					else
+					{
+						// Add new database pay item
+						var payItem = await _payItemService.GetPayItemByIdAsync(
+							itemDto.PayItemId.Value,
+							cancellationToken);
+
+						if (payItem == null)
+							throw new ArgumentException($"عامل حقوقی با شناسه {itemDto.PayItemId} یافت نشد");
+
+						contract.AddPayItem(itemDto.PayItemId.Value, itemDto.Value);
+					}
+				}
+			}
+
+			// ─────────────────────────────────────────────────────────────
+			// Step 4: Save all changes
+			// ─────────────────────────────────────────────────────────────
+			return await _contractRepo.SaveChangesAsync(cancellationToken);
+
+		}, cancellationToken);
+
+		return result;
+	}
+
+
+	/// <summary>
+	/// Activate contract
+	/// </summary>
+	public async Task<bool> ActivateContractAsync(long contractId, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -260,11 +467,29 @@ public class ContractService : IContractService
         }
     }
 
-    private async Task<ContractDto> MapToDto(Contract contract, CancellationToken ct)
+    /// <summary>
+    /// Maps Contract entity to ContractDto
+    /// Handles both database pay items and system pay items
+    /// </summary>
+    private async Task<ContractDto> MapToDto(Contract contract, CancellationToken ct = default)
     {
-        var payItemIds = contract.PayItems.Select(pi => pi.PayItemId).Distinct().ToList();
-        var payItems = await _payItemRepo.GetAllByConditionAsync(p => payItemIds.Contains(p.Id), ct);
-        var payItemDict = payItems.ToDictionary(p => p.Id, p => p.Name);
+        // Get all database pay item IDs (exclude system items)
+        var payItemIds = contract.PayItems
+            .Where(pi => pi.IsDatabaseItem)
+            .Select(pi => pi.PayItemId!.Value)
+            .Distinct()
+            .ToList();
+
+        // Fetch database pay items
+        Dictionary<long, string?> payItemDict = new();
+        if (payItemIds.Any())
+        {
+            var payItems = await _payItemRepo.GetAllByConditionAsync(
+                p => payItemIds.Contains(p.Id),
+                ct
+            );
+            payItemDict = payItems.ToDictionary(p => p.Id, p => p.Name);
+        }
 
         return new ContractDto
         {
@@ -278,9 +503,17 @@ public class ContractService : IContractService
             PayItems = contract.PayItems.Select(pi => new ContractPayItemDto
             {
                 PayItemId = pi.PayItemId,
-                PayItemName = payItemDict.GetValueOrDefault(pi.PayItemId, "Unknown"),
+                SystemCode = pi.SystemCode,
+                IsSystemItem = pi.IsSystemItem,
+
+                // Get name from database or system constants
+                PayItemName = pi.IsSystemItem
+                    ? PayItemConstants.GetName(pi.SystemCode!)
+                    : payItemDict.GetValueOrDefault(pi.PayItemId!.Value, "نامشخص"),
+
                 Value = pi.Value
             }).ToList()
         };
     }
+
 }

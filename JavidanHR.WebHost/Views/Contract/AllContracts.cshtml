@@ -356,7 +356,7 @@
                                             <i class="fas fa-edit"></i>
                                         </a>
 
-                                        @if (contract.Status != ContractStatus.Terminated)
+                                        @if (contract.Status is not ContractStatus.Terminated and not ContractStatus.Active)
                                         {
                                             <button type="button" class="ct-btn ct-btn-delete"
                                                     onclick="confirmDelete('@contract.Id', '@contract.EmployeeName')"

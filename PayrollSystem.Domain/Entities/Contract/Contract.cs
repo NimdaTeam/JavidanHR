@@ -36,8 +36,12 @@ namespace PayrollSystem.Domain.Entities.Contract
         }
 
         // ---------------------- متدهای مدیریت آیتم‌های قرارداد ----------------------
+        /// <summary>
+        /// Adds a database pay item to the contract
+        /// </summary>
         public void AddPayItem(long payItemId, decimal? value = null)
         {
+            // Check for duplicate database pay item
             if (_payItems.Any(p => p.PayItemId == payItemId))
                 throw new InvalidOperationException("این آیتم قبلاً به قرارداد اضافه شده است");
 
@@ -45,18 +49,65 @@ namespace PayrollSystem.Domain.Entities.Contract
             _payItems.Add(payItem);
         }
 
+        /// <summary>
+        /// Adds a system pay item to the contract
+        /// </summary>
+        public void AddSystemPayItem(string systemCode, decimal? value = null)
+        {
+            Guard.Against.NullOrWhiteSpace(systemCode, nameof(systemCode));
+
+            // Check for duplicate system pay item
+            if (_payItems.Any(p => p.SystemCode == systemCode))
+                throw new InvalidOperationException("این عامل سیستمی قبلاً به قرارداد اضافه شده است");
+
+            var payItem = new ContractPayItem.ContractPayItem(Id, systemCode, value);
+            _payItems.Add(payItem);
+        }
+
+        /// <summary>
+        /// Updates value for a database pay item
+        /// </summary>
         public void UpdatePayItemValue(long payItemId, decimal? newValue)
         {
             var payItem = _payItems.FirstOrDefault(p => p.PayItemId == payItemId);
             if (payItem == null)
-                throw new ArgumentException("آیتم مورد نظر در قرارداد یافت نشد");
+                throw new InvalidOperationException("آیتم مورد نظر در قرارداد یافت نشد");
 
             payItem.UpdateValue(newValue);
         }
 
+        /// <summary>
+        /// Updates value for a system pay item
+        /// </summary>
+        public void UpdateSystemPayItemValue(string systemCode, decimal? newValue)
+        {
+            Guard.Against.NullOrWhiteSpace(systemCode, nameof(systemCode));
+
+            var payItem = _payItems.FirstOrDefault(p => p.SystemCode == systemCode);
+            if (payItem == null)
+                throw new InvalidOperationException("عامل سیستمی مورد نظر در قرارداد یافت نشد");
+
+            payItem.UpdateValue(newValue);
+        }
+
+        /// <summary>
+        /// Removes a database pay item from the contract
+        /// </summary>
         public void RemovePayItem(long payItemId)
         {
             var payItem = _payItems.FirstOrDefault(p => p.PayItemId == payItemId);
+            if (payItem != null)
+                _payItems.Remove(payItem);
+        }
+
+        /// <summary>
+        /// Removes a system pay item from the contract
+        /// </summary>
+        public void RemoveSystemPayItem(string systemCode)
+        {
+            Guard.Against.NullOrWhiteSpace(systemCode, nameof(systemCode));
+
+            var payItem = _payItems.FirstOrDefault(p => p.SystemCode == systemCode);
             if (payItem != null)
                 _payItems.Remove(payItem);
         }

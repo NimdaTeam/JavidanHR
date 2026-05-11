@@ -1,0 +1,938 @@
+﻿@model PayrollSystem.Application.DTOs.EditContractDto
+@using _0_Framework.Utilities.Helpers
+@using HrSystem.Domain.Entities
+@using PayrollSystem.Application.DTOs
+@using PayrollSystem.Domain.Entities.Workshop
+@using System.Text.Json
+@using System.Text.Encodings.Web
+@using System.Text.Json.Serialization
+
+@{
+    ViewData["Title"] = "ویرایش قرارداد";
+    var selectedEmployee = ViewBag.selectedEmployee as Employee;
+    var selectedWorkshop = ViewBag.selectedWorkshop as Workshop;
+
+    // Serialize available pay items to JSON for client-side use
+    var allPayItemsJson = JsonSerializer.Serialize(
+        ViewBag.AvailablePayItems ?? new List<object>(),
+        new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+            Converters = { new JsonStringEnumConverter() }
+        }
+    );
+}
+
+@section customStyles {
+    <style>
+        /* Section labels */
+        .pi-section-label {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid #e4e6ef;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #181c32;
+        }
+
+        .pi-section-num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2rem;
+            height: 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 50%;
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+
+        /* Badge styles */
+        .pi-badge {
+            display: inline-block;
+            padding: 0.35rem 0.75rem;
+            border-radius: 0.475rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        /* Field styles */
+        .pi-field {
+            margin-bottom: 1.5rem;
+        }
+
+        .pi-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #3f4254;
+        }
+
+            .pi-label.required::after {
+                content: " *";
+                color: #f1416c;
+            }
+
+        .pi-optional {
+            font-size: 0.85rem;
+            font-weight: 400;
+            color: #a1a5b7;
+        }
+
+        .pi-input,
+        .pi-select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #e4e6ef;
+            border-radius: 0.475rem;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+            background-color: #f9f9f9;
+        }
+
+            .pi-input:focus,
+            .pi-select:focus {
+                outline: none;
+                border-color: #667eea;
+                background-color: white;
+                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            }
+
+        .pi-error-msg {
+            display: block;
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            color: #f1416c;
+        }
+
+        .pi-hint {
+            display: block;
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            color: #a1a5b7;
+        }
+
+        /* Pay item picker */
+        .pi-picker {
+            background: #f9f9f9;
+            border: 2px dashed #e4e6ef;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .pi-picker-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .pi-picker-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #3f4254;
+        }
+
+        .pi-filter-group {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .pi-filter-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid #e4e6ef;
+            border-radius: 0.475rem;
+            background: white;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #7e8299;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+            .pi-filter-btn:hover {
+                border-color: #667eea;
+                color: #667eea;
+            }
+
+            .pi-filter-btn.active {
+                background: #667eea;
+                border-color: #667eea;
+                color: white;
+            }
+
+        .pi-search-box {
+            width: 100%;
+            max-width: 300px;
+            padding: 0.5rem 1rem;
+            border: 1px solid #e4e6ef;
+            border-radius: 0.475rem;
+            font-size: 0.9rem;
+        }
+
+            .pi-search-box:focus {
+                outline: none;
+                border-color: #667eea;
+            }
+
+        /* Chip grid */
+        .pi-chip-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .pi-chip {
+            background: white;
+            border: 2px solid #e4e6ef;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+            .pi-chip:hover {
+                border-color: #667eea;
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+                transform: translateY(-2px);
+            }
+
+            .pi-chip.disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+                background: #f5f5f5;
+            }
+
+                .pi-chip.disabled:hover {
+                    border-color: #e4e6ef;
+                    box-shadow: none;
+                    transform: none;
+                }
+
+        .pi-chip-body {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .pi-chip-name {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #181c32;
+        }
+
+        .pi-chip-code {
+            font-size: 0.8rem;
+            color: #a1a5b7;
+            font-family: 'Courier New', monospace;
+        }
+
+        .pi-chip-type-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            width: fit-content;
+        }
+
+        .grp-success {
+            background: #e8fff3;
+            color: #0bb783;
+        }
+
+        .grp-danger {
+            background: #fff5f8;
+            color: #f1416c;
+        }
+
+        .grp-primary {
+            background: #f1faff;
+            color: #009ef7;
+        }
+
+        /* Empty states */
+        .pi-empty {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #a1a5b7;
+        }
+
+            .pi-empty i {
+                font-size: 3rem;
+                margin-bottom: 1rem;
+                opacity: 0.3;
+            }
+
+        .pi-empty-selection {
+            text-align: center;
+            padding: 2rem;
+            background: white;
+            border: 2px dashed #e4e6ef;
+            border-radius: 0.75rem;
+            color: #a1a5b7;
+        }
+
+        /* Selected items */
+        .pi-selected-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .pi-selected-card {
+            background: white;
+            border: 2px solid #e4e6ef;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            transition: all 0.2s ease;
+        }
+
+            .pi-selected-card:hover {
+                border-color: #667eea;
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+            }
+
+        .pi-selected-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .pi-selected-info {
+            flex: 1;
+        }
+
+        .pi-selected-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #181c32;
+            margin-bottom: 0.5rem;
+        }
+
+        .pi-selected-code {
+            font-size: 0.85rem;
+            color: #a1a5b7;
+            font-family: 'Courier New', monospace;
+        }
+
+        .pi-selected-icon {
+            width: 2.5rem;
+            height: 2.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.5rem;
+            font-size: 1.2rem;
+        }
+
+            .pi-selected-icon.success {
+                background: #e8fff3;
+                color: #0bb783;
+            }
+
+            .pi-selected-icon.danger {
+                background: #fff5f8;
+                color: #f1416c;
+            }
+
+            .pi-selected-icon.primary {
+                background: #f1faff;
+                color: #009ef7;
+            }
+
+        .pi-remove-btn {
+            padding: 0.5rem 1rem;
+            background: #fff5f8;
+            color: #f1416c;
+            border: none;
+            border-radius: 0.475rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+            .pi-remove-btn:hover {
+                background: #f1416c;
+                color: white;
+            }
+
+        .pi-value-input-group {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e4e6ef;
+        }
+
+        .pi-value-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #3f4254;
+        }
+
+        .pi-value-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #e4e6ef;
+            border-radius: 0.475rem;
+            font-size: 0.95rem;
+            text-align: left;
+            direction: ltr;
+        }
+
+            .pi-value-input:focus {
+                outline: none;
+                border-color: #667eea;
+                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            }
+
+        .pi-formula-display {
+            background: #f9f9f9;
+            padding: 0.75rem 1rem;
+            border-radius: 0.475rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            color: #3f4254;
+            margin-top: 0.5rem;
+        }
+
+        .pi-auto-calc-msg {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem;
+            background: #f1faff;
+            border-radius: 0.475rem;
+            color: #009ef7;
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+
+        .pi-count-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 1.5rem;
+            height: 1.5rem;
+            padding: 0 0.5rem;
+            background: #667eea;
+            color: white;
+            border-radius: 0.375rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+    </style>
+}
+
+<form asp-action="EditContract" asp-controller="Contract" method="post" id="contractForm">
+    <div class="card mb-5 mb-xl-8 pi-card-main">
+        <!-- Card header -->
+        <div class="card-header border-0 pt-5">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-file-signature fs-2x text-primary me-3"></i>
+                <div>
+                    <h3 class="card-title align-items-start flex-column">
+                        <span class="card-label fw-bold fs-3 mb-1">@ViewData["Title"]</span>
+                        <span class="text-muted mt-1 fw-semibold fs-7">ویرایش اطلاعات قرارداد کاری</span>
+                    </h3>
+                </div>
+            </div>
+            <div class="card-toolbar">
+                <Form-buttons return-url="@ViewBag.ReturnUrl"></Form-buttons>
+            </div>
+        </div>
+
+        <!-- Card body -->
+        <div class="card-body py-3">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Id" />
+
+            @if (!ViewData.ModelState.IsValid && ViewData.ModelState.ContainsKey(string.Empty))
+            {
+                <div class="alert alert-danger d-flex align-items-center p-5 mb-10">
+                    <i class="fas fa-exclamation-triangle fs-2hx text-danger me-4"></i>
+                    <div class="d-flex flex-column">
+                        <h4 class="mb-1 text-danger">خطا در اعتبارسنجی</h4>
+                        @foreach (var error in ViewData.ModelState[string.Empty].Errors)
+                        {
+                            <span>@error.ErrorMessage</span>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- Section 1: Basic Information -->
+            <div class="pi-section-label">
+                <span class="pi-section-num">۱</span>
+                <span>اطلاعات پایه</span>
+            </div>
+
+            <div class="row">
+                <!-- Workshop -->
+                <div class="col-md-6">
+                    <div class="pi-field">
+                        <label asp-for="WorkshopId" class="pi-label required">کارگاه</label>
+                        <select asp-for="WorkshopId" class="pi-select text-center" id="workshopSelect" required readonly>
+                            <option value="">— انتخاب کنید —</option>
+                            @if (selectedWorkshop != null)
+                            {
+
+                                <option selected="" value="@selectedWorkshop.Id">@selectedWorkshop.Name</option>
+
+                            }
+                        </select>
+                        <span asp-validation-for="WorkshopId" class="pi-error-msg"></span>
+                    </div>
+                </div>
+
+                <!-- Employee -->
+                <div class="col-md-6">
+                    <div class="pi-field">
+                        <label asp-for="EmployeeId" class="pi-label required">کارمند</label>
+                        <select asp-for="EmployeeId" class="pi-select text-center" id="employeeSelect" required readonly>
+                            @if (selectedEmployee != null) 
+                            {
+
+                                <option selected="" value="@selectedEmployee.Id">@selectedEmployee.GetFullName() - @selectedEmployee.EmployeeCode</option>
+
+                            }
+                        </select>
+                        <span asp-validation-for="EmployeeId" class="pi-error-msg"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Valid From Date -->
+                <div class="col-md-6">
+                    <div class="pi-field">
+                        <label asp-for="ValidFromDateJalali" class="pi-label required">تاریخ شروع</label>
+                        <input asp-for="ValidFromDateJalali"
+                               class="form-control form-control-solid text-center persian-date-input"
+                               placeholder="@DateTime.Now.ToShamsi()"
+                               maxlength="10"
+                               data-jdp
+                               required />
+                        <span asp-validation-for="ValidFromDateJalali" class="pi-error-msg"></span>
+                    </div>
+                </div>
+
+                <!-- Valid To Date -->
+                <div class="col-md-6">
+                    <div class="pi-field">
+                        <label asp-for="ValidToDateJalali" class="pi-label">
+                            تاریخ پایان <span class="pi-optional">(اختیاری)</span>
+                        </label>
+                        <input asp-for="ValidToDateJalali"
+                               class="form-control form-control-solid text-center persian-date-input"
+                               placeholder="تاریخ پایان قرارداد (اختیاری)"
+                               maxlength="10"
+                               data-jdp />
+                        <span asp-validation-for="ValidToDateJalali" class="pi-error-msg"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Contract Legal Factors -->
+            <div class="pi-section-label mt-5">
+                <span class="pi-section-num">۲</span>
+                <span>عوامل حقوقی قرارداد</span>
+            </div>
+
+            <div class="pi-picker">
+                <div class="pi-picker-header">
+                    <div class="pi-picker-title">
+                        <i class="fas fa-search me-2"></i>
+                        انتخاب اقلام حقوقی
+                    </div>
+                    <div class="pi-filter-group">
+                        <button type="button" class="pi-filter-btn active" onclick="filterByGroup('all', this)">
+                            <i class="fas fa-th me-1"></i> همه
+                        </button>
+                        <button type="button" class="pi-filter-btn" onclick="filterByGroup('Earning', this)">
+                            <i class="fas fa-plus-circle me-1"></i> مزایا
+                        </button>
+                        <button type="button" class="pi-filter-btn" onclick="filterByGroup('Deduction', this)">
+                            <i class="fas fa-minus-circle me-1"></i> کسورات
+                        </button>
+                        <button type="button" class="pi-filter-btn" onclick="filterByGroup('Info', this)">
+                            <i class="fas fa-info-circle me-1"></i> اطلاعاتی
+                        </button>
+                    </div>
+                </div>
+
+                <input type="text"
+                       class="pi-search-box"
+                       placeholder="جستجو در اقلام..."
+                       oninput="filterPayItems(this.value)" />
+
+                <div class="pi-chip-grid" id="payItemGrid">
+                    <!-- Pay items will be rendered here by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Section 3: Selected Items -->
+            <div class="pi-section-label mt-5">
+                <span class="pi-section-num">۳</span>
+                <span>اقلام انتخاب‌شده</span>
+                <span class="pi-count-badge" id="selectedCount">0</span>
+            </div>
+
+            <div id="selectedItemsContainer">
+                <div class="pi-empty-selection" id="emptyState">
+                    <i class="fas fa-inbox"></i>
+                    <p class="mb-0">هیچ قلمی انتخاب نشده است</p>
+                </div>
+                <div class="pi-selected-list" id="selectedList" style="display: none;">
+                    <!-- Selected items will be rendered here -->
+                </div>
+            </div>
+
+            <!-- Hidden inputs for form submission -->
+            <div id="hiddenInputsContainer"></div>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+            // Data from server
+            const ALL_PAY_ITEMS = @Html.Raw(allPayItemsJson);
+
+            // Type metadata for UI rendering
+            const TYPE_META = {
+                'Earning': { label: 'مزایا', cssClass: 'grp-success', icon: 'fa-plus-circle' },
+                'Deduction': { label: 'کسورات', cssClass: 'grp-danger', icon: 'fa-minus-circle' },
+                'Info': { label: 'اطلاعاتی', cssClass: 'grp-primary', icon: 'fa-info-circle' }
+            };
+
+            // State
+            let activeGroup = 'all';
+            let searchText = '';
+            let selectedItems = [];
+
+            // Initialize on page load
+            document.addEventListener('DOMContentLoaded', function () {
+                // Load existing contract pay items
+                loadExistingPayItems();
+
+                // Render pay item grid
+                renderPayItemGrid();
+
+                // Setup workshop/employee cascade
+                //setupWorkshopEmployeeCascade();
+            });
+
+            /**
+             * Load existing pay items from the model
+             */
+            function loadExistingPayItems() {
+                @if (Model.PayItems != null && Model.PayItems.Any())
+                {
+                                <text>
+                                const existingPayItems = @Html.Raw(JsonSerializer.Serialize(Model.PayItems, new JsonSerializerOptions
+                                {
+                                                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                                                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+                                                Converters = { new JsonStringEnumConverter() }
+                                }));
+
+        existingPayItems.forEach(contractPayItem => {
+            // Find the pay item definition from ALL_PAY_ITEMS
+            const payItemDef = ALL_PAY_ITEMS.find(p => p.systemCode === contractPayItem.systemCode);
+
+                                    if (payItemDef) {
+                                        // Create selected item with existing value
+                                        const selectedItem = {
+                                            ...payItemDef,
+                                            contractPayItemId: contractPayItem.id, // ID رکورد ContractPayItem
+                                            id: payItemDef.id, // ID اصلی PayItem (از تعریف سیستم)
+                                            value: contractPayItem.value || 0,
+                                            isDeleted: contractPayItem.isDeleted || false
+                                        };
+
+                                        selectedItems.push(selectedItem);
+                                    }
+                                });
+
+                                renderSelectedItems();
+                                </text>
+                                                }
+            }
+
+            /**
+             * Setup workshop-employee cascade dropdown
+             */
+            
+            /**
+             * Render pay item grid with filters
+             */
+            function renderPayItemGrid() {
+                const grid = document.getElementById('payItemGrid');
+                grid.innerHTML = '';
+
+                // Filter items
+                let filtered = ALL_PAY_ITEMS.filter(item => {
+                    // Group filter
+                    if (activeGroup !== 'all' && item.type !== activeGroup) return false;
+
+                    // Search filter
+                    if (searchText) {
+                        const search = searchText.toLowerCase();
+                        return item.name.toLowerCase().includes(search) ||
+                               item.systemCode.toLowerCase().includes(search);
+                    }
+
+                    return true;
+                });
+
+                // Empty state
+                if (filtered.length === 0) {
+                    const emptyMsg = ALL_PAY_ITEMS.length === 0
+                        ? 'هیچ عامل حقوقی‌ای در سیستم تعریف نشده'
+                        : 'موردی یافت نشد';
+                    grid.innerHTML = `<div class="pi-empty"><i class="fas fa-search"></i><p>${emptyMsg}</p></div>`;
+                    return;
+                }
+
+                // Render chips
+                filtered.forEach(item => {
+                    const isSelected = selectedItems.some(s => s.systemCode === item.systemCode);
+                    const meta = TYPE_META[item.type] || TYPE_META['Info'];
+
+                    const chip = document.createElement('div');
+                    chip.className = `pi-chip ${isSelected ? 'disabled' : ''}`;
+                    chip.innerHTML = `
+                            <div class="pi-chip-body">
+                <div class="pi-chip-name">${item.name}</div>
+                <div class="pi-chip-code">${item.systemCode}</div>
+                <div class="pi-chip-type-badge ${meta.cssClass}">
+                    <i class="fas ${meta.icon}"></i>
+                    <span>${meta.label}</span>
+                </div>
+            </div>
+            `;
+
+            if (!isSelected) {
+                chip.onclick = () => selectPayItem(item);
+            }
+
+            grid.appendChild(chip);
+            });
+            }
+
+            /**
+             * Filter pay items by group
+             */
+            function filterByGroup(group, btn) {
+            activeGroup = group;
+
+            // Update active button
+            document.querySelectorAll('.pi-filter-btn').forEach(b => {
+                b.classList.remove('active');
+            });
+
+            btn.classList.add('active');
+
+            renderPayItemGrid();
+            }
+
+            /**
+             * Filter pay items by search text
+             */
+            function filterPayItems(val) {
+            searchText = val.trim();
+            renderPayItemGrid();
+            }
+
+            /**
+             * Select a pay item
+             */
+            function selectPayItem(item) {
+            // Prevent duplicates
+            if (selectedItems.some(s => s.systemCode === item.systemCode)) {
+                return;
+            }
+
+            // Add to selected items
+            selectedItems.push({
+                ...item,
+                value: 0,
+                contractPayItemId: 0,
+                isDeleted: false
+            });
+
+            // Re-render
+            renderSelectedItems();
+            renderPayItemGrid();
+            }
+
+            /**
+             * Remove a selected pay item
+             */
+            function removePayItem(systemCode) {
+            selectedItems = selectedItems.filter(i => i.systemCode !== systemCode);
+
+            renderSelectedItems();
+            renderPayItemGrid();
+            }
+
+            /**
+             * Handle value change for user input items
+             */
+            function onValueChange(systemCode, val) {
+            const item = selectedItems.find(i => i.systemCode === systemCode);
+
+            if (item) {
+                item.value = parseFloat(val) || 0;
+            }
+
+            rebuildHiddenInputs();
+            }
+
+            /**
+             * Render selected items
+             */
+                    function renderSelectedItems() {
+                const emptyMsg = document.getElementById('emptyState');
+                const list = document.getElementById('selectedList');
+                const badge = document.getElementById('selectedCount');
+
+                badge.textContent = selectedItems.length;
+
+                if (selectedItems.length === 0) {
+                    emptyMsg.style.display = 'block';
+                    list.style.display = 'none';
+                    list.innerHTML = '';
+                    rebuildHiddenInputs();
+                    return;
+                }
+
+                emptyMsg.style.display = 'none';
+                list.style.display = 'flex';
+                list.innerHTML = '';
+
+                selectedItems.forEach(item => {
+                    const meta = TYPE_META[item.type] || TYPE_META['Info'];
+                    const requiresInput = item.dataType === 'UserInput';
+                    const isFormula = item.dataType === 'Formula';
+
+                    const card = document.createElement('div');
+                    card.className = 'pi-selected-card';
+
+                    card.innerHTML = `
+                        <div class="pi-selected-header">
+                            <div class="d-flex align-items-start gap-3 flex-grow-1">
+                                <div class="pi-selected-icon ${meta.cssClass.replace('grp-', '')}">
+                                    <i class="fas ${meta.icon}"></i>
+                                </div>
+                                <div class="pi-selected-info">
+                                    <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
+                                        <div class="pi-selected-name">${item.name}</div>
+                                        ${requiresInput ? '<span class="badge badge-light-warning">نیاز به مقدار</span>' : ''}
+                                        ${isFormula ? '<span class="badge badge-light-info">فرمول</span>' : ''}
+                                        ${!requiresInput && !isFormula ? '<span class="badge badge-light-success">محاسبه خودکار</span>' : ''}
+                                    </div>
+                                    <div class="pi-selected-code">${item.systemCode}</div>
+                                    <div class="mt-2">
+                                        <span class="pi-chip-type-badge ${meta.cssClass}">
+                                            <i class="fas ${meta.icon}"></i>
+                                            <span>${meta.label}</span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="pi-remove-btn" onclick="removePayItem('${item.systemCode}')">
+                                <i class="fas fa-trash-alt me-1"></i> حذف
+                            </button>
+                        </div>
+                        ${requiresInput ? `
+                            <div class="pi-value-input-group">
+                                <label class="pi-value-label">مقدار (ریال)</label>
+                                <input type="text" class="pi-value-input text-center" value="${item.value || 0}" min="0" onchange="onValueChange('${item.systemCode}', this.value)" />
+                            </div>
+                        ` : isFormula && item.currentFormula ? `
+                            <div class="pi-value-input-group">
+                                <label class="pi-value-label">فرمول محاسبه</label>
+                                <div class="pi-formula-display">${item.currentFormula}</div>
+                            </div>
+                        ` : `
+                            <div class="pi-auto-calc-msg">
+                                <i class="fas fa-calculator"></i>
+                                <span>این مقدار به صورت خودکار محاسبه خواهد شد</span>
+                            </div>
+                        `}
+                    `;
+
+                    list.appendChild(card);
+                });
+
+                rebuildHiddenInputs();
+            }
+
+
+            /**
+      * Rebuild hidden inputs for form submission
+      */
+            function rebuildHiddenInputs() {
+                const container = document.getElementById('hiddenInputsContainer');
+                container.innerHTML = '';
+
+                selectedItems.forEach((item, idx) => {
+                    // ContractPayItem Id (برای آیتم‌های موجود)
+                    const idInput = document.createElement('input');
+                    idInput.type = 'hidden';
+                    idInput.name = `PayItems[${idx}].Id`;
+                    idInput.value = item.contractPayItemId || 0;
+                    container.appendChild(idInput);
+
+                    // PayItemId (شناسه تعریف PayItem در سیستم)
+                    const payItemIdInput = document.createElement('input');
+                    payItemIdInput.type = 'hidden';
+                    payItemIdInput.name = `PayItems[${idx}].PayItemId`;
+                    payItemIdInput.value = item.id; // این همان id اصلی PayItem است
+                    container.appendChild(payItemIdInput);
+
+                    // SystemCode
+                    const codeInput = document.createElement('input');
+                    codeInput.type = 'hidden';
+                    codeInput.name = `PayItems[${idx}].SystemCode`;
+                    codeInput.value = item.systemCode;
+                    container.appendChild(codeInput);
+
+                    // Value
+                    const valueInput = document.createElement('input');
+                    valueInput.type = 'hidden';
+                    valueInput.name = `PayItems[${idx}].Value`;
+                    valueInput.value = item.value || 0;
+                    container.appendChild(valueInput);
+
+                    // IsDeleted
+                    const isDeletedInput = document.createElement('input');
+                    isDeletedInput.type = 'hidden';
+                    isDeletedInput.name = `PayItems[${idx}].IsDeleted`;
+                    isDeletedInput.value = item.isDeleted ? 'true' : 'false';
+                    container.appendChild(isDeletedInput);
+                });
+            }
+
+    </script>
+
+}

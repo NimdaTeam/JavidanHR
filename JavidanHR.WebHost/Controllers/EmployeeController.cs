@@ -13,6 +13,7 @@ using HrSystem.Domain.Entities;
 using JavidanHR.WebHost.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PayrollSystem.Application.Interfaces;
 using WebHost.Helpers.GlobalHelpers;
 using WebHost.PageSecurity;
 using WebHost.Utilities;
@@ -27,14 +28,16 @@ namespace JavidanHR.WebHost.Controllers
         private readonly IFileUploadService _fileUploadService;
         private readonly IUserRepository _userService;
         private readonly IRoleRepository _roleService;
+        private readonly IWorkshopService _workshopService;
         private readonly ILogger<EmployeeController> _logger;
 
-        public EmployeeController(IEmployeeService employeeService, IFileUploadService fileUploadService, IUserRepository userService, IRoleRepository roleService, ILogger<EmployeeController> logger)
+        public EmployeeController(IEmployeeService employeeService, IFileUploadService fileUploadService, IUserRepository userService, IRoleRepository roleService, IWorkshopService workshopService, ILogger<EmployeeController> logger)
         {
             _employeeService = employeeService;
             _fileUploadService = fileUploadService;
             _userService = userService;
             _roleService = roleService;
+            _workshopService = workshopService;
             _logger = logger;
         }
 
@@ -121,6 +124,10 @@ namespace JavidanHR.WebHost.Controllers
 
             var userPermissions = await _roleService.GetLoggedInUserPermissions();
 
+            var workshops = await _workshopService.GetAllWorkshopsAsync();
+            var workshopList = new List<EmployeeWorkshopListItem>();
+            
+
             if (isUpdating && employeeId is > 0)
             {
                 var emp = await _employeeService.GetEmployeeForEdit(employeeId.Value);
@@ -158,6 +165,15 @@ namespace JavidanHR.WebHost.Controllers
                 ViewData["EmployeeTitle"] = $"{emp.FirstName} {emp.LastName} - ({emp.EmployeeCode})";
                 model = _employeeService.GetEmployeeData_Step1(emp);
 
+               workshopList = workshops.Select(x => new EmployeeWorkshopListItem()
+                {
+                    Id = x.Id,
+                    Name = x.Name,
+                    IsSelected = x.Id == model.WorkshopId
+                }).ToList();
+
+                ViewBag.workshops = workshopList;
+
                 ViewBag.IsFirstTime = true;
                 return View("AddEmployee", model);
             }
@@ -178,6 +194,15 @@ namespace JavidanHR.WebHost.Controllers
                 NationalCode = "",
                 MobilePhone = currentUser.PhoneNumber ?? ""
             };
+
+            workshopList = workshops.Select(x => new EmployeeWorkshopListItem()
+            {
+                Id = x.Id,
+                Name = x.Name,
+                IsSelected = x.Id == model.WorkshopId
+            }).ToList();
+
+            ViewBag.workshops = workshopList;
 
             ViewData["Title"] = "تکمیل اطلاعات اولیه (مرحله ۱ از ۵)";
             return View("AddEmployee", model);
@@ -264,6 +289,7 @@ namespace JavidanHR.WebHost.Controllers
                 }
 
                 emp.UserId = newUserId.Value;
+                
                 var result = await _employeeService.AddNewEmployee_Step1(emp);
 
                 var employeeLinkedUser = await _userService.GetAsync((long)emp.UserId);

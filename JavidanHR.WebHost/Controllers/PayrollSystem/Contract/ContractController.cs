@@ -1,4 +1,5 @@
-﻿using _0_Framework.Utilities.NotificationSystem;
+﻿using _0_Framework.Utilities.Helpers;
+using _0_Framework.Utilities.NotificationSystem;
 using _0_Framework.Utilities.Pagination;
 using AuthenticationSystem.Services.Repositories;
 using HrSystem.Application.Interfaces;
@@ -111,8 +112,9 @@ namespace JavidanHR.WebHost.Controllers.PayrollSystem.Contract
             }
         }
 
+
         /// <summary>
-        /// Create new contract
+        /// Create new contract with pay items (both database and system items)
         /// </summary>
         [HttpPost]
         [Route("Add")]
@@ -123,6 +125,7 @@ namespace JavidanHR.WebHost.Controllers.PayrollSystem.Contract
         {
             try
             {
+                // Validate model state
                 if (!ModelState.IsValid)
                 {
                     await PrepareViewBagForDropdowns(cancellationToken);
@@ -130,16 +133,8 @@ namespace JavidanHR.WebHost.Controllers.PayrollSystem.Contract
                     return View(model);
                 }
 
+                // Create contract with all pay items (service handles both types)
                 var result = await _contractService.CreateContractAsync(model, cancellationToken);
-
-                if (result != null && model.PayItems.Any())
-                {
-                    foreach (var pi in model.PayItems)
-                    {
-                        pi.ContractId = result.Id;
-                        await _contractService.AssignPayItemToContractAsync(pi, cancellationToken);
-                    }
-                }
 
                 if (result != null)
                 {
@@ -147,6 +142,7 @@ namespace JavidanHR.WebHost.Controllers.PayrollSystem.Contract
                     return RedirectToAction(nameof(EditContract), new { id = result.Id });
                 }
 
+                // If creation failed
                 ShowNotification(ApplicationMessages.ErrorOccurred, ApplicationMessagesIcon.ErrorIcon);
                 await PrepareViewBagForDropdowns(cancellationToken);
                 return View(model);
@@ -155,6 +151,22 @@ namespace JavidanHR.WebHost.Controllers.PayrollSystem.Contract
             {
                 _logger.LogWarning(ex, "Contract date overlap for employee {EmployeeId}", model.EmployeeId);
                 ShowNotification("تاریخ قرارداد با قرارداد فعال دیگری تداخل دارد", ApplicationMessagesIcon.ErrorIcon);
+                await PrepareViewBagForDropdowns(cancellationToken);
+                return View(model);
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("System pay item"))
+            {
+                // Handle invalid system code
+                _logger.LogWarning(ex, "Invalid system code in contract creation");
+                ShowNotification("کد عامل سیستمی نامعتبر است", ApplicationMessagesIcon.ErrorIcon);
+                await PrepareViewBagForDropdowns(cancellationToken);
+                return View(model);
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("Pay item"))
+            {
+                // Handle invalid pay item ID
+                _logger.LogWarning(ex, "Invalid pay item ID in contract creation");
+                ShowNotification("عامل حقوقی انتخاب شده نامعتبر است", ApplicationMessagesIcon.ErrorIcon);
                 await PrepareViewBagForDropdowns(cancellationToken);
                 return View(model);
             }
@@ -167,81 +179,133 @@ namespace JavidanHR.WebHost.Controllers.PayrollSystem.Contract
             }
         }
 
-        /// <summary>
-        /// Display form for editing contract
-        /// </summary>
-        [HttpGet]
-        [Route("Edit/{id}")]
-        public async Task<IActionResult> EditContract(long id, CancellationToken cancellationToken = default)
-        {
-            try
-            {
-                var contract = await _contractService.GetContractByIdAsync(id, cancellationToken);
-                if (contract == null)
-                {
-                    ShowNotification(ApplicationMessages.NotFound, ApplicationMessagesIcon.ErrorIcon);
-                    return RedirectToAction(nameof(AllContracts));
-                }
 
-                await PrepareViewBagForDropdowns(cancellationToken);
+		/// <summary>
+		/// Display form for editing contract
+		/// </summary>
+		[HttpGet]
+		[Route("Edit/{id}")]
+		public async Task<IActionResult> EditContract(int id, CancellationToken cancellationToken = default)
+		{
+			try
+			{
+				var contract = await _contractService.GetContractForEditAsync(id, cancellationToken);
+				if (contract == null)
+				{
+					ShowNotification("قرارداد یافت نشد", ApplicationMessagesIcon.ErrorIcon);
+					return RedirectToAction(nameof(AllContracts));
+				}
 
-                // Load all available pay items for assignment
-                var allPayItems = await _payItemService.GetAllPayItemsAsync(cancellationToken);
-                ViewBag.AvailablePayItems = allPayItems.Where(p => p.IsActive).ToList();
+				await PrepareViewBagForDropdowns(cancellationToken);
 
-                return View(contract);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading contract {ContractId}", id);
-                ShowNotification(ApplicationMessages.ErrorOccurred, ApplicationMessagesIcon.ErrorIcon);
-                return RedirectToAction(nameof(AllContracts));
-            }
-        }
+				var selectedEmployee = await _employeeService.GetById(contract.EmployeeId);
+				if (selectedEmployee is null)
+				{
+					ShowNotification("اطلاعات کارمند پیدا نشد", ApplicationMessagesIcon.ErrorIcon);
+					return RedirectToAction(nameof(AllContracts));
+				}
 
-        /// <summary>
-        /// Update contract basic information
-        /// </summary>
-        [HttpPost]
-        [Route("Update")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> UpdateContract(
-            UpdateContractDto model,
-            CancellationToken cancellationToken = default)
-        {
-            try
-            {
-                if (!ModelState.IsValid)
-                {
-                    ShowNotification(ApplicationMessages.MalformedInput, ApplicationMessagesIcon.ErrorIcon);
-                    return RedirectToAction(nameof(EditContract), new { id = model.Id });
-                }
+				ViewBag.selectedEmployee = selectedEmployee;
 
-                var result = await _contractService.UpdateContractAsync(model, cancellationToken);
 
-                if (result)
-                {
-                    ShowNotification(ApplicationMessages.RecordUpdated);
-                }
-                else
-                {
-                    ShowNotification(ApplicationMessages.ErrorOccurred, ApplicationMessagesIcon.ErrorIcon);
-                }
+				var selectedWorkshop = await _workshopService.GetWorkshopByIdAsync(contract.WorkshopId,cancellationToken);
+				if (selectedWorkshop is null)
+				{
+					ShowNotification("اطلاعات کارگاه پیدا نشد", ApplicationMessagesIcon.ErrorIcon);
+					return RedirectToAction(nameof(AllContracts));
+				}
 
-                return RedirectToAction(nameof(EditContract), new { id = model.Id });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating contract {ContractId}", model.Id);
-                ShowNotification(ApplicationMessages.ErrorOccurred, ApplicationMessagesIcon.ErrorIcon);
-                return RedirectToAction(nameof(EditContract), new { id = model.Id });
-            }
-        }
+				ViewBag.selectedWorkshop = selectedWorkshop;
 
-        /// <summary>
-        /// Assign pay item to contract
-        /// </summary>
-        [HttpPost]
+
+				// Also load available pay items for the picker
+				//var allPayItems = await _payItemService.GetAllPayItemsAsync(cancellationToken);
+				//ViewBag.AvailablePayItems = allPayItems.Where(p => p.IsActive).ToList();
+
+				// Convert to EditContractDto
+				var dto = new EditContractDto
+				{
+					Id = contract.Id,
+					EmployeeId = contract.EmployeeId,
+					WorkshopId = contract.WorkshopId,
+					ValidFromDateJalali = contract.ValidFromDate.ToShamsi(),
+					ValidToDateJalali = contract.ValidToDate?.ToShamsi() ?? "",
+					PayItems = contract.PayItems.Select(pi => new EditPayItemDto
+					{
+						Id = pi.Id,
+						PayItemId = pi.PayItemId,
+						SystemCode = pi.SystemCode,
+						Value = pi.Value,
+						IsDeleted = false
+					}).ToList()
+				};
+
+				return View(dto);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Error loading edit contract page for id {ContractId}", id);
+				ShowNotification(ApplicationMessages.ErrorOccurred, ApplicationMessagesIcon.ErrorIcon);
+				return RedirectToAction(nameof(AllContracts));
+			}
+		}
+
+		/// <summary>
+		/// Update existing contract
+		/// </summary>
+		[HttpPost]
+		[Route("Edit/{id}")]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> EditContract(int id, EditContractDto model, CancellationToken cancellationToken = default)
+		{
+			try
+			{{
+				if (id != model.Id)
+				{
+					ShowNotification("اطلاعات ناهماهنگ", ApplicationMessagesIcon.ErrorIcon);
+					return RedirectToAction(nameof(AllContracts));
+				}
+
+				if (!ModelState.IsValid)
+				{
+					await PrepareViewBagForDropdowns(cancellationToken);
+					
+					ShowNotification(ApplicationMessages.MalformedInput, ApplicationMessagesIcon.ErrorIcon);
+					return View(model);
+				}
+
+				var result = await _contractService.UpdateContractAsync(model, cancellationToken);
+				if (result)
+				{
+					ShowNotification("قرارداد با موفقیت به‌روزرسانی شد", ApplicationMessagesIcon.SuccessIcon);
+					return RedirectToAction(nameof(EditContract), new { id = model.Id });
+				}
+
+				ShowNotification(ApplicationMessages.ErrorOccurred, ApplicationMessagesIcon.ErrorIcon);
+				await PrepareViewBagForDropdowns(cancellationToken);
+				return View(model);
+			}}
+			catch (InvalidOperationException ex) when (ex.Message.Contains("overlap"))
+			{
+				_logger.LogWarning(ex, "Contract date overlap during update for contract {ContractId}", id);
+				ShowNotification("تاریخ قرارداد با قرارداد فعال دیگری تداخل دارد", ApplicationMessagesIcon.ErrorIcon);
+				await PrepareViewBagForDropdowns(cancellationToken);
+				return View(model);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Error updating contract {ContractId}", id);
+				ShowNotification(ApplicationMessages.ErrorOccurred, ApplicationMessagesIcon.ErrorIcon);
+				await PrepareViewBagForDropdowns(cancellationToken);
+				return View(model);
+			}
+		}
+
+
+		/// <summary>
+		/// Assign pay item to contract
+		/// </summary>
+		[HttpPost]
         [Route("AssignPayItem")]
         public async Task<IActionResult> AssignPayItem(
             [FromBody] AssignPayItemToContractDto model,
@@ -418,6 +482,36 @@ namespace JavidanHR.WebHost.Controllers.PayrollSystem.Contract
         }
 
         /// <summary>
+        /// Get employees filtered by workshop for AJAX dropdown population
+        /// </summary>
+        /// <param name="workshopId">Workshop identifier</param>
+        /// <returns>JSON list of employees with Id, FullName, and EmployeeCode</returns>
+        [HttpGet("GetEmployeesByWorkshop/{workshopId}")]
+        public async Task<IActionResult> GetEmployeesByWorkshop(int workshopId)
+        {
+            try
+            {
+                // Fetch employees from the workshop service
+                var employees = await _employeeService.GetEmployeesByWorkshopIdAsync(workshopId);
+
+                // Map to a lightweight DTO for the dropdown
+                var result = employees.Select(e => new
+                {
+                    id = e.Id,
+                    fullName = e.GetFullName(),
+                    employeeCode = e.EmployeeCode
+                }).ToList();
+
+                return Json(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching employees for workshop {WorkshopId}", workshopId);
+                return Json(new List<object>());
+            }
+        }
+
+        /// <summary>
         /// Get workshop by employee (AJAX)
         /// </summary>
         [HttpGet]
@@ -499,7 +593,8 @@ namespace JavidanHR.WebHost.Controllers.PayrollSystem.Contract
             var allPayItems = await _payItemService.GetAllValidCodesAsync();
             ViewBag.AvailablePayItems = allPayItems.Where(p => p.IsActive).ToList();
 
-            ViewBag.Employees = employees.Where(e => e.IsActive).ToList();
+
+			ViewBag.Employees = employees.Where(e => e.IsActive).ToList();
             ViewBag.Workshops = workshops.ToList();
         }
     }

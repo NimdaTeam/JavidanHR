@@ -70,22 +70,45 @@ namespace PayrollSystem.Infrastructure.Persistence.Context
                 entity.HasIndex(c => new { c.EmployeeId, c.ValidFromDate });
             });
 
-            // ---------------------- ContractPayItem ----------------------
-            modelBuilder.Entity<ContractPayItem>(entity =>
-            {
-                entity.HasKey(cpi => cpi.Id);
-                entity.Property(cpi => cpi.ContractId).IsRequired();
-                entity.Property(cpi => cpi.PayItemId).IsRequired();
-                entity.Property(cpi => cpi.Value).HasPrecision(18, 2);
+			// ---------------------- ContractPayItem ----------------------
+			// ---------------------- ContractPayItem ----------------------
+			modelBuilder.Entity<ContractPayItem>(entity =>
+			{
+				entity.HasKey(cpi => cpi.Id);
 
-                // رابطه با PayItem (ارجاعی، بدون FK در دیتابیس در صورت عدم دسترسی به HrSystem)
-                // در صورت وجود PayItem در همان دیتابیس می‌توان FK تعریف کرد
-                entity.HasIndex(cpi => cpi.PayItemId);
-                entity.HasIndex(cpi => new { cpi.ContractId, cpi.PayItemId }).IsUnique();
-            });
+				entity.Property(cpi => cpi.ContractId).IsRequired();
 
-            // ---------------------- PayItem ----------------------
-            modelBuilder.Entity<PayItem>(entity =>
+				// PayItemId is now nullable — remove IsRequired()
+				entity.Property(cpi => cpi.PayItemId).IsRequired(false);
+
+				// SystemCode column added by migration
+				entity.Property(cpi => cpi.SystemCode)
+					.HasMaxLength(100)
+					.IsRequired(false);
+
+				entity.Property(cpi => cpi.Value).HasPrecision(18, 2);
+
+				// Index on PayItemId alone (nullable, so not unique by itself)
+				entity.HasIndex(cpi => cpi.PayItemId);
+
+				// Index on SystemCode alone
+				entity.HasIndex(cpi => cpi.SystemCode);
+
+				// Unique composite index — only for DB-backed items (PayItemId NOT NULL)
+				// The CHECK constraint in migration handles the XOR rule at DB level
+				entity.HasIndex(cpi => new { cpi.ContractId, cpi.PayItemId })
+					.IsUnique()
+					.HasFilter("[PayItemId] IS NOT NULL"); // ← کلید حل مشکل NULL تکراری
+
+				// Unique composite index for system-code items
+				entity.HasIndex(cpi => new { cpi.ContractId, cpi.SystemCode })
+					.IsUnique()
+					.HasFilter("[SystemCode] IS NOT NULL");
+			});
+
+
+			// ---------------------- PayItem ----------------------
+			modelBuilder.Entity<PayItem>(entity =>
             {
                 entity.HasKey(pi => pi.Id);
                 entity.Property(pi => pi.Name).HasMaxLength(100).IsRequired();
